@@ -1,6 +1,6 @@
 # Plan 🐾
 
-Eine ruhige To-do-App mit Babytieren zum Sammeln. Sie ist ADHS- und autismusfreundlich und läuft als Web-App auf dem iPhone, ohne App Store.
+Eine ruhige To-do-App mit Babytieren zum Sammeln. Sie ist läuft als Web-App auf dem iPhone, ohne App Store.
 
 ## Was die App kann
 

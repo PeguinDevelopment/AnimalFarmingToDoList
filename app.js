@@ -46,6 +46,7 @@
     unlocked: [...Wd.START_REGIONS],  // freigeschaltete Gebiete (IDs)
     slots: {},                        // Platz-ID → Gadget-ID
     finds: [],                        // Fundstücke {id, type, region, x, y}
+    animalSpots: {},                  // Tier-ID → selbst gewählter Tierplatz (z. B. "wald:af3")
   });
   function defaultState() {
     const m = newMap();
@@ -93,7 +94,7 @@
     s.schema = Math.max(s.schema || 1, SCHEMA);
     const d = defaultState();
     const world = s.world && Array.isArray(s.world.maps) && s.world.maps.length ? s.world : d.world;
-    world.maps = world.maps.map(m => ({ ...newMap(), ...m, slots: m.slots || {}, finds: m.finds || [], unlocked: m.unlocked?.length ? m.unlocked : [...Wd.START_REGIONS] }));
+    world.maps = world.maps.map(m => ({ ...newMap(), ...m, slots: m.slots || {}, finds: m.finds || [], animalSpots: m.animalSpots || {}, unlocked: m.unlocked?.length ? m.unlocked : [...Wd.START_REGIONS] }));
     if (!world.maps.some(m => m.id === world.active)) world.active = world.maps[0].id;
     return {
       ...d, ...s, world,
@@ -122,13 +123,24 @@
     } catch (e) { /* frischer Start */ }
     return defaultState();
   }
-  let state = load();
+  // Repariert Zählerstände (z. B. nach manuell bearbeiteten Backups): nie negativ, nie NaN
+  function sanitizeRewards(s) {
+    const n = v => (Number.isFinite(+v) && +v > 0 ? Math.floor(+v) : 0);
+    Object.keys(s.progress || {}).forEach(k => { s.progress[k] = n(s.progress[k]); });
+    s.pebbles = n(s.pebbles); s.checks = n(s.checks); s.vouchers = n(s.vouchers);
+    s.tasks.forEach(t => {
+      if (t.done && !t.rewarded && t.doneAt == null) t.rewarded = true;          // alte Daten: erledigt = schon belohnt
+      (t.subtasks || []).forEach(x => { if (x.done && x.rewarded == null) x.rewarded = true; });
+    });
+    return s;
+  }
+  let state = sanitizeRewards(load());
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
     catch (e) { toast('Speichern hat nicht geklappt 😕'); }
   }
 
-  const ui = { view: 'heute', sheet: null, overlay: null, focus: null, timer: null, hatchQueue: [], addDraft: '', addCat: null, addImp: false, addToday: false, confirm: null, refocus: null,
+  const ui = { view: 'heute', sheet: null, overlay: null, focus: null, timer: null, addDraft: '', addCat: null, addImp: false, addToday: false, confirm: null, refocus: null,
     edit: false, placing: null, worldX: 0, shopGroup: 'land' };
 
   const catById = id => state.categories.find(c => c.id === id);
@@ -190,7 +202,7 @@
   const giftDay = () => dayKey(Date.now() - 6 * 3600e3);
   function checkDaily() {
     if (state.daily.last === giftDay()) return;
-    if (!$('#hatch').hidden || ui.hatchQueue.length || !$('#gift').hidden) return;
+    if (!$('#hatch').hidden || pendingHatches().length || !$('#gift').hidden) return;
     showGift();
   }
   function showGift(opened) {
@@ -255,7 +267,18 @@
     return tile ? tile.dataset.r : null;
   }
 
-  // ---------- Belohnungen ----------
+  /* ---------- Belohnungen ----------
+     Absicherung (wichtig!):
+     - Jede Aufgabe / jeder Mini-Schritt gibt nur beim ERSTEN Abhaken einen Punkt (Merker „rewarded“).
+       Ent-abhaken nimmt nichts weg, erneutes Abhaken gibt nichts doppelt.
+     - „Rückgängig“ stellt den alten Stand her, aber ein schon geschlüpftes Tier wird NIE entfernt.
+     - Kaputte Zählerstände werden beim Laden repariert (sanitizeRewards). */
+  function restore(snap) {
+    const keep = state.animals.filter(a => !snap.animals.some(b => b.id === a.id));
+    state = snap;
+    if (keep.length) state.animals.push(...keep);
+    save(); refresh();
+  }
   function award(catId) {
     const cat = catById(catId);
     if (!cat) return null;
@@ -272,7 +295,7 @@
       state.progress[catId] = 0;
       const a = { id: uid(), kind: cat.animal, look: A.randomLook(cat.animal), name: A.randomName(), catName: cat.name, bornAt: Date.now() };
       state.animals.push(a);
-      ui.hatchQueue.push(a.id);
+      a.welcomed = false;    // → Schlüpf-Fenster ist fällig
       return a;
     }
     return null;
@@ -298,7 +321,7 @@
     save(); refresh();
     celebrate(ev);
     if (hatched) showNextHatch();
-    else toast(cheer(), () => { state = snap; save(); refresh(); });
+    else toast(cheer(), () => { restore(snap); });
   }
 
   function cheer(fallback) {
@@ -320,7 +343,7 @@
     }
     save(); refresh();
     if (hatched) showNextHatch();
-    else if (s.done) toast(cheer(autoDone ? 'Alle Schritte geschafft – Aufgabe erledigt! 🎉' : 'Mini-Schritt geschafft 🐾'),() => { state = snap; save(); refresh(); });
+    else if (s.done) toast(cheer(autoDone ? 'Alle Schritte geschafft – Aufgabe erledigt! 🎉' : 'Mini-Schritt geschafft 🐾'),() => { restore(snap); });
   }
 
   // ---------- Rendering ----------
@@ -470,17 +493,28 @@
         <button class="pill" data-action="shop">🛍️ Laden</button>
         <button class="pill ${ui.edit ? 'on' : ''}" data-action="w-edit">${ui.edit ? '✓ Fertig' : '✏️ Gestalten'}</button>
       </div>
+      ${ui.moving ? (() => {
+        const ma = state.animals.find(x => x.id === ui.moving);
+        return `<div class="place-banner move">
+          <div><b>Tippe auf einen 🐾-Platz für ${esc(ma?.name || '')}.</b><br>
+          <small>Steht dort schon ein Tier, tauschen die beiden ihre Plätze. Wischen zeigt weitere Gebiete.</small></div>
+          <button class="link" data-action="move-cancel">Abbrechen</button></div>`;
+      })() : ''}
       ${ui.placing ? `<div class="place-banner">Tippe auf einen ${Wd.byId[ui.placing]?.sky ? '✨ Himmelsplatz' : 'freien Platz'} für <b>${esc(Wd.byId[ui.placing]?.name || '')}</b>
         <button class="link" data-action="place-cancel">Abbrechen</button></div>` : ''}
       <div class="world-wrap" id="world-wrap">${Wd.world({
         map: curMap(), owned: ownedLand(),
-        edit: ui.edit, placing: ui.placing, animals: state.animals.map(a => ({ id: a.id, svg: A.draw(a.kind, a.look) })),
+        edit: ui.edit, placing: ui.placing, moving: ui.moving, animals: state.animals.map(a => ({ id: a.id, svg: A.draw(a.kind, a.look) })),
       })}</div>
       <div class="region-chips">${shownRegions().map(g => {
         const locked = !curMap().unlocked.includes(g.id);
         return `<button class="rchip ${locked ? 'locked' : ''}" data-action="w-go" data-r="${g.id}">${locked ? '🔒 ' : ''}${esc(g.name)}</button>`;
       }).join('')}</div>
       <p class="hint" style="margin:6px 4px 12px">← Wischen zum Erkunden · Tiere antippen · ${openCount()}/${Wd.REGIONS.length} Gebiete offen</p>
+      ${(() => {
+        const over = state.animals.length - Wd.animalCapacity(openCount());
+        return over > 0 ? `<p class="hint" style="margin:-6px 4px 12px">🏡 ${over} Babytier${over > 1 ? 'e kuscheln' : ' kuschelt'} gerade im Tierhaus. Mit jedem neuen Gebiet gibt es ${Wd.SPOTS_PER_REGION} Plätze mehr auf der Wiese.</p>` : '';
+      })()}
       <p class="muted" style="margin:0 4px 14px">${state.animals.length ? `${state.animals.length} Babytiere wohnen schon hier.` : 'Noch ist die Wiese leer – hak etwas ab, dann kommt das erste Babytier!'}</p>
       <div class="card">
         ${state.categories.map(c => `<div class="prog-row" style="--cat:${c.color}">${mini(c.animal)}
@@ -531,7 +565,16 @@
         <p class="hint"><b>Neues Handy?</b> Hier „Backup speichern“ → Datei in iCloud Drive sichern oder per AirDrop schicken → auf dem neuen Handy die App öffnen und „Backup laden“. Alle Tiere ziehen mit um. 🐾</p>
         <button class="big-btn danger-soft" data-action="clear-done">🧹 Erledigte Aufgaben aufräumen</button>
       </div>
-      <p class="footer-note">Mit 💛 gemacht</p>`;
+      ${ui.debug ? `<div class="card debug-card">
+        <h3 style="margin-bottom:4px">🛠️ Debug</h3>
+        <p class="hint">Nur zum Testen. Vor dem Löschen wird automatisch ein Backup gespeichert.</p>
+        ${ui.debugBackedUp
+          ? `<p><b>✓ Backup gespeichert.</b> Jetzt wirklich alles löschen? Aufgaben, Tiere, Kiesel, Wiese und Einstellungen sind dann weg.</p>
+             <button class="big-btn danger" data-action="debug-wipe">Ja, jetzt alles löschen</button>
+             <button class="big-btn" data-action="debug-cancel">Abbrechen</button>`
+          : `<button class="big-btn danger-soft" data-action="debug-backup">🗑️ Daten löschen (mit Backup)</button>`}
+      </div>` : ''}
+      <p class="footer-note" data-action="secret-tap">Mit 💛 gemacht</p>`;
   }
 
   const VIEWS = { heute: viewHeute, listen: viewListen, tiere: viewTiere, einstellungen: viewEinstellungen };
@@ -682,7 +725,10 @@
       return `
         <div class="center" data-action="hop" style="cursor:pointer">${A.draw(a.kind, a.look, { cls: 'big-animal' })}</div>
         <input class="field" type="text" value="${esc(a.name)}" data-input="animal-name" data-id="${a.id}" maxlength="24" style="text-align:center;font-weight:800;font-size:1.2rem" aria-label="Name">
-        <button class="big-btn soft" data-action="show-on-map" data-id="${a.id}" style="margin-top:10px">🗺️ Auf der Karte zeigen</button>
+        <div class="row2" style="margin-top:10px">
+          <button class="big-btn soft" data-action="show-on-map" data-id="${a.id}">🗺️ Auf der Karte zeigen</button>
+          <button class="big-btn soft" data-action="move-animal" data-id="${a.id}">📍 Woanders hinsetzen</button>
+        </div>
         <p class="center muted">${esc(k?.baby || '')} · ${esc(k?.furs[a.look.fur]?.name || '')}<br>da seit ${new Date(a.bornAt).toLocaleDateString('de-DE')} · aus „${esc(a.catName || '')}“</p>
         <h3>Fell</h3>
         <div class="chips">${(k?.furs || []).map((f, i) => `<button class="chip ${a.look.fur === i ? 'on' : ''}" style="padding:6px 14px" data-action="a-fur" data-id="${a.id}" data-i="${i}">${esc(f.name)}</button>`).join('')}</div>
@@ -893,10 +939,13 @@
     renderOverlay(); render();
   }
 
+  /* Schlüpf-Warteschlange steckt im Speicherstand: jedes neue Tier hat welcomed:false,
+     bis sein Schlüpf-Fenster bestätigt wurde. Übersteht Neuladen, schnelles Tippen und „Rückgängig“. */
+  const pendingHatches = () => state.animals.filter(a => a.welcomed === false);
   function showNextHatch() {
-    if (!$('#hatch').hidden || !ui.hatchQueue.length) return;
-    const a = state.animals.find(x => x.id === ui.hatchQueue.shift());
-    if (!a) return showNextHatch();
+    if (!$('#hatch').hidden || ui.moving) return;
+    const a = pendingHatches()[0];
+    if (!a) return;
     const cat = state.categories.find(c => c.name === a.catName);
     const el = $('#hatch');
     // Kein „Rückgängig“ während des Schlüpfens
@@ -907,8 +956,9 @@
     el.innerHTML = `<div class="ov-inner">
       <div class="hatch-stage">
         <div class="hatch-ground"></div>
-        <div class="born">${A.draw(a.kind, a.look)}</div>
-        <div class="shell shell-bot">${egg}</div>
+        <div class="born-clip"><div class="born">${A.draw(a.kind, a.look)}</div></div>
+        <div class="shell shell-bot left">${egg}</div>
+        <div class="shell shell-bot right">${egg}</div>
         <div class="shell shell-top">${egg}</div>
         <div class="burst"><span>✨</span><span>⭐</span><span>✨</span><span>💛</span><span>⭐</span></div>
       </div>
@@ -916,20 +966,53 @@
         <p>Ein <b>${esc(A.KINDS[a.kind]?.baby)}</b> ist da! 💛<br><span class="muted">${esc(A.ACCS[a.look.acc]?.crochet ? 'Es trägt sogar etwas Gehäkeltes 🧶' : 'Es freut sich riesig über dich.')}</span></p>
         <label for="hatch-name"><b>Wie soll es heißen?</b></label>
         <div class="name-row"><input id="hatch-name" type="text" value="${esc(a.name)}" maxlength="24"><button data-action="hatch-dice" aria-label="Anderer Name">🎲</button></div>
-        <button class="big-btn primary" data-action="hatch-ok">Willkommen!</button>
+        <p class="where-q"><b>Wo soll es wohnen?</b></p>
+        <button class="big-btn primary choice" data-action="hatch-pick">📍 Ich suche einen Platz aus
+          <small>Danach tippst du auf der Karte auf einen freien Pfoten-Platz.</small></button>
+        <button class="big-btn soft choice" data-action="hatch-ok">🎲 Die App sucht einen Platz aus
+          <small>Du kannst den Platz später jederzeit ändern.</small></button>
       </div></div>`;
+    // Knöpfe erst antippbar, wenn sie sichtbar sind (nach der Animation bzw. sofort im Ruhemodus)
+    el.classList.remove('ready');
+    const calm = state.settings.calm || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    clearTimeout(ui.readyT);
+    ui.readyT = setTimeout(() => el.classList.add('ready'), calm ? 150 : 2400);
   }
-  function closeHatch() {
+  // mode 'pick' = selbst einen Platz aussuchen, sonst setzt die App das Tier automatisch hin
+  function closeHatch(mode) {
     const el = $('#hatch');
+    if (!el.classList.contains('ready')) return;   // Knöpfe erst nach der Animation (kein versehentliches Antippen)
     const a = state.animals.find(x => x.id === el.dataset.id);
     const name = $('#hatch-name')?.value.trim();
     if (a && name) a.name = name;
+    if (a) a.welcomed = true;
     save();
-    el.hidden = true; el.innerHTML = '';
+    el.hidden = true; el.innerHTML = ''; el.classList.remove('ready');
+    if (mode === 'pick' && a) { startMoving(a.id, true); return; } // nächstes Tier kommt nach dem Platzieren
+    afterHatch();
+  }
+  function afterHatch() {
     refresh();
-    if (ui.hatchQueue.length) setTimeout(showNextHatch, 250);
-    else if (ui.unlock) toast(cheer());
-    if (!ui.hatchQueue.length) setTimeout(checkDaily, 400);
+    if (pendingHatches().length) setTimeout(showNextHatch, 250);
+    else { if (ui.unlock) toast(cheer()); setTimeout(checkDaily, 400); }
+  }
+  // Tier-Versetzen-Modus: zeigt nur die Pfoten-Plätze
+  function startMoving(id, fresh) {
+    ui.moving = id; ui.movingFresh = !!fresh;
+    ui.edit = false; ui.placing = null;
+    if (ui.sheet) { ui.sheet = null; $('#sheet-layer').hidden = true; }
+    ui.view = 'tiere';
+    render();
+    const m = curMap();
+    const cur = Wd.placeAnimals(m, state.animals).find(p => p.id === id);
+    const target = fresh ? (Wd.freeAnimalSpot(m, state.animals)?.reg || cur?.reg) : cur?.reg;
+    if (target) scrollWorldTo(target);
+    $('#world-wrap')?.scrollIntoView({ block: 'center' });
+  }
+  function endMoving() {
+    const fresh = ui.movingFresh;
+    ui.moving = null; ui.movingFresh = false;
+    if (fresh) afterHatch(); else render();
   }
 
   // ---------- Toast & Effekte ----------
@@ -960,20 +1043,23 @@
   }
 
   // ---------- Import / Export ----------
-  async function exportData() {
+  // Gibt true zurück, wenn das Backup gespeichert/geteilt wurde (false = abgebrochen)
+  async function exportData(prefix = 'plan-backup') {
     const data = JSON.stringify({ type: 'pfoetchenplan-backup', exportedAt: new Date().toISOString(), state }, null, 1);
-    const name = `plan-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    const name = `${prefix}-${stamp}.json`;
     const file = new File([data], name, { type: 'application/json' });
     try {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: 'Plan-Backup' });
-        return;
+        return true;
       }
-    } catch (e) { if (e.name === 'AbortError') return; }
+    } catch (e) { if (e.name === 'AbortError') return false; }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(file); a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    return true;
   }
 
   let pendingImport = null;
@@ -1015,7 +1101,12 @@
 
   // ---------- Aktionen ----------
   const act = {
-    nav: el => { ui.view = el.dataset.view; closeAllForNav(); render(); scrollTo(0, 0); },
+    nav: el => {
+      // Wer beim Versetzen die Ansicht wechselt, bricht ab – das Tier behält seinen Platz,
+      // und wartende Schlüpf-Fenster kommen trotzdem.
+      if (ui.moving) { ui.moving = null; const fresh = ui.movingFresh; ui.movingFresh = false; if (fresh) setTimeout(showNextHatch, 250); }
+      ui.view = el.dataset.view; closeAllForNav(); render(); scrollTo(0, 0);
+    },
     toggle: (el, ev) => toggleTask(el.dataset.id, ev),
     'open-task': el => openSheet('task', el.dataset.id),
     'close-sheet': () => closeSheet(),
@@ -1046,7 +1137,7 @@
       const snap = clone(state);
       state.tasks = state.tasks.filter(t => t.id !== el.dataset.id);
       save(); closeSheet();
-      toast('Aufgabe gelöscht', () => { state = snap; save(); refresh(); });
+      toast('Aufgabe gelöscht', () => { restore(snap); });
     },
     'sub-toggle': (el, ev) => toggleSub(el.dataset.id, el.dataset.sub, ev),
     'sub-del': el => { const t = taskById(el.dataset.id); t.subtasks = t.subtasks.filter(s => s.id !== el.dataset.sub); save(); refresh(); },
@@ -1168,7 +1259,8 @@
       ui.edit = false; ui.placing = null; ui.view = 'tiere';
       render();
       const g = document.querySelector(`.w-anim[data-id="${a.id}"]`), wrap = $('#world-wrap');
-      if (!g || !wrap) return;
+      if (!wrap) return;
+      if (!g) { toast(`${a.name} kuschelt gerade im Tierhaus 🏡 – mit einem neuen Gebiet ist wieder Platz.`); return; }
       scrollWorldTo(g.closest('.w-region').dataset.r);
       requestAnimationFrame(() => {
         const ar = g.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
@@ -1203,11 +1295,11 @@
       state.categories = state.categories.filter(c => c.id !== id);
       state.tasks = state.tasks.filter(t => t.catId !== id);
       save(); closeSheet();
-      toast('Kategorie gelöscht', () => { state = snap; save(); refresh(); });
+      toast('Kategorie gelöscht', () => { restore(snap); });
     },
     export: () => exportData(),
     import: () => $('#file-in').click(),
-    'import-replace': () => { if (pendingImport) { state = migrate(pendingImport); pendingImport = null; save(); } closeSheet(); toast('Backup geladen 💾'); },
+    'import-replace': () => { if (pendingImport) { state = sanitizeRewards(migrate(pendingImport)); pendingImport = null; save(); } closeSheet(); toast('Backup geladen 💾'); },
     'import-animals': () => {
       const have = new Set(state.animals.map(a => a.id));
       const neu = (pendingImport?.animals || []).filter(a => a && A.KINDS[a.kind] && !have.has(a.id));
@@ -1216,13 +1308,51 @@
       pendingImport = null; save(); closeSheet();
       toast(neu.length ? `${neu.length} Tiere sind umgezogen 🐾` : 'Diese Tiere wohnen schon alle hier 🙂');
     },
+    // --- Tiere versetzen ---
+    'hatch-pick': () => closeHatch('pick'),
+    'move-animal': el => startMoving(el.dataset.id, false),
+    'move-cancel': () => endMoving(),
+    'w-aspot': el => {
+      if (!ui.moving) return;
+      const m = curMap(), id = ui.moving, spot = el.dataset.spot;
+      const now = Wd.placeAnimals(m, state.animals);
+      const mine = now.find(p => p.id === id), occ = now.find(p => p.spot === spot);
+      if (occ && occ.id !== id) {
+        // Tauschen: das andere Tier bekommt meinen bisherigen Platz (oder sucht sich automatisch einen)
+        if (mine) m.animalSpots[occ.id] = mine.spot; else delete m.animalSpots[occ.id];
+      }
+      m.animalSpots[id] = spot;
+      save();
+      const a = state.animals.find(x => x.id === id);
+      endMoving();
+      const g = document.querySelector(`.w-anim[data-id="${id}"]`);
+      if (g) { g.classList.add('spot'); setTimeout(() => g.classList.remove('spot'), 2500); }
+      toast(`${a?.name || 'Dein Tier'} wohnt jetzt hier 🏡`);
+    },
+    // Versteckt: 5× schnell auf „Mit 💛 gemacht“ tippen
+    'secret-tap': () => {
+      const now = Date.now();
+      ui.taps = (ui.taps || []).filter(t => now - t < 3000).concat(now);
+      if (ui.taps.length >= 5 && !ui.debug) { ui.debug = true; ui.taps = []; render(); toast('Debug-Bereich freigeschaltet 🛠️'); }
+    },
+    'debug-backup': async () => {
+      const ok = await exportData('plan-backup-vor-loeschen');
+      if (!ok) { toast('Backup abgebrochen – es wurde nichts gelöscht.'); return; }
+      ui.debugBackedUp = true; render();
+    },
+    'debug-cancel': () => { ui.debugBackedUp = false; render(); },
+    'debug-wipe': () => {
+      if (!ui.debugBackedUp) return;
+      try { localStorage.removeItem(KEY); } catch (e) { /* egal */ }
+      location.reload();
+    },
     'clear-done': () => {
       const n = state.tasks.filter(t => t.done).length;
       if (!n) { toast('Es gibt nichts aufzuräumen ✨'); return; }
       const snap = clone(state);
       state.tasks = state.tasks.filter(t => !t.done);
       save(); render();
-      toast(`${n} erledigte Aufgaben aufgeräumt 🧹`, () => { state = snap; save(); refresh(); });
+      toast(`${n} erledigte Aufgaben aufgeräumt 🧹`, () => { restore(snap); });
     },
   };
 
@@ -1320,7 +1450,8 @@
 
   // ---------- Start ----------
   render();
-  setTimeout(checkDaily, 300);
+  // Beim Start: zuerst noch nicht begrüßte Babytiere zeigen, dann das Tagesgeschenk
+  setTimeout(() => { if (pendingHatches().length) showNextHatch(); else checkDaily(); }, 300);
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});

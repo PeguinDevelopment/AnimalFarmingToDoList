@@ -537,29 +537,22 @@
     </svg>`;
   }
 
+  // Nur süße Kosenamen – keine echten Vornamen, keine Gegenstände
   const NAMES = [
-    // süß & verfressen
-    'Krümel', 'Mochi', 'Bohne', 'Keks', 'Nugget', 'Muffin', 'Erbse', 'Tofu', 'Honig', 'Zimt', 'Nudel', 'Pudding',
-    'Brezel', 'Rosine', 'Toffee', 'Kakao', 'Schoki', 'Praline', 'Trüffel', 'Nougat', 'Karamell', 'Marzipan', 'Waffel',
-    'Plätzchen', 'Gummibärchen', 'Haselnuss', 'Mandel', 'Pistazie', 'Erdnuss', 'Bonbon', 'Lakritz', 'Krapfen',
-    'Pfannkuchen', 'Dattel', 'Kichererbse', 'Kekskrümel', 'Schokotröpfchen', 'Pfefferkorn', 'Sesam', 'Knödel',
-    // flauschig & knuddelig
-    'Wuschel', 'Puschel', 'Flausch', 'Fussel', 'Bommel', 'Knuddel', 'Schnuffel', 'Wusel', 'Purzel', 'Kuller',
-    'Tapsi', 'Hoppel', 'Pfötchen', 'Piepsi', 'Mümmel', 'Flummi', 'Watte', 'Knöpfchen', 'Pünktchen', 'Tüpfel',
-    'Kringel', 'Socke', 'Schnupsi', 'Wackel', 'Zottel', 'Fluffi', 'Stupsi', 'Murmel', 'Klecks', 'Brummel',
-    // Wald & Berge
-    'Moos', 'Farn', 'Zapfi', 'Tannenzapfen', 'Eichel', 'Pilzchen', 'Kiesel', 'Gipfel', 'Bergkristall', 'Edelweiß',
-    'Lärche', 'Fichtennadel', 'Steinchen', 'Gämschen', 'Alpenglühen', 'Lawinchen', 'Firn', 'Grat', 'Hütte', 'Wanderschuh',
-    // Wasser & Geographie
-    'Sprudel', 'Tröpfchen', 'Fontäne', 'Bächlein', 'Quelle', 'Welle', 'Muschel', 'Perle', 'Strudel', 'Gischt',
-    'Fjord', 'Delta', 'Atlas', 'Kompass', 'Globus', 'Lagune', 'Atoll', 'Düne', 'Vulkan', 'Gletscher', 'Meridian',
-    // Himmel & Herbst
-    'Wölkchen', 'Flocke', 'Schneeflocke', 'Sternchen', 'Komet', 'Nebel', 'Brise', 'Kastanie', 'Bucheckerl',
-    'Laubblatt', 'Kürbis', 'Apfelstrudel', 'Herbstblatt', 'Löwenzahn', 'Kleeblatt', 'Butterblume', 'Hummel',
-    // Bücher
-    'Lesezeichen', 'Eselsohr', 'Kapitel', 'Fußnote', 'Seitchen', 'Bücherwurm',
-    // ein paar echte Namen
-    'Wanda', 'Lotte', 'Frieda', 'Momo', 'Otto', 'Ida', 'Bruno'];
+    'Krümel', 'Krümelchen', 'Mochi', 'Bohne', 'Böhnchen', 'Keks', 'Nugget', 'Muffin', 'Muffinchen', 'Erbse',
+    'Erbschen', 'Tofu', 'Honig', 'Zimt', 'Zimtschnecke', 'Nudel', 'Pudding', 'Toffee', 'Kakao', 'Schoki',
+    'Praline', 'Trüffel', 'Nougat', 'Karamell', 'Marzipan', 'Waffel', 'Plätzchen', 'Gummibärchen', 'Haselnuss', 'Haselnüsschen',
+    'Mandel', 'Pistazie', 'Erdnuss', 'Bonbon', 'Knödel', 'Brezel', 'Vanille', 'Zuckerwatte', 'Marshmallow', 'Lebkuchen',
+    'Kokos', 'Beere', 'Heidelbeere', 'Brombeere', 'Sesam', 'Kichererbse', 'Mohnschnecke', 'Zuckerschnute', 'Schokotröpfchen', 'Honigtöpfchen',
+    'Pfannküchlein', 'Kekskrümel', 'Wuschel', 'Puschel', 'Flausch', 'Flauschi', 'Fussel', 'Bommel', 'Knuddel', 'Knuffel',
+    'Kuschel', 'Schnuffel', 'Wusel', 'Purzel', 'Kuller', 'Tapsi', 'Hoppel', 'Pfötchen', 'Piepsi', 'Mümmel',
+    'Mümmelchen', 'Flummi', 'Knöpfchen', 'Pünktchen', 'Tüpfelchen', 'Kringel', 'Schnupsi', 'Zottel', 'Fluffi', 'Stupsi',
+    'Murmel', 'Klecks', 'Brummel', 'Pummel', 'Moppel', 'Muckel', 'Schnuckel', 'Plüschi', 'Strubbel', 'Löckchen',
+    'Knirps', 'Wichtel', 'Schnurri', 'Wuffi', 'Bärli', 'Mausi', 'Piepmatz', 'Tüddel', 'Kuschelmuschel', 'Wackelpudding',
+    'Purzelchen', 'Wölkchen', 'Flöckchen', 'Schneeflöckchen', 'Sternchen', 'Tröpfchen', 'Sprudel', 'Kieselchen', 'Moosi', 'Zapfi',
+    'Pilzchen', 'Eichelchen', 'Butterblume', 'Hummel', 'Hummelchen', 'Kleeblatt', 'Gänseblümchen', 'Muschelchen', 'Perlchen', 'Glühwürmchen',
+    'Marienkäferchen', 'Pusteblume', 'Herbstblättchen', 'Sonnenschein', 'Mondkind', 'Bücherwürmchen',
+  ];
 
   window.Animals = { KINDS, ACCS, ACC_COLORS, STONES, draw, randomLook, egg, NAMES, randomName: () => pick(NAMES) };
 })();

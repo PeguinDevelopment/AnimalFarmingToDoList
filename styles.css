@@ -329,7 +329,9 @@ section { margin-bottom: 8px; }
 .cat-line + .cat-line { border-top: 1px dashed var(--line); }
 .cat-line svg { width: 40px; height: 40px; }
 .cat-line .dot { width: 18px; height: 18px; border-radius: 50%; background: var(--cat); margin-left: auto; }
-.footer-note { text-align: center; color: var(--muted); font-size: .85rem; margin: 18px 0; }
+.footer-note { text-align: center; color: var(--muted); font-size: .85rem; margin: 18px 0; padding: 10px; user-select: none; -webkit-user-select: none; }
+.debug-card { border: 2px dashed var(--line); }
+.big-btn.danger { background: #b23a12; color: #fff; border-color: transparent; }
 
 /* ---------- Navigation ---------- */
 #nav {
@@ -441,10 +443,23 @@ section { margin-bottom: 8px; }
 .shell-top { z-index: 3; clip-path: polygon(0 0, 100% 0, 100% 51%, 78% 51%, 70% 56%, 62% 50%, 54% 57%, 46% 49%, 38% 57%, 31% 50%, 22% 56%, 0 56%);
   -webkit-clip-path: polygon(0 0, 100% 0, 100% 51%, 78% 51%, 70% 56%, 62% 50%, 54% 57%, 46% 49%, 38% 57%, 31% 50%, 22% 56%, 0 56%);
   animation: wobble .45s ease-in-out .2s 3 both, lidoff .7s cubic-bezier(.3, .7, .4, 1) 1.35s forwards; }
-.shell-bot { z-index: 2; clip-path: polygon(0 56%, 22% 56%, 31% 50%, 38% 57%, 46% 49%, 54% 57%, 62% 50%, 70% 56%, 78% 51%, 100% 51%, 100% 100%, 0 100%);
-  -webkit-clip-path: polygon(0 56%, 22% 56%, 31% 50%, 38% 57%, 46% 49%, 54% 57%, 62% 50%, 70% 56%, 78% 51%, 100% 51%, 100% 100%, 0 100%);
-  animation: wobble .45s ease-in-out .2s 3 both, shellaway .5s ease-in 2.5s forwards; }
-.born { z-index: 1; transform-origin: 50% 90%; animation: rise .85s cubic-bezier(.25, 1.35, .5, 1) 1.45s both; }
+/* Untere Schale in zwei Hälften, die beim Schlüpfen nach außen wegfallen – nie über dem Tier */
+.shell-bot { z-index: 2; }
+.shell-bot.left { clip-path: polygon(0 56%, 22% 56%, 31% 50%, 38% 57%, 46% 49%, 50% 53%, 50% 100%, 0 100%);
+  -webkit-clip-path: polygon(0 56%, 22% 56%, 31% 50%, 38% 57%, 46% 49%, 50% 53%, 50% 100%, 0 100%);
+  animation: wobble .45s ease-in-out .2s 3 both, fall-left .45s ease-in 1.7s forwards; }
+.shell-bot.right { clip-path: polygon(50% 53%, 54% 57%, 62% 50%, 70% 56%, 78% 51%, 100% 51%, 100% 100%, 50% 100%);
+  -webkit-clip-path: polygon(50% 53%, 54% 57%, 62% 50%, 70% 56%, 78% 51%, 100% 51%, 100% 100%, 50% 100%);
+  animation: wobble .45s ease-in-out .2s 3 both, fall-right .45s ease-in 1.7s forwards; }
+@keyframes fall-left { 0%, 55% { opacity: 1; } 100% { transform: translate(-42%, 18%) rotate(-28deg); opacity: 0; } }
+@keyframes fall-right { 0%, 55% { opacity: 1; } 100% { transform: translate(42%, 18%) rotate(28deg); opacity: 0; } }
+/* Das Tier ist beim Aufsteigen an der Unterkante des Eis abgeschnitten (nichts schaut unten raus);
+   die untere Schale fällt weg, BEVOR das Tier oben ankommt – sie bleibt nie vor dem fertigen Tier stehen. */
+.born-clip { z-index: 1; clip-path: polygon(-30% -60%, 130% -60%, 130% 93%, -30% 93%); -webkit-clip-path: polygon(-30% -60%, 130% -60%, 130% 93%, -30% 93%);
+  animation: unclip .3s linear 2.05s forwards; }
+.born-clip .born { position: absolute; inset: 0; }
+@keyframes unclip { to { clip-path: polygon(-30% -60%, 130% -60%, 130% 160%, -30% 160%); -webkit-clip-path: polygon(-30% -60%, 130% -60%, 130% 160%, -30% 160%); } }
+.born { transform-origin: 50% 90%; animation: rise .85s cubic-bezier(.25, 1.35, .5, 1) 1.45s both; }
 .burst { z-index: 4; pointer-events: none; }
 .burst span { position: absolute; font-size: 24px; opacity: 0; animation: twinkle .9s ease-out 2.05s both; }
 .burst span:nth-child(1) { left: 6%; top: 18%; }
@@ -452,7 +467,14 @@ section { margin-bottom: 8px; }
 .burst span:nth-child(3) { left: 14%; top: 62%; animation-delay: 2.25s; }
 .burst span:nth-child(4) { right: 10%; top: 58%; animation-delay: 2.1s; }
 .burst span:nth-child(5) { left: 44%; top: -6%; animation-delay: 2.2s; }
-.hatch-text { text-align: center; animation: fadeup .45s ease-out 2.2s both; }
+#hatch:not(.ready) .hatch-text { pointer-events: none; }
+.big-btn.choice { flex-direction: column; gap: 2px; line-height: 1.25; }
+.big-btn.choice small { font-weight: 500; font-size: .82rem; opacity: .9; }
+.where-q { margin: 6px 0 8px !important; }
+.place-banner.move { background: var(--soft); color: var(--ink); align-items: flex-start; }
+.place-banner small { color: var(--muted); }
+.w-aspot { cursor: pointer; }
+.hatch-text { text-align: center; animation: fadeup .45s ease-out 2.3s both; }
 .hatch-text h2 { font-size: 1.6rem; margin-bottom: 6px; }
 .hatch-text p { margin: 0 0 18px; font-size: 1.05rem; }
 .name-row { display: flex; gap: 8px; margin: 8px 0 14px; }
@@ -492,8 +514,10 @@ section { margin-bottom: 8px; }
 .calm *, .calm *::before, .calm *::after { animation: none !important; transition: none !important; }
 .calm .shell, .calm .burst { display: none; }
 .calm .born, .calm .hatch-text { opacity: 1; transform: none; }
+.calm .born-clip { clip-path: none; -webkit-clip-path: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .shell, .burst { display: none; }
   .born, .hatch-text { opacity: 1; transform: none; }
+  .born-clip { clip-path: none; -webkit-clip-path: none; }
 }

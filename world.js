@@ -96,6 +96,12 @@
     if (o.airy) s += dots(o.seed + 7, 6, shade(col, .7), 1.2, 0, crownY + o.ry * .6, o.rx * .8, 3);
     return s + (o.extra ? o.extra(c) : '');
   }
+  function shrub(c, o) {
+    const stems = [-7, -2, 3, 8].map(x => `<path d="M${x * .6} 0 Q${x} ${-o.h * .4} ${x * 1.4} ${-o.h * .8}" stroke="#6a5444" stroke-width="2" fill="none" stroke-linecap="round"/>`).join('');
+    if (c.sea === 'winter') return stems + bareCrown(0, -o.h * .6, o.rx * .9, '#6a5444', o.seed) + (o.extra ? o.extra(c) : '');
+    const col = c.sea === 'herbst' ? o.autumn : c.sea === 'fruehling' ? o.spring : o.col;
+    return stems + canopy(0, -o.h - o.ry * .3, o.rx, o.ry, col, o.seed, 10) + (o.extra ? o.extra(c) : '');
+  }
   // Nadelbaum: Etagen von unten nach oben, Licht von links, Schnee im Winter
   function conifer(c, o) {
     let s = o.noTrunk ? '' : trunk(o.trunkH + 6, 5, '#6a5242');
@@ -280,9 +286,9 @@
     { id: 'fichte', name: 'Fichte', group: 'baeume', price: 4, d: c => conifer(c, { h: 84, w0: 20, col: '#1f5e36', trunkH: 8, tiers: 9, droop: true, seed: 91 }) },
     { id: 'zirbe', name: 'Zirbelkiefer', group: 'baeume', price: 6, d: c => trunk(16, 6, '#6a5242') + canopy(0, -46, 15, 30, '#2f5d47', 101, 11) +
       (c.sea === 'winter' ? '<path d="M-12 -62 h9 M2 -70 h9 M-6 -52 h12" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>' : '') },
-    { id: 'mammutbaum', name: 'Mammutbaum', group: 'baeume', price: 12, d: c => trunk(46, 14, '#9b4a2c') +
+    { id: 'mammutbaum', name: 'Mammutbaum', group: 'weltbaeume', price: 12, d: c => trunk(46, 14, '#9b4a2c') +
       `<path d="M-4 -6 v-34 M2 -10 v-30" stroke="#7a3820" stroke-width="1.2"/>` + conifer(c, { h: 88, w0: 16, col: '#2f5d3a', trunkH: 38, tiers: 7, seed: 111, noTrunk: true }) },
-    { id: 'zeder', name: 'Libanon-Zeder', group: 'baeume', price: 9, d: c => trunk(50, 7, '#6a5242') +
+    { id: 'zeder', name: 'Libanon-Zeder', group: 'weltbaeume', price: 9, d: c => trunk(50, 7, '#6a5242') +
       [[-22, 32, 5], [-36, 27, 5], [-50, 20, 4.5], [-62, 12, 4]].map(([y, w, hh], i) => canopy(i % 2 ? 4 : -4, y, w, hh, '#3d6b4f', 121 + i, 12)).join('') +
       (c.sea === 'winter' ? '<path d="M-20 -27 h18 M-12 -40 h22 M-10 -52 h16" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' : '') },
     { id: 'rotbuche', name: 'Rotbuche', group: 'baeume', price: 7, d: c => decid(c, {
@@ -294,25 +300,93 @@
     { id: 'vogelbeere', name: 'Vogelbeere', group: 'baeume', price: 5, d: c => decid(c, {
       h: 26, tw: 5, bark: '#6a5a4a', rx: 16, ry: 15, col: '#4f9a3a', autumn: '#d9a03a', spring: '#93d062', seed: 161, n: 8, airy: true,
       extra: c => c.sea === 'sommer' || c.sea === 'herbst' ? dots(162, 6, '#e8501a', 3, 0, -42, 12, 8) + dots(163, 6, '#d9381e', 2.2, 2, -40, 12, 8) : '' }) },
-    { id: 'ginkgo', name: 'Ginkgo', group: 'baeume', price: 8, d: c => decid(c, {
+    { id: 'ginkgo', name: 'Ginkgo', group: 'weltbaeume', price: 8, d: c => decid(c, {
       h: 26, tw: 6, bark: '#6e6458', rx: 14, ry: 26, col: '#5aa040', autumn: '#f5c518', spring: '#a8dc6a', seed: 171, n: 9, airy: true }) },
-    { id: 'olivenbaum', name: 'Olivenbaum', group: 'baeume', price: 8, d: c => `
+    { id: 'olivenbaum', name: 'Olivenbaum', group: 'weltbaeume', price: 8, d: c => `
       <path d="M-7 0 Q-2 -8 -6 -14 Q-9 -20 -2 -26 L3 -26 Q8 -18 4 -12 Q2 -6 7 0 Z" fill="#7d776c"/>
       <path d="M-3 -18 q-2 -4 1 -8 M3 -10 q3 -4 0 -8" stroke="#5f5a50" stroke-width="1.2" fill="none"/>
       ${canopy(-8, -34, 15, 10, '#8fa67a', 181, 7)}${canopy(9, -36, 13, 9, '#7d9668', 182, 6)}
       ${c.sea !== 'winter' ? dots(183, 6, '#3d3f2e', 1.6, 0, -34, 18, 8) : ''}` },
-    { id: 'affenbrotbaum', name: 'Affenbrotbaum', group: 'baeume', price: 12, d: c => `
+    { id: 'affenbrotbaum', name: 'Affenbrotbaum', group: 'weltbaeume', price: 12, d: c => `
       <path d="M-14 0 Q-17 -24 -8 -40 L8 -40 Q17 -24 14 0 Z" fill="#a08870"/><path d="M-6 -4 Q-8 -22 -4 -36 M5 -6 Q7 -22 3 -36" stroke="#8a7460" stroke-width="1.4" fill="none"/>
       <path d="M-6 -40 l-10 -10 l-5 2 M0 -40 v-12 M6 -40 l10 -9 l5 1 M-12 -48 l-4 -6 M12 -47 l3 -6" stroke="#8a7460" stroke-width="3" fill="none" stroke-linecap="round"/>
       ${c.sea === 'sommer' || c.sea === 'fruehling' ? canopy(-16, -52, 7, 4, '#6b8f3a', 191, 3) + canopy(0, -56, 7, 4, '#6b8f3a', 192, 3) + canopy(17, -51, 7, 4, '#6b8f3a', 193, 3) : ''}` },
-    { id: 'schirmakazie', name: 'Schirmakazie', group: 'baeume', price: 10, d: c => `
+    { id: 'schirmakazie', name: 'Schirmakazie', group: 'weltbaeume', price: 10, d: c => `
       <path d="M-2 0 L-1 -28 L-14 -46 M0 -28 L12 -46 M-1 -34 L0 -48" stroke="#5f4630" stroke-width="3.4" fill="none" stroke-linecap="round"/>
       ${canopy(0, -52, 34, 6, '#6b8f3a', 201, 9)}` },
-    { id: 'saguaro', name: 'Saguaro-Kaktus', group: 'baeume', price: 8, d: () => `
+    { id: 'saguaro', name: 'Saguaro-Kaktus', group: 'weltbaeume', price: 8, d: () => `
       <path d="M-5 0 V-62 a5 5 0 0 1 10 0 V0 Z" fill="#4f8a4a"/>
       <path d="M-5 -26 h-8 a4 4 0 0 1 -4 -4 V-46 a4 4 0 0 1 8 0 V-34 h4 Z M5 -34 h7 a4 4 0 0 0 4 -4 V-52 a4 4 0 0 0 -8 0 V-42 h-3 Z" fill="#4f8a4a"/>
       <path d="M-2 -2 V-62 M2 -2 V-62 M-13 -30 V-46 M12 -38 V-52" stroke="#3d6f3a" stroke-width="1"/>
       <circle cx="0" cy="-67" r="2.4" fill="#fff"/><circle cx="12" cy="-56" r="2" fill="#fff"/>` },
+    // --- Heimische Bäume (BW, Schwarzwald, Alb, Alpen) ---
+    { id: 'traubeneiche', name: 'Traubeneiche', group: 'baeume', price: 7, d: c => decid(c, {
+      h: 34, tw: 9, bark: '#5f4630', rx: 24, ry: 22, col: '#3f7a2e', autumn: '#9a6a2a', autumn2: '#b5803a', spring: '#86c24e', seed: 211, n: 11 }) },
+    { id: 'hainbuche', name: 'Hainbuche', group: 'baeume', price: 5, d: c => decid(c, {
+      h: 24, tw: 8, bark: '#8f949a', rx: 20, ry: 22, col: '#4a8f35', autumn: '#c9a23a', spring: '#9bd46a', seed: 221, n: 11,
+      extra: () => '<path d="M-2 -4 q-1 -10 0 -20 M2 -4 q1 -10 0 -20" stroke="#757a80" stroke-width="1" fill="none"/>' }) },
+    { id: 'esche', name: 'Gemeine Esche', group: 'baeume', price: 6, d: c => decid(c, {
+      h: 32, tw: 7, bark: '#8a8578', rx: 22, ry: 20, col: '#5a9a3a', autumn: '#c8c040', spring: '#a5d86a', seed: 231, n: 8, airy: true, fork: true }) },
+    { id: 'spitzahorn', name: 'Spitzahorn', group: 'baeume', price: 6, d: c => decid(c, {
+      h: 26, tw: 8, bark: '#5f5448', rx: 23, ry: 21, col: '#3f8a35', autumn: '#f2b01e', autumn2: '#e8701a', spring: '#c8e05a', seed: 241, n: 10 }) },
+    { id: 'feldahorn', name: 'Feldahorn', group: 'baeume', price: 4, d: c => decid(c, {
+      h: 16, tw: 6, bark: '#6a5a48', rx: 17, ry: 14, col: '#4a8f35', autumn: '#e8c02a', spring: '#9bd46a', seed: 251, n: 8 }) },
+    { id: 'sommerlinde', name: 'Sommerlinde', group: 'baeume', price: 6, d: c => decid(c, {
+      h: 24, tw: 9, bark: '#6a5a4a', rx: 24, ry: 28, col: '#4a8f35', autumn: '#e8c840', spring: '#93d062', seed: 261, n: 12 }) },
+    { id: 'bergulme', name: 'Bergulme', group: 'baeume', price: 6, d: c => decid(c, {
+      h: 30, tw: 8, bark: '#5a4a3c', rx: 27, ry: 16, col: '#3f7a30', autumn: '#c9a03a', spring: '#8fcc5a', seed: 271, n: 11, fork: true }) },
+    { id: 'schwarzerle', name: 'Schwarzerle', group: 'baeume', price: 5, d: c => decid(c, {
+      h: 22, tw: 6, bark: '#3d3a36', rx: 13, ry: 27, col: '#2f6b2e', autumn: '#5a7a30', spring: '#6fae45', seed: 281, n: 10 }) },
+    { id: 'walnuss', name: 'Walnussbaum', group: 'baeume', price: 8, d: c => decid(c, {
+      h: 24, tw: 9, bark: '#8a8a84', rx: 30, ry: 20, col: '#4f8a3a', autumn: '#a8903a', spring: '#8fc85a', seed: 291, n: 12, fork: true,
+      extra: c => c.sea === 'herbst' ? dots(292, 6, '#6a8a3a', 2.4, 0, -40, 22, 10) : '' }) },
+    { id: 'edelkastanie', name: 'Edelkastanie', group: 'baeume', price: 8, d: c => decid(c, {
+      h: 22, tw: 10, bark: '#5a4636', rx: 28, ry: 22, col: '#3f7a2e', autumn: '#c8a030', spring: '#7cc24a', seed: 301, n: 12,
+      extra: c => c.sea === 'sommer' || c.sea === 'herbst' ? dots(302, 7, c.sea === 'herbst' ? '#8a6a2a' : '#9ab84a', 2.6, 0, -40, 22, 12) : '' }) },
+    { id: 'kopfweide', name: 'Kopfweide', group: 'baeume', price: 6, d: c => {
+      const col = c.sea === 'herbst' ? '#c8b45a' : c.sea === 'fruehling' ? '#b5d88a' : '#9fb88a';
+      let s = `<path d="M-8 0 Q-9 -14 -7 -24 Q-10 -30 -4 -32 Q0 -28 4 -32 Q10 -30 7 -24 Q9 -14 8 0 Z" fill="#6a5a48"/><path d="M-3 -6 q-2 -8 0 -16 M3 -8 q2 -8 0 -14" stroke="#4f4234" stroke-width="1.2" fill="none"/>`;
+      for (let i = -5; i <= 5; i++) s += `<path d="M${i * 1.2} -30 q${i * 1.6} -14 ${i * 3} -28" stroke="${c.sea === 'winter' ? '#8a6a3a' : '#7a8a4a'}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+      if (c.sea !== 'winter') s += canopy(0, -48, 18, 12, col, 311, 9);
+      return s;
+    } },
+    { id: 'vogelkirsche', name: 'Vogelkirsche', group: 'baeume', price: 6, d: c => decid(c, {
+      h: 28, tw: 6, bark: '#6e4a3e', rx: 18, ry: 22, col: '#4a9038', autumn: '#e8501a', autumn2: '#f2b01e', spring: '#eef2e6', seed: 321, n: 10,
+      extra: c => (c.sea === 'fruehling' ? dots(322, 8, '#7cc24a', 2, 0, -46, 14, 14) : '') + '<path d="M-2 -10 h4 M-2 -18 h4" stroke="#8a6a5a" stroke-width="1"/>' }) },
+    { id: 'suesskirsche', name: 'Kirschbaum', group: 'baeume', price: 7, d: c => decid(c, {
+      h: 20, tw: 7, bark: '#6e4a3e', rx: 22, ry: 18, col: '#4a9038', autumn: '#e8601a', spring: '#f2f2ea', seed: 331, n: 10, fork: true,
+      extra: c => c.sea === 'sommer' ? dots(332, 10, '#c8201e', 2.2, 0, -34, 18, 10) : c.sea === 'fruehling' ? dots(333, 6, '#8ccf5c', 2, 0, -34, 18, 10) : '' }) },
+    { id: 'birnbaum', name: 'Birnbaum', group: 'baeume', price: 7, d: c => decid(c, {
+      h: 20, tw: 7, bark: '#5a4a40', rx: 15, ry: 28, col: '#4a8a35', autumn: '#b5452a', autumn2: '#d08a3a', spring: '#f2f2ea', seed: 341, n: 10,
+      extra: c => c.sea === 'sommer' || c.sea === 'herbst' ? [...Array(6)].map((_, i) => { const r = prng(342 + i); const x = (r() - .5) * 20, y = -38 - r() * 30; return `<path d="M${x.toFixed(1)} ${y.toFixed(1)} q-2.4 3 0 5 q2.4 -2 0 -5 Z" fill="#c8c040"/>`; }).join('') : '' }) },
+    { id: 'zwetschge', name: 'Zwetschgenbaum', group: 'baeume', price: 6, d: c => decid(c, {
+      h: 18, tw: 6, bark: '#4f4038', rx: 20, ry: 17, col: '#4a8a35', autumn: '#d0a030', spring: '#f2f2ea', seed: 351, n: 9, fork: true,
+      extra: c => c.sea === 'sommer' || c.sea === 'herbst' ? dots(352, 8, '#3a3f7a', 2.4, 0, -32, 16, 9) : '' }) },
+    { id: 'mehlbeere', name: 'Echte Mehlbeere', group: 'baeume', price: 5, d: c => decid(c, {
+      h: 20, tw: 6, bark: '#6a6a64', rx: 16, ry: 18, col: '#7a9a62', autumn: '#d9a03a', spring: '#a8c890', seed: 361, n: 9,
+      extra: c => c.sea === 'herbst' ? dots(362, 8, '#e8501a', 2, 0, -36, 12, 10) : '' }) },
+    { id: 'douglasie', name: 'Douglasie', group: 'baeume', price: 6, d: c => conifer(c, { h: 88, w0: 20, col: '#2c6a40', trunkH: 10, tiers: 9, droop: true, seed: 371 }) },
+    { id: 'eibe', name: 'Eibe', group: 'baeume', price: 6, d: c => trunk(14, 9, '#8a4a32') + canopy(0, -32, 18, 20, '#24502f', 381, 11) +
+      (c.sea === 'sommer' || c.sea === 'herbst' ? dots(382, 8, '#d9381e', 1.8, 0, -32, 13, 14) : '') +
+      (c.sea === 'winter' ? '<path d="M-12 -48 h10 M2 -50 h10 M-8 -38 h16" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' : '') },
+    // --- Sträucher & Hecken ---
+    { id: 'wacholder', name: 'Wacholder (Alb)', group: 'straeucher', price: 3, d: c => trunk(6, 5, '#6a5242') + canopy(0, -30, 8, 26, '#4f7a62', 391, 9) +
+      dots(392, 6, '#3a4f8a', 1.6, 0, -28, 6, 18) + (c.sea === 'winter' ? '<path d="M-4 -54 h7 M-6 -40 h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' : '') },
+    { id: 'latsche', name: 'Latsche (Bergkiefer)', group: 'straeucher', price: 3, d: c =>
+      `<path d="M-18 0 q4 -10 -2 -16 M-4 0 q-2 -12 4 -20 M8 0 q6 -8 2 -18 M18 0 q-2 -8 6 -12" stroke="#5a4636" stroke-width="2.6" fill="none" stroke-linecap="round"/>` +
+      canopy(-12, -18, 12, 7, '#2f5d3a', 401, 6) + canopy(6, -22, 14, 8, '#2f5d3a', 402, 6) + canopy(20, -14, 9, 6, '#2f5d3a', 403, 5) +
+      (c.sea === 'winter' ? '<path d="M-22 -22 h18 M-4 -28 h20" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>' : '') },
+    { id: 'holunder', name: 'Schwarzer Holunder', group: 'straeucher', price: 4, d: c => shrub(c, {
+      h: 26, rx: 21, ry: 15, col: '#4f8a3a', autumn: '#9a8a3a', spring: '#8fcc5a', seed: 411,
+      extra: c => c.sea === 'fruehling' || c.sea === 'sommer' ? [...Array(6)].map((_, i) => { const r = prng(412 + i); return `<ellipse cx="${((r() - .5) * 30).toFixed(1)}" cy="${(-30 - r() * 14).toFixed(1)}" rx="4" ry="1.8" fill="#f4f0dc"/>`; }).join('')
+        : c.sea === 'herbst' ? dots(413, 10, '#2a2236', 1.6, 0, -36, 16, 8) : '' }) },
+    { id: 'hasel', name: 'Haselstrauch', group: 'straeucher', price: 3, d: c => shrub(c, {
+      h: 28, rx: 18, ry: 18, col: '#5a9a3a', autumn: '#d0b040', spring: '#9bd46a', seed: 421,
+      extra: c => c.sea === 'winter' || c.sea === 'fruehling' ? [...Array(7)].map((_, i) => { const r = prng(422 + i); const x = (r() - .5) * 30, y = -26 - r() * 20; return `<path d="M${x.toFixed(1)} ${y.toFixed(1)} v5" stroke="#e8c840" stroke-width="1.8" stroke-linecap="round"/>`; }).join('')
+        : c.sea === 'herbst' ? dots(423, 6, '#8a5a2a', 2, 0, -36, 14, 10) : '' }) },
+    { id: 'weissdorn', name: 'Weißdorn', group: 'straeucher', price: 3, d: c => shrub(c, {
+      h: 22, rx: 18, ry: 14, col: '#4a8a35', autumn: '#c8802a', spring: '#8fcc5a', seed: 431,
+      extra: c => c.sea === 'fruehling' ? dots(432, 12, '#fff', 1.8, 0, -32, 15, 10) : c.sea === 'herbst' || c.sea === 'winter' ? dots(433, 10, '#c8301e', 1.8, 0, -32, 15, 10) : '' }) },
     // --- Brunnen ---
     { id: 'springbrunnen', name: 'Springbrunnen', group: 'brunnen', price: 15, d: () => `
       <ellipse cx="0" cy="-4" rx="26" ry="7" fill="#c9d3e0"/><ellipse cx="0" cy="-6" rx="22" ry="5" fill="${WATER}"/>
@@ -529,7 +603,7 @@
     } },
   ];
   const GROUPS = {
-    land: '🏞️ Landschaft', himmel: '✨ Himmel & Sternbilder', premium: '🌟 Premium', baeume: '🌳 Bäume', brunnen: '⛲ Brunnen',
+    land: '🏞️ Landschaft', himmel: '✨ Himmel & Sternbilder', premium: '🌟 Premium', baeume: '🌳 Heimische Bäume', straeucher: '🌿 Sträucher & Hecken', weltbaeume: '🌍 Bäume der Welt', brunnen: '⛲ Brunnen',
     berge: '⛰️ Berge', wald: '🌲 Wald', wasser: '💧 Wasser', geo: '🧭 Geographie', buch: '📚 Bücher', schoko: '🍫 Schokolade', haekeln: '🧶 Häkeln',
   };
   const byId = Object.fromEntries(G.map(g => [g.id, g]));
@@ -815,6 +889,51 @@
     return s;
   }
 
+  /* Tierplätze: pro Gebiet 2 Reihen à 9. Hintere Reihe (klein) endet genau dort, wo die vordere beginnt,
+     und innerhalb einer Reihe ist der Abstand größer als ein Tier breit ist → Tiere überlappen sich NIE.
+     Gibt es mehr Tiere als Plätze, werden nur die neuesten gezeigt (der Rest „kuschelt im Tierhaus“). */
+  const ROW_BACK = { y: 221, size: 27 }, ROW_FRONT = { y: 255, size: 32 }, SPOT_DX = [20, 60, 100, 140, 180, 220, 260, 300, 340];
+  const SPOTS_PER_REGION = SPOT_DX.length * 2;
+  const hashId = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+  // Tierplätze haben feste IDs („wald:af3“ = Wald, vordere Reihe, Platz 3) – getrennt von den Deko-Plätzen
+  function spotList(openRegs) {
+    const spots = [];
+    openRegs.forEach(reg => SPOT_DX.forEach((dx, k) => [['f', ROW_FRONT], ['b', ROW_BACK]].forEach(([rn, row]) =>
+      spots.push({ id: `${reg.id}:a${rn}${k}`, reg: reg.id, x: reg.i * RW + dx + (rn === 'b' ? (k % 2 ? 6 : -6) : 0), y: row.y, size: row.size }))));
+    return spots;
+  }
+  // 1. Tiere mit selbst gewähltem Platz stehen dort. 2. Der Rest bekommt automatisch einen freien Platz
+  //    (die neuesten zuerst sichtbar). Nie zwei Tiere auf einem Platz.
+  function animalSpots(openRegs, animals, assign = {}) {
+    const spots = spotList(openRegs), idx = Object.fromEntries(spots.map((s, i) => [s.id, i]));
+    const used = new Set(), out = [];
+    animals.forEach((a, i) => {
+      const si = idx[assign[a.id]];
+      if (si != null && !used.has(si)) { used.add(si); out.push({ a, sp: spots[si], i }); }
+    });
+    const done = new Set(out.map(o => o.a.id));
+    const rest = animals.filter(a => !done.has(a.id));
+    rest.slice(-Math.max(0, spots.length - used.size)).forEach(a => {
+      let h = hashId(a.id) % spots.length;
+      while (used.has(h)) h = (h + 1) % spots.length;
+      used.add(h);
+      out.push({ a, sp: spots[h], i: animals.indexOf(a) });
+    });
+    return out;
+  }
+  const openRegsOf = map => {
+    const known = (map?.unlocked || []).filter(id => regionById[id]);
+    const unlocked = known.length ? known : START_REGIONS;
+    return REGIONS.filter(r => unlocked.includes(r.id));
+  };
+  // Für die App: wer steht wo? [{ id, spot, reg }]
+  const placeAnimals = (map, animals) => animalSpots(openRegsOf(map), animals, map?.animalSpots || {}).map(o => ({ id: o.a.id, spot: o.sp.id, reg: o.sp.reg }));
+  const freeAnimalSpot = (map, animals) => {
+    const taken = new Set(placeAnimals(map, animals).map(p => p.spot));
+    return spotList(openRegsOf(map)).find(s => !taken.has(s.id)) || null;
+  };
+  const animalCapacity = openCount => openCount * SPOTS_PER_REGION;
+
   // Farbverläufe (Himmel, Gletscher, Nordlicht) – einmal pro Seite bzw. in jeder Vorschau
   const defsInner = () => `<defs>
     ${Object.entries(SKY).map(([k, v]) => `<linearGradient id="wsky-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${v[0]}"/><stop offset=".55" stop-color="${v[1]}"/><stop offset="1" stop-color="${v[2]}"/></linearGradient>`).join('')}
@@ -854,13 +973,11 @@
     const shown = next ? [...openRegs, next] : openRegs;   // + 1 Vorschau-Gebiet im Nebel
     const placingSky = o.placing ? !!(byId[o.placing] || {}).sky : null;
 
-    // Tiere gleichmäßig auf die offenen Gebiete verteilen
-    const animalsIn = {};
-    const wOpen = openRegs.length * RW;
-    (o.animals || []).forEach((a, i) => {
-      const gx = 30 + ((i * 263 + 40) % (wOpen - 60)), reg = openRegs[Math.floor(gx / RW)];
-      const x = reg.i * RW + (gx % RW), y = 226 + ((i * 17) % 12);
-      (animalsIn[reg.id] ||= []).push(`<g class="w-anim" data-action="w-animal" data-id="${a.id}" style="animation-delay:${((i * 1.7) % 9).toFixed(1)}s">${a.svg.replace('<svg', `<svg x="${x - 17}" y="${y - 32}" width="34" height="34"`)}</g>`);
+    // Tiere auf feste, sich nie überschneidende Plätze setzen
+    const animalsIn = {}, occupied = {};
+    animalSpots(openRegs, o.animals || [], map.animalSpots || {}).forEach(({ a, sp, i }) => {
+      occupied[sp.id] = a.id;
+      (animalsIn[sp.reg] ||= []).push(`<g class="w-anim" data-action="w-animal" data-id="${a.id}" style="animation-delay:${((i * 1.7) % 9).toFixed(1)}s">${a.svg.replace('<svg', `<svg x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}"`)}</g>`);
     });
 
     const defs = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${defsInner()}</svg>`;
@@ -880,7 +997,14 @@
           const d = findById[f.type];
           if (d) s += `<g class="w-find" data-action="w-find" data-id="${f.id}" transform="translate(${reg.i * RW + f.x} ${f.y})">${d.d}</g>`;
         });
-        if (o.edit) sl.forEach(x => {
+        // Tier versetzen: NUR die Pfoten-Plätze zeigen (keine Deko-Plätze)
+        if (o.moving) spotList([reg]).forEach(sp => {
+          const occ = occupied[sp.id], me = occ === o.moving, cy = sp.y - sp.size / 2;
+          s += `<g class="w-aspot ${occ ? 'full' : 'empty'} ${me ? 'me' : ''}" data-action="w-aspot" data-spot="${sp.id}">
+            <circle cx="${sp.x}" cy="${cy}" r="${(sp.size * .6).toFixed(1)}" fill="rgba(255,255,255,${occ ? .15 : .6})" stroke="${me ? '#f2b01e' : '#fff'}" stroke-width="${me ? 3 : 2}" stroke-dasharray="${me ? '0' : '4 3'}"/>
+            ${occ ? '' : `<text x="${sp.x}" y="${cy + 5}" font-size="${sp.size * .45}" text-anchor="middle">🐾</text>`}</g>`;
+        });
+        if (o.edit && !o.moving) sl.forEach(x => {
           if (placingSky !== null && placingSky !== x.sky) return;
           const full = !!placed[x.id];
           const cy = x.sky ? x.y : x.y - 16 * x.s;
@@ -912,6 +1036,7 @@
 
   window.World = {
     RW, H, GADGETS: G, GROUPS, SLOTS, slotById, REGIONS, regionById, START_REGIONS, regionPrice, nextRegion, FINDS, byId, findById,
-    world, preview, previewFind, regionPreview, randomFind, timeOfDay, season, chest,
+    world, preview, previewFind, regionPreview, randomFind, timeOfDay, season, chest, animalCapacity, SPOTS_PER_REGION,
+    placeAnimals, freeAnimalSpot,
   };
 })();

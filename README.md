@@ -11,7 +11,7 @@ Eine ruhige, übersichtliche To-do-App mit Babytieren zum Sammeln. Sie läuft al
 - **🎯 Nur eine Sache:** zeigt eine einzige Aufgabe groß an. Man kann sie „kleiner machen“ oder „was anderes“ wählen.
 - **⏳ 5-Minuten-Starthilfe:** ein sanfter Timer nach dem Motto „nur kurz anfangen“.
 - **Babytiere:** Nach 3 Haken (einstellbar) schlüpft ein Tier, oft mit Häkelmütze, Häkelschal oder Häkelblume.
-  Es gibt Pinguin-Küken, Fohlen, Steinböckchen, Hundewelpe, Kätzchen, Häschen, Fuchsbaby, Eisbärbaby, Highland-Kälbchen und Entenküken.
+  Es gibt Pinguin-Küken, Fohlen, Steinböckchen, Hundewelpe, Kätzchen, Häschen, Fuchsbaby, Eisbärbaby, Highland-Kälbchen, Entenküken, Tigerbaby und Otterbaby (sammelt Steine).
   Name, Fell und Outfit lassen sich jederzeit ändern.
 - **Kein Druck:** keine roten Fristen, keine Streaks, Tiere gehen nie verloren.
 - **Ruhemodus** (ohne Animationen), **3 Textgrößen** und **8 kräftige Farbthemen** (Meer, Himmel, Gipfel, Türkis, Wald, Herbst, Sonne, Nacht).

@@ -26,6 +26,12 @@
 
   const head = (main, cy = 48, r = 27) => `<circle cx="50" cy="${cy}" r="${r}" fill="${main}" ${OL}/>`;
 
+  // Lieblingssteine der Otter
+  const STONES = [
+    { name: 'Kiesel', c: '#8fa3b8' }, { name: 'Sandstein', c: '#d9a066' }, { name: 'Jade', c: '#4fa77a' },
+    { name: 'Türkisstein', c: '#2bb3b1' }, { name: 'Rostrot', c: '#b5532a' }, { name: 'Bergkristall', c: '#e3eef7' },
+  ];
+
   // Standard-Ankerpunkte für Zubehör
   const STD = { hat: [21, 1], neck: [71, 28, 72], bow: [66, 27], flower: [33, 28] };
 
@@ -127,6 +133,73 @@
         <ellipse cx="50" cy="56" rx="3.8" ry="2.8" fill="${INK}"/>
         ${mouth(58.4)}
         ${eyes(48, 11)}${blush(56, 19)}`,
+    },
+
+    tiger: {
+      label: 'Tiger', baby: 'Tigerbaby',
+      furs: [
+        { name: 'bengalorange', main: '#f28c28', light: '#fff8ef', stripes: '#3a2a26' },
+        { name: 'goldtiger', main: '#f2b55a', light: '#fffaf0', stripes: '#b5652e' },
+        { name: 'weißer Tiger', main: '#f6f5f2', light: '#ffffff', stripes: '#4a4a55' },
+      ],
+      anchors: STD,
+      draw: f => `
+        <path d="M72 86 q16 -1 13 -16" stroke="${f.main}" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+        <path d="M80.5 84 l2.5 -3 M84.5 77 l3 -.5" stroke="${f.stripes}" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="30" cy="28" r="8.5" fill="${f.main}" ${OL}/>
+        <circle cx="30" cy="28.5" r="4.5" fill="${f.light}"/>
+        <circle cx="70" cy="28" r="8.5" fill="${f.main}" ${OL}/>
+        <circle cx="70" cy="28.5" r="4.5" fill="${f.light}"/>
+        ${body(f.main, f.light)}
+        <path d="M29 77 q4 2 7 0 M71 77 q-4 2 -7 0 M27.5 84 q4 2 7 0 M72.5 84 q-4 2 -7 0" stroke="${f.stripes}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        ${head(f.main)}
+        <path d="M50 22 v6 M43 24 q1.6 3 0 6.5 M57 24 q-1.6 3 0 6.5" stroke="${f.stripes}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <path d="M24 44 h6 M23.6 50.5 h7 M76 44 h-6 M76.4 50.5 h-7" stroke="${f.stripes}" stroke-width="2.4" stroke-linecap="round"/>
+        <ellipse cx="44" cy="60" rx="8" ry="6.5" fill="${f.light}"/>
+        <ellipse cx="56" cy="60" rx="8" ry="6.5" fill="${f.light}"/>
+        <ellipse cx="50" cy="65" rx="5" ry="3.5" fill="${f.light}"/>
+        ${eyes(48, 10)}
+        <path d="M47 55.5 h6 l-3 3 z" fill="#d9785a" stroke="#d9785a" stroke-linejoin="round"/>
+        ${mouth(58.5)}
+        <circle cx="42" cy="61" r=".8" fill="${INK}" opacity=".4"/><circle cx="44.5" cy="63.5" r=".8" fill="${INK}" opacity=".4"/>
+        <circle cx="58" cy="61" r=".8" fill="${INK}" opacity=".4"/><circle cx="55.5" cy="63.5" r=".8" fill="${INK}" opacity=".4"/>
+        ${blush(55, 19)}`,
+    },
+
+    otter: {
+      label: 'Otter', baby: 'Otterbaby',
+      furs: [
+        { name: 'flussbraun', main: '#8d6447', light: '#ead8c4', dark: '#5e3f2c' },
+        { name: 'schokobraun', main: '#6f4a35', light: '#dcc3a8', dark: '#47301f' },
+        { name: 'haselnuss', main: '#b08562', light: '#f2e4d3', dark: '#7a5638' },
+        { name: 'Seeotter', main: '#7a6a60', light: '#ece6de', dark: '#4f433c' },
+      ],
+      anchors: STD,
+      draw: (f, l) => {
+        const st = STONES[l.stone] || STONES[0];
+        return `
+        <path d="M70 88 q18 2 21 -9 q-8 5 -21 3 z" fill="${f.main}" ${OL} stroke-linejoin="round"/>
+        <ellipse cx="17" cy="95" rx="5" ry="3.4" fill="#8fa3b8" ${OL}/>
+        <ellipse cx="24.5" cy="96" rx="4" ry="2.8" fill="#d9a066" ${OL}/>
+        <ellipse cx="20.5" cy="91" rx="3.6" ry="2.6" fill="#2bb3b1" ${OL}/>
+        <circle cx="27" cy="38" r="5.5" fill="${f.main}" ${OL}/>
+        <circle cx="27" cy="38" r="2.6" fill="${f.dark}"/>
+        <circle cx="73" cy="38" r="5.5" fill="${f.main}" ${OL}/>
+        <circle cx="73" cy="38" r="2.6" fill="${f.dark}"/>
+        ${body(f.main, f.light, f.dark)}
+        ${head(f.main, 48, 26)}
+        <ellipse cx="50" cy="57" rx="19" ry="13" fill="${f.light}"/>
+        ${eyes(46, 10)}
+        <ellipse cx="50" cy="53" rx="4.6" ry="3.1" fill="${INK}"/>
+        <ellipse cx="48.6" cy="52.2" rx="1.3" ry=".8" fill="#fff" opacity=".7"/>
+        ${mouth(55.6)}
+        <path d="M35 57 l-9 -1 M35 60 l-9 2 M65 57 l9 -1 M65 60 l9 2" stroke="${INK}" stroke-opacity=".3" stroke-width="1.1" stroke-linecap="round"/>
+        ${blush(59, 20)}
+        <ellipse cx="50" cy="74.5" rx="6" ry="4.6" fill="${st.c}" ${OL}/>
+        <path d="M47.5 73 q1.5 -1.2 3.5 -.8" stroke="#fff" stroke-opacity=".7" stroke-width="1" fill="none" stroke-linecap="round"/>
+        <ellipse cx="42.5" cy="75.5" rx="4.6" ry="3.6" fill="${f.main}" ${OL}/>
+        <ellipse cx="57.5" cy="75.5" rx="4.6" ry="3.6" fill="${f.main}" ${OL}/>`;
+      },
     },
 
     katze: {
@@ -486,6 +559,7 @@
     const k = KINDS[kind] || KINDS.pinguin;
     return {
       fur: Math.floor(Math.random() * k.furs.length),
+      stone: Math.floor(Math.random() * STONES.length),
       acc: pick(ACC_POOL),
       color: pick(ACC_COLORS),
     };
@@ -498,7 +572,7 @@
     const acc = ACCS[l.acc] || ACCS.keins;
     const cls = opts.cls ? ` class="${opts.cls}"` : '';
     const title = opts.title ? `<title>${opts.title}</title>` : '';
-    return `<svg${cls} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${opts.title || k.baby}">${title}${k.draw(f)}${acc.draw(l.color, k.anchors)}</svg>`;
+    return `<svg${cls} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${opts.title || k.baby}">${title}${k.draw(f, l)}${acc.draw(l.color, k.anchors)}</svg>`;
   }
 
   function egg(color = '#00a5a0') {
@@ -538,5 +612,5 @@
     // ein paar echte Namen
     'Wanda', 'Lotte', 'Frieda', 'Momo', 'Otto', 'Ida', 'Bruno'];
 
-  window.Animals = { KINDS, ACCS, ACC_COLORS, draw, randomLook, egg, NAMES, scene, UNLOCKS, randomName: () => pick(NAMES) };
+  window.Animals = { KINDS, ACCS, ACC_COLORS, STONES, draw, randomLook, egg, NAMES, scene, UNLOCKS, randomName: () => pick(NAMES) };
 })();

@@ -57,11 +57,19 @@
       ...d, ...s,
       settings: (st => ({ ...st, theme: THEMES.some(t => t.id === st.theme) ? st.theme : 'meer' }))({ ...d.settings, ...(s.settings || {}) }),
       progress: s.progress || {},
-      animals: s.animals || [],
+      animals: (s.animals || []).map(a => a.kind === 'kuh' ? { ...a, kind: 'hochland', look: { ...a.look, fur: 0 } } : a),
       checks: s.checks ?? (s.tasks || []).reduce((n, t) => n + (t.rewarded ? 1 : 0) + (t.subtasks || []).filter(x => x.rewarded).length, 0),
       tasks: (s.tasks || []).map(t => ({ subtasks: [], note: '', ...t })),
       categories: (s.categories && s.categories.length ? s.categories : d.categories)
-        .map(c => c.color === '#0b6fb8' ? { ...c, color: '#084a85' } : c), // altes Uni-Blau → dunkler
+        .map(c => c.color === '#0b6fb8' ? { ...c, color: '#084a85' } : c) // altes Uni-Blau → dunkler
+        .map(c => {
+          // Alte Standard-Tiere auf die neue Reihenfolge umstellen – nur wenn nie selbst geändert
+          const OLD = { therapie: 'hase', umzug: 'hund', sonstiges: 'katze', vorlesung: 'pferd' };
+          const NEW = { therapie: 'steinbock', umzug: 'hochland', sonstiges: 'hund', vorlesung: 'hase' };
+          if (OLD[c.id] && (c.animal === OLD[c.id] || c.animal === 'kuh')) return { ...c, animal: NEW[c.id] };
+          if (!A.KINDS[c.animal]) return { ...c, animal: 'pinguin' };
+          return c;
+        }),
     };
   }
   function load() {
@@ -485,6 +493,8 @@
         <p class="center muted">${esc(k?.baby || '')} · ${esc(k?.furs[a.look.fur]?.name || '')}<br>da seit ${new Date(a.bornAt).toLocaleDateString('de-DE')} · aus „${esc(a.catName || '')}“</p>
         <h3>Fell</h3>
         <div class="chips">${(k?.furs || []).map((f, i) => `<button class="chip ${a.look.fur === i ? 'on' : ''}" style="padding:6px 14px" data-action="a-fur" data-id="${a.id}" data-i="${i}">${esc(f.name)}</button>`).join('')}</div>
+        ${a.kind === 'otter' ? `<h3>Lieblingsstein</h3>
+        <div class="chips">${A.STONES.map((st, i) => `<button class="chip ${(a.look.stone || 0) === i ? 'on' : ''}" style="padding:6px 14px" data-action="a-stone" data-id="${a.id}" data-i="${i}"><span class="stone-dot" style="background:${st.c}"></span>${esc(st.name)}</button>`).join('')}</div>` : ''}
         <h3>Anziehen</h3>
         <div class="chips">${Object.entries(A.ACCS).map(([key, v]) => `<button class="chip ${a.look.acc === key ? 'on' : ''}" style="padding:6px 14px" data-action="a-acc" data-id="${a.id}" data-acc="${key}">${v.crochet ? '🧶 ' : ''}${esc(v.label)}</button>`).join('')}</div>
         ${a.look.acc !== 'keins' && a.look.acc !== 'bluemchen' ? `<h3>Farbe</h3>
@@ -617,10 +627,19 @@
     if (!a) return showNextHatch();
     const cat = state.categories.find(c => c.name === a.catName);
     const el = $('#hatch');
+    // Kein „Rückgängig“ während des Schlüpfens
+    $('#toast').classList.remove('show'); ui.undo = null;
+    const egg = A.egg(cat?.color);
     el.hidden = false;
     el.dataset.id = a.id;
     el.innerHTML = `<div class="ov-inner">
-      <div class="hatch-stage"><div class="egg-wrap">${A.egg(cat?.color)}</div><div class="born">${A.draw(a.kind, a.look)}</div></div>
+      <div class="hatch-stage">
+        <div class="hatch-ground"></div>
+        <div class="born">${A.draw(a.kind, a.look)}</div>
+        <div class="shell shell-bot">${egg}</div>
+        <div class="shell shell-top">${egg}</div>
+        <div class="burst"><span>✨</span><span>⭐</span><span>✨</span><span>💛</span><span>⭐</span></div>
+      </div>
       <div class="hatch-text"><h2>Überraschung!</h2>
         <p>Ein <b>${esc(A.KINDS[a.kind]?.baby)}</b> ist da! 💛<br><span class="muted">${esc(A.ACCS[a.look.acc]?.crochet ? 'Es trägt sogar etwas Gehäkeltes 🧶' : 'Es freut sich riesig über dich.')}</span></p>
         <label for="hatch-name"><b>Wie soll es heißen?</b></label>
@@ -787,6 +806,7 @@
     'open-animal': el => openSheet('animal', el.dataset.id),
     hop: el => { const s = el.querySelector('svg'); s.classList.remove('hop-now'); void s.offsetWidth; s.classList.add('hop-now'); },
     'a-fur': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.fur = +el.dataset.i; save(); refresh(); },
+    'a-stone': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.stone = +el.dataset.i; save(); refresh(); },
     'a-acc': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.acc = el.dataset.acc; save(); refresh(); },
     'a-color': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.color = el.dataset.color; save(); refresh(); },
     theme: el => { state.settings.theme = el.dataset.id; save(); render(); },

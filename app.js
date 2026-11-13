@@ -65,6 +65,8 @@
       pebbles: 0,          // Kiesel – Währung für den Wiesen-Laden
       inv: {},             // gekaufte Gadgets: { id: Anzahl } – gehören der Person, nicht der Karte
       world: { active: m.id, maps: [m] },  // Karten (später archivierbar), eine ist aktiv
+      daily: { last: null, days: 0, chests: 0 }, // Tagesgeschenk: gesammelte Tage bis zur Truhe (keine Serie nötig)
+      vouchers: 0,         // Wunsch-Gutscheine aus der Schatztruhe
       settings: { appName: 'Plan', theme: 'meer', calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, tipClosed: false },
     };
   }
@@ -147,6 +149,81 @@
     const next = Wd.nextRegion(curMap().unlocked);
     return next ? [...open, next] : open;
   };
+  // Bezahlen: mit Kieseln oder mit einem Wunsch-Gutschein
+  function pay(price, voucher) {
+    if (voucher) { if ((state.vouchers || 0) < 1) return false; state.vouchers--; return true; }
+    if ((state.pebbles || 0) < price) return false;
+    state.pebbles -= price; return true;
+  }
+  function doUnlock(voucher) {
+    const m = curMap(), next = Wd.nextRegion(m.unlocked);
+    if (!next) return;
+    if (!pay(Wd.regionPrice(openCount()), voucher)) return;
+    m.unlocked.push(next.id);
+    save();
+    if (ui.sheet) closeSheet();
+    ui.view = 'tiere'; render();
+    scrollWorldTo(next.id, true);
+    toast(`Neues Gebiet entdeckt: ${next.name}! 🗺️`);
+  }
+  function purchase(voucher) {
+    const arg = ui.sheet?.arg;
+    if (!arg) return;
+    if (arg.kind === 'region') { doUnlock(voucher); return; }
+    const g = Wd.byId[arg.id];
+    if (!g || g.premium) return;
+    if (g.group === 'land' && state.inv[g.id]) return;
+    if (!pay(g.price, voucher)) return;
+    state.inv[g.id] = (state.inv[g.id] || 0) + 1;
+    save();
+    if (g.group === 'land') { closeSheet(); toast(`${g.name} ist jetzt auf deiner Karte! 🏞️`); return; }
+    startPlacing(g.id);
+    toast(`${g.name} ${voucher ? 'mit Gutschein geholt' : 'gekauft'}! Tippe auf einen ${g.sky ? '✨ Himmelsplatz' : 'freien Platz'}.`);
+  }
+
+  // ---------- Tagesgeschenk & Schatztruhe ----------
+  // Ein „Geschenk-Tag“ beginnt um 6 Uhr – nach Mitternacht zählt noch der alte Tag.
+  const GIFT_AMOUNTS = [2, 2, 3, 3, 4, 4];             // Tag 1–6, Tag 7 = Truhe
+  // Eigene kleine Symbole statt Emojis (die sind auf dem iPhone rot/rosa)
+  const ICON_CHEST = `<svg class="ico" viewBox="-44 -40 88 68" aria-hidden="true"><rect x="-40" y="-12" width="80" height="36" rx="5" fill="#a0694a"/><rect x="-40" y="-12" width="8" height="36" fill="#f2b01e"/><rect x="32" y="-12" width="8" height="36" fill="#f2b01e"/><path d="M-42 -12 Q0 -44 42 -12 Z" fill="#8a5236"/><path d="M-42 -12 Q0 -44 42 -12" stroke="#f2b01e" stroke-width="5" fill="none"/><rect x="-7" y="-18" width="14" height="16" rx="3" fill="#f2b01e"/></svg>`;
+  const ICON_TICKET = `<svg class="ico" viewBox="0 0 40 26" aria-hidden="true"><path d="M3 3 H37 V9 a4 4 0 0 0 0 8 V23 H3 V17 a4 4 0 0 0 0 -8 Z" fill="#f2b01e"/><path d="M27 4 V22" stroke="#fff" stroke-width="1.6" stroke-dasharray="2.4 2"/><path d="M10 13 l2.4 -5 l2.4 5 l-2.4 5 Z" fill="#fff"/></svg>`;
+  const giftDay = () => dayKey(Date.now() - 6 * 3600e3);
+  function checkDaily() {
+    if (state.daily.last === giftDay()) return;
+    if (!$('#hatch').hidden || ui.hatchQueue.length || !$('#gift').hidden) return;
+    showGift();
+  }
+  function showGift(opened) {
+    const d = state.daily, n = d.days % 7, isChest = n === 6, el = $('#gift');
+    el.hidden = false;
+    if (opened) {
+      const free = Wd.GADGETS.filter(g => g.premium && !state.inv[g.id]);
+      if (!ui.giftPrem || !free.some(g => g.id === ui.giftPrem)) ui.giftPrem = free.length ? pick(free).id : null;
+      const prem = ui.giftPrem && Wd.byId[ui.giftPrem];
+      el.innerHTML = `<div class="ov-inner gift">
+        <div class="chest-box open">${Wd.chest(true)}</div>
+        <h2 class="center">Die Schatztruhe ist offen! ✨</h2>
+        <p class="center muted">Such dir aus, was du möchtest:</p>
+        <button class="gift-choice" data-action="gift-pick" data-k="voucher">
+          <span class="gc-icon">${ICON_TICKET}</span><span><b>Wunsch-Gutschein</b><small>Ein Teil oder ein neues Gebiet aus dem Laden – gratis, egal wie teuer.</small></span></button>
+        ${prem ? `<button class="gift-choice" data-action="gift-pick" data-k="premium">
+          <span class="gc-sky">${Wd.preview(prem.id)}</span><span><b>${esc(prem.name)}</b><small>Exklusiv – gibt es nur in der Schatztruhe. Für deinen Himmel.</small></span></button>` : ''}
+      </div>`;
+      return;
+    }
+    const cells = [...Array(7)].map((_, i) => `<div class="gift-cell ${i < n ? 'done' : ''} ${i === n ? 'today' : ''}">
+      <span>${i === 6 ? ICON_CHEST : '🪨'}</span><b>${i === 6 ? 'Truhe' : '+' + GIFT_AMOUNTS[i]}</b><small>Tag ${i + 1}</small></div>`).join('');
+    el.innerHTML = `<div class="ov-inner gift">
+      <h2 class="center">${isChest ? 'Heute gibt es die Schatztruhe! ✨' : 'Dein Tagesgeschenk 🎁'}</h2>
+      <p class="center muted">Schön, dass du da bist. 💛</p>
+      <div class="gift-row">${cells}</div>
+      <div class="gift-big">${isChest ? `<div class="chest-box">${Wd.chest(false)}</div>` : `<span class="pebble-pop">🪨 +${GIFT_AMOUNTS[n]}</span>`}</div>
+      <p class="hint center">Komm an 7 Tagen vorbei – egal ob hintereinander oder mit Pausen. Dann öffnest du eine Schatztruhe.</p>
+      <button class="big-btn primary" data-action="gift-claim">${isChest ? 'Schatztruhe öffnen' : 'Einsammeln'}</button>
+    </div>`;
+  }
+  function closeGift() { const el = $('#gift'); el.hidden = true; el.innerHTML = ''; render(); }
+
   function startPlacing(gid) {
     ui.placing = gid; ui.edit = true;
     if (ui.sheet) { ui.sheet = null; $('#sheet-layer').hidden = true; }
@@ -154,12 +231,28 @@
     render();
   }
   // Zu einem Gebiet scrollen (über die Kachel-Position, nicht über feste Pixel)
+  // (SVG-Elemente haben kein offsetLeft – deshalb über getBoundingClientRect)
   function scrollWorldTo(regionId, smooth) {
     const wrap = $('#world-wrap'), tile = wrap && wrap.querySelector(`.w-region[data-r="${regionId}"]`);
     if (!tile) return;
-    const x = tile.offsetLeft - (wrap.clientWidth - tile.clientWidth) / 2;
-    wrap.scrollTo({ left: Math.max(0, x), behavior: smooth ? 'smooth' : 'auto' });
-    ui.worldX = Math.max(0, x);
+    const t = tile.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    const x = Math.max(0, wrap.scrollLeft + (t.left - w.left) - (w.width - t.width) / 2);
+    wrap.scrollTo({ left: x, behavior: smooth && !state.settings.calm ? 'smooth' : 'auto' });
+    ui.worldX = x;
+    markRegionChip(regionId);
+  }
+  // Knopf des Gebiets hervorheben, das gerade in der Mitte der Karte ist
+  function markRegionChip(id) {
+    document.querySelectorAll('.rchip').forEach(b => b.classList.toggle('on', b.dataset.r === id));
+    const on = document.querySelector('.rchip.on');
+    if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  function regionInView() {
+    const wrap = $('#world-wrap');
+    if (!wrap) return null;
+    const mid = wrap.getBoundingClientRect().left + wrap.clientWidth / 2;
+    const tile = [...wrap.querySelectorAll('.w-region')].find(t => { const r = t.getBoundingClientRect(); return r.left <= mid && r.right >= mid; });
+    return tile ? tile.dataset.r : null;
   }
 
   // ---------- Belohnungen ----------
@@ -372,6 +465,8 @@
       <h1 class="view-title">Tierwiese ⛰️</h1>
       <div class="world-bar">
         <span class="pebbles" aria-label="${state.pebbles || 0} Kiesel">🪨 <b>${state.pebbles || 0}</b></span>
+        <button class="pebbles" data-action="gift-info" aria-label="Tage bis zur Schatztruhe">🎁 <b>${state.daily.days % 7}/7</b></button>
+        ${state.vouchers > 0 ? `<span class="pebbles" aria-label="${state.vouchers} Wunsch-Gutscheine">${ICON_TICKET} <b>${state.vouchers}</b></span>` : ''}
         <button class="pill" data-action="shop">🛍️ Laden</button>
         <button class="pill ${ui.edit ? 'on' : ''}" data-action="w-edit">${ui.edit ? '✓ Fertig' : '✏️ Gestalten'}</button>
       </div>
@@ -454,7 +549,13 @@
     const wrap = $('#world-wrap');
     if (wrap) {
       wrap.scrollLeft = ui.worldX || 0;
-      wrap.addEventListener('scroll', () => { ui.worldX = wrap.scrollLeft; }, { passive: true });
+      let raf = 0;
+      wrap.addEventListener('scroll', () => {
+        ui.worldX = wrap.scrollLeft;
+        if (!raf) raf = requestAnimationFrame(() => { raf = 0; const id = regionInView(); if (id) document.querySelectorAll('.rchip').forEach(b => b.classList.toggle('on', b.dataset.r === id)); });
+      }, { passive: true });
+      const id = regionInView();
+      if (id) document.querySelectorAll('.rchip').forEach(b => b.classList.toggle('on', b.dataset.r === id));
     }
     restoreFocus($('#view'));
   }
@@ -581,6 +682,7 @@
       return `
         <div class="center" data-action="hop" style="cursor:pointer">${A.draw(a.kind, a.look, { cls: 'big-animal' })}</div>
         <input class="field" type="text" value="${esc(a.name)}" data-input="animal-name" data-id="${a.id}" maxlength="24" style="text-align:center;font-weight:800;font-size:1.2rem" aria-label="Name">
+        <button class="big-btn soft" data-action="show-on-map" data-id="${a.id}" style="margin-top:10px">🗺️ Auf der Karte zeigen</button>
         <p class="center muted">${esc(k?.baby || '')} · ${esc(k?.furs[a.look.fur]?.name || '')}<br>da seit ${new Date(a.bornAt).toLocaleDateString('de-DE')} · aus „${esc(a.catName || '')}“</p>
         <h3>Fell</h3>
         <div class="chips">${(k?.furs || []).map((f, i) => `<button class="chip ${a.look.fur === i ? 'on' : ''}" style="padding:6px 14px" data-action="a-fur" data-id="${a.id}" data-i="${i}">${esc(f.name)}</button>`).join('')}</div>
@@ -599,10 +701,11 @@
       const items = Wd.GADGETS.filter(g => g.group === ui.shopGroup);
       return `
         <h2>Wiesen-Laden 🛍️</h2>
-        <p class="pebble-big">🪨 <b>${state.pebbles || 0}</b> Kiesel <span class="muted">· jeder Haken = 1 Kiesel</span></p>
+        <p class="pebble-big">🪨 <b>${state.pebbles || 0}</b> Kiesel <span class="muted">· jeder Haken = 1 Kiesel</span>
+          ${state.vouchers > 0 ? `<br>${ICON_TICKET} <b>${state.vouchers}</b> Wunsch-Gutschein${state.vouchers > 1 ? 'e' : ''} <span class="muted">· bei jedem Kauf einlösbar</span>` : ''}</p>
         ${p ? `<div class="unlock-card">
             <div><b>🗺️ Neues Gebiet: ${esc(p.name)}</b><br><span class="muted">${openCount()}/${Wd.REGIONS.length} Gebiete offen · 11 neue Plätze</span></div>
-            <button class="big-btn ${state.pebbles >= price ? 'primary' : ''}" data-action="w-unlock" ${state.pebbles >= price ? '' : 'disabled'}>🪨 ${price}</button>
+            <button class="big-btn ${state.pebbles >= price ? 'primary' : ''}" data-action="w-unlock">🪨 ${price}</button>
           </div>` : '<p class="muted">Du hast alle 40 Gebiete entdeckt! 🌍</p>'}
         <div class="shop-tabs">${Object.entries(Wd.GROUPS).map(([k, v]) => `<button class="chip ${ui.shopGroup === k ? 'on' : ''}" style="padding:6px 12px" data-action="shop-group" data-g="${k}">${v}</button>`).join('')}</div>
         <div class="shop-grid">${items.map(g => {
@@ -611,12 +714,49 @@
           return `<div class="shop-item">
             <div class="shop-prev">${Wd.preview(g.id)}</div>
             <b>${esc(g.name)}</b>
-            <small class="muted">${land ? esc(g.info || '') : own ? `${own}× gekauft${free ? ` · ${free} in der Kiste` : ''}` : g.sky ? 'für den Himmel' : '&nbsp;'}</small>
-            ${land && own ? '<span class="owned">✓ auf der Karte</span>'
-              : `<button class="buy ${can ? '' : 'off'}" data-action="buy" data-id="${g.id}" ${can ? '' : 'disabled'}>🪨 ${g.price}</button>`}
+            <small class="muted">${land ? esc(g.info || '') : g.premium ? (free ? `${free} in der Kiste` : own ? 'steht am Himmel' : 'golden & exklusiv') : own ? `${own}× gekauft${free ? ` · ${free} in der Kiste` : ''}` : g.sky ? 'für den Himmel' : '&nbsp;'}</small>
+            ${g.premium ? `<span class="owned">${own ? '🌟 aus deiner Truhe' : ICON_CHEST + ' nur aus der Truhe'}</span>`
+              : land && own ? '<span class="owned">✓ auf der Karte</span>'
+              : `<button class="buy ${can ? '' : 'off'}" data-action="buy" data-id="${g.id}">🪨 ${g.price}</button>`}
             ${!land && free ? `<button class="link" data-action="place" data-id="${g.id}">Platzieren</button>` : ''}
           </div>`;
         }).join('')}</div>`;
+    },
+
+    // Kauf-Bestätigung: Vorschau, Preis, Kiesel vorher/nachher – erst dann wird bezahlt
+    confirmBuy(arg) {
+      const have = state.pebbles || 0;
+      let title, prev, price, info, okLabel;
+      if (arg.kind === 'region') {
+        const next = Wd.nextRegion(curMap().unlocked);
+        if (!next) return null;
+        price = Wd.regionPrice(openCount());
+        title = `Neues Gebiet: ${next.name}`;
+        prev = `<div class="buy-prev region">${Wd.regionPreview(next.id, ownedLand())}</div>`;
+        info = '11 neue Plätze: 8 am Boden und 3 am Himmel ✨';
+        okLabel = 'freischalten';
+      } else {
+        const g = Wd.byId[arg.id];
+        if (!g) return null;
+        price = g.price; title = g.name;
+        prev = `<div class="buy-prev">${Wd.preview(g.id)}</div>`;
+        info = g.group === 'land' ? `Erscheint automatisch: ${g.info || ''}` : g.sky ? 'Kommt an einen Himmelsplatz ✨' : 'Kommt auf einen freien Platz auf deiner Wiese';
+        okLabel = 'kaufen';
+      }
+      const left = have - price, ok = left >= 0;
+      return `
+        <h2>${esc(title)}</h2>
+        ${prev}
+        <p class="center muted" style="margin:6px 0 12px">${esc(info)}</p>
+        <div class="price-box">
+          <div><span>Kostet</span><b>🪨 ${price}</b></div>
+          <div><span>Du hast</span><b>🪨 ${have}</b></div>
+          <div><span>Danach</span><b class="${ok ? '' : 'neg'}">${ok ? '🪨 ' + left : '–'}</b></div>
+        </div>
+        ${ok ? `<button class="big-btn primary" data-action="buy-ok">Ja, für ${price} 🪨 ${okLabel}</button>`
+          : `<p class="center"><b>Dir fehlen noch ${-left} Kiesel</b> – das sind ${-left} Haken. Du schaffst das! 🐾</p>`}
+        ${state.vouchers > 0 ? `<button class="big-btn gold" data-action="buy-voucher">${ICON_TICKET} Mit Gutschein gratis holen (${state.vouchers} übrig)</button>` : ''}
+        <button class="big-btn" data-action="buy-cancel">${ok ? 'Abbrechen' : 'Zurück'}</button>`;
     },
 
     slot(id) {
@@ -789,6 +929,7 @@
     refresh();
     if (ui.hatchQueue.length) setTimeout(showNextHatch, 250);
     else if (ui.unlock) toast(cheer());
+    if (!ui.hatchQueue.length) setTimeout(checkDaily, 400);
   }
 
   // ---------- Toast & Effekte ----------
@@ -941,30 +1082,43 @@
     // --- Wiese & Laden ---
     shop: () => { if (ui.sheet?.name === 'shop') return; openSheet('shop'); },
     'shop-group': el => { ui.shopGroup = el.dataset.g; renderSheet(); },
-    buy: el => {
-      const g = Wd.byId[el.dataset.id];
-      if (!g || state.pebbles < g.price) return;
-      if (g.group === 'land' && state.inv[g.id]) return;
-      state.pebbles -= g.price;
-      state.inv[g.id] = (state.inv[g.id] || 0) + 1;
-      save();
-      if (g.group === 'land') { renderSheet(); render(); toast(`${g.name} ist jetzt auf deiner Karte! 🏞️`); return; }
-      startPlacing(g.id);
-      toast(`${g.name} gekauft! Tippe auf einen ${g.sky ? '✨ Himmelsplatz' : 'freien Platz'}.`);
+    // Kaufen & Freischalten öffnen immer erst die Bestätigung
+    buy: el => { ui.buyFrom = ui.sheet?.name || null; openSheet('confirmBuy', { kind: 'gadget', id: el.dataset.id }); },
+    'buy-cancel': () => { if (ui.buyFrom === 'shop') openSheet('shop'); else closeSheet(); },
+    'buy-ok': () => purchase(false),
+    'buy-voucher': () => purchase(true),
+    'gift-claim': () => {
+      const d = state.daily, n = d.days % 7;
+      if (n === 6) { showGift(true); return; }
+      const amt = GIFT_AMOUNTS[n];
+      state.pebbles = (state.pebbles || 0) + amt;
+      d.days = n + 1; d.last = giftDay();
+      save(); closeGift();
+      toast(`+${amt} Kiesel 🪨 – noch ${6 - n} ${6 - n === 1 ? 'Tag' : 'Tage'} bis zur Schatztruhe`);
     },
+    'gift-pick': el => {
+      const d = state.daily;
+      d.days = 0; d.last = giftDay(); d.chests = (d.chests || 0) + 1;
+      if (el.dataset.k === 'premium' && ui.giftPrem) {
+        const id = ui.giftPrem;
+        state.inv[id] = (state.inv[id] || 0) + 1;
+        ui.giftPrem = null;
+        save(); $('#gift').hidden = true; $('#gift').innerHTML = '';
+        startPlacing(id);
+        toast(`${Wd.byId[id].name} gehört dir! Tippe auf einen ✨ Himmelsplatz.`);
+        return;
+      }
+      state.vouchers = (state.vouchers || 0) + 1;
+      save(); closeGift();
+      toast('Wunsch-Gutschein erhalten! ✨ Im Laden kannst du ihn bei jedem Kauf einlösen.');
+    },
+    'gift-info': () => toast(`🎁 ${state.daily.days % 7}/7 Tage gesammelt – noch ${7 - state.daily.days % 7} bis zur Schatztruhe`),
     place: el => startPlacing(el.dataset.id),
     'place-cancel': () => { ui.placing = null; render(); },
     'w-unlock': () => {
-      const m = curMap(), next = Wd.nextRegion(m.unlocked);
-      if (!next) return;
-      const price = Wd.regionPrice(openCount());
-      if (state.pebbles < price) { toast(`Dafür brauchst du ${price} 🪨 – noch ${price - state.pebbles} Haken!`); return; }
-      state.pebbles -= price; m.unlocked.push(next.id);
-      save();
-      if (ui.sheet) closeSheet();
-      ui.view = 'tiere'; render();
-      scrollWorldTo(next.id);
-      toast(`Neues Gebiet entdeckt: ${next.name}! 🗺️`);
+      if (!Wd.nextRegion(curMap().unlocked)) return;
+      ui.buyFrom = ui.sheet?.name || null;
+      openSheet('confirmBuy', { kind: 'region' });
     },
     'w-edit': () => { ui.edit = !ui.edit; if (!ui.edit) ui.placing = null; render(); },
     'w-go': el => {
@@ -1006,6 +1160,26 @@
     'slot-put': el => { if (available(el.dataset.id) > 0) { curMap().slots[el.dataset.slot] = el.dataset.id; save(); } closeSheet(); },
     'a-stone': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.stone = +el.dataset.i; save(); refresh(); },
     'a-acc': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.acc = el.dataset.acc; save(); refresh(); },
+    // Tier auf der Karte suchen: zur Wiese, zum Gebiet scrollen, Tier mittig zeigen und aufleuchten lassen
+    'show-on-map': el => {
+      const a = state.animals.find(x => x.id === el.dataset.id);
+      if (!a) return;
+      ui.sheet = null; $('#sheet-layer').hidden = true;
+      ui.edit = false; ui.placing = null; ui.view = 'tiere';
+      render();
+      const g = document.querySelector(`.w-anim[data-id="${a.id}"]`), wrap = $('#world-wrap');
+      if (!g || !wrap) return;
+      scrollWorldTo(g.closest('.w-region').dataset.r);
+      requestAnimationFrame(() => {
+        const ar = g.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+        if (ar.width) wrap.scrollLeft += (ar.left + ar.width / 2) - (wr.left + wr.width / 2);
+        ui.worldX = wrap.scrollLeft;
+        wrap.scrollIntoView({ block: 'center', behavior: state.settings.calm ? 'auto' : 'smooth' });
+        g.classList.add('spot');
+        setTimeout(() => g.classList.remove('spot'), 4200);
+      });
+      toast(`Hier ist ${a.name}! 💛`);
+    },
     'a-color': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.color = el.dataset.color; save(); refresh(); },
     theme: el => { state.settings.theme = el.dataset.id; save(); render(); },
     calm: () => { state.settings.calm = !state.settings.calm; save(); render(); },
@@ -1056,7 +1230,27 @@
     if (ui.sheet) { ui.sheet = null; $('#sheet-layer').hidden = true; }
   }
 
+  // Am PC: Mausrad scrollt die Gebietsleiste seitwärts …
+  document.addEventListener('wheel', ev => {
+    const row = ev.target.closest('.region-chips');
+    if (row && Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) { row.scrollLeft += ev.deltaY; ev.preventDefault(); }
+  }, { passive: false });
+  // … und die Karte lässt sich mit gedrückter Maus ziehen (am Handy wischt man ohnehin)
+  let drag = null, dragMoved = false;
+  document.addEventListener('mousedown', ev => {
+    const w = ev.target.closest('#world-wrap');
+    if (w && ev.button === 0) { drag = { w, x: ev.clientX, left: w.scrollLeft }; dragMoved = false; }
+  });
+  document.addEventListener('mousemove', ev => {
+    if (!drag) return;
+    const dx = ev.clientX - drag.x;
+    if (Math.abs(dx) > 5) dragMoved = true;
+    if (dragMoved) drag.w.scrollLeft = drag.left - dx;
+  });
+  document.addEventListener('mouseup', () => { drag = null; });
+
   document.addEventListener('click', ev => {
+    if (dragMoved && ev.target.closest('#world-wrap')) { dragMoved = false; return; } // Ziehen ist kein Antippen
     const el = ev.target.closest('[data-action]');
     if (!el) return;
     const fn = act[el.dataset.action];
@@ -1118,10 +1312,15 @@
   });
 
   // Nach Mitternacht oder beim Zurückkommen: Datum & Zählung aktualisieren
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !ui.sheet) render(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (!ui.sheet) render();
+    checkDaily(); // neuer Tag (ab 6 Uhr) → Tagesgeschenk
+  });
 
   // ---------- Start ----------
   render();
+  setTimeout(checkDaily, 300);
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});

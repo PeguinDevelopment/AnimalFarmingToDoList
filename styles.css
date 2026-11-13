@@ -98,7 +98,12 @@ section { margin-bottom: 8px; }
 }
 .chip svg { width: 30px; height: 30px; flex: none; }
 .stone-dot { width: 18px; height: 14px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 0 1.5px rgba(20,35,58,.2); }
-.chip.on {background: var(--cat, var(--soft)); border-color: var(--ink); color: var(--cat-ink); }
+/* ausgewählt: kräftige Akzentfarbe (gut lesbar); Kategorie-Chips in ihrer eigenen Farbe */
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip.on[style*="--cat"] { background: var(--cat); border-color: var(--ink); color: #fff; }
+.ico { width: 1.25em; height: 1.25em; vertical-align: -.25em; display: inline-block; }
+.gift-cell .ico { width: 1.5em; height: 1.2em; }
+.gc-icon .ico { width: 54px; height: 40px; }
 
 /* ---------- Kategorien ---------- */
 .cat { margin-bottom: 16px; }
@@ -208,14 +213,19 @@ section { margin-bottom: 8px; }
 }
 .world-wrap::-webkit-scrollbar { display: none; }
 .world-row { display: flex; width: max-content; }
+@media (hover: hover) and (pointer: fine) { .world-wrap { cursor: grab; } .world-wrap:active { cursor: grabbing; } }
 .w-region { display: block; flex: none; content-visibility: auto; contain-intrinsic-size: 412px 300px; }
 .region-chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 2px 2px; scrollbar-width: none; }
 .region-chips::-webkit-scrollbar { display: none; }
 .rchip { flex: none; padding: 7px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: .82rem; font-weight: 700; white-space: nowrap; min-height: 36px; }
 .rchip.locked { color: var(--muted); border-style: dashed; }
+.rchip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.w-label { cursor: pointer; }
 .w-anim, .w-gadget, .w-find, .w-slot, .w-lock { cursor: pointer; }
 .w-anim { transform-box: fill-box; transform-origin: 50% 100%; animation: wiggle 9s ease-in-out infinite; }
 .w-anim.hop-now { animation: happy .6s ease; }
+.w-anim.spot { animation: happy .7s ease 5; filter: drop-shadow(0 0 4px #ffd23f) drop-shadow(0 0 8px #ffd23f); }
+.calm .w-anim.spot { filter: drop-shadow(0 0 4px #ffd23f) drop-shadow(0 0 8px #ffd23f); }
 @keyframes wiggle { 0%, 86%, 100% { transform: none } 89% { transform: translateY(-5px) } 92% { transform: none } 95% { transform: rotate(-4deg) } }
 .w-slot.pulse circle { animation: pulse 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes pulse { 50% { transform: scale(1.18); } }
@@ -232,8 +242,24 @@ section { margin-bottom: 8px; }
 .unlock-card > div { flex: 1; font-size: .92rem; }
 .unlock-card .big-btn { width: auto; min-width: 92px; margin: 0; }
 .unlock-card .big-btn[disabled] { opacity: .55; }
-.shop-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; scrollbar-width: none; }
-.shop-tabs .chip { flex: none; white-space: nowrap; }
+/* Kategorien umbrechen statt seitlich scrollen – alles auf einen Blick */
+.shop-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.shop-tabs .chip { white-space: nowrap; }
+.buy-prev { width: 170px; height: 170px; margin: 4px auto 0; display: grid; place-items: center; background: var(--soft); border-radius: 24px; }
+.buy-prev svg { width: 86%; height: 86%; }
+.buy-prev.region { width: 100%; height: auto; aspect-ratio: 360 / 262; overflow: hidden; padding: 0; }
+.buy-prev.region svg { width: 100%; height: 100%; display: block; }
+.price-box { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.price-box > div { background: var(--soft); border-radius: 16px; padding: 10px 6px; text-align: center; }
+.price-box span { display: block; font-size: .8rem; color: var(--muted); }
+.price-box b { font-size: 1.2rem; }
+.price-box b.neg { color: var(--muted); }
+/* Am PC: sichtbare, schmale Scrollleiste für die Gebiets-Knöpfe */
+@media (hover: hover) and (pointer: fine) {
+  .region-chips { scrollbar-width: thin; padding-bottom: 6px; }
+  .region-chips::-webkit-scrollbar { display: block; height: 6px; }
+  .region-chips::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+}
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .shop-item { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 8px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3px; font-size: .88rem; }
 .shop-prev { width: 84px; height: 84px; display: grid; place-items: center; }
@@ -373,6 +399,37 @@ section { margin-bottom: 8px; }
 .timer-ring circle { transition: stroke-dashoffset 1s linear; }
 .center { text-align: center; }
 .center p { margin: 6px 0; }
+
+/* Tagesgeschenk & Schatztruhe */
+#gift { position: fixed; inset: 0; z-index: 62; background: var(--bg); overflow-y: auto;
+  padding: calc(env(safe-area-inset-top) + 24px) 18px calc(env(safe-area-inset-bottom) + 20px); animation: fade .25s; }
+.gift h2 { font-size: 1.45rem; margin: 6px 0 4px; }
+.gift-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 18px 0 8px; }
+.gift-cell { background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 6px 2px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.gift-cell span { font-size: 1.1rem; }
+.gift-cell b { font-size: .78rem; }
+.gift-cell small { font-size: .62rem; color: var(--muted); }
+.gift-cell.done { background: var(--soft); border-color: transparent; opacity: .75; }
+.gift-cell.done span::after { content: '✓'; font-size: .8rem; margin-left: 1px; color: var(--accent); }
+.gift-cell.today { border-color: var(--accent); box-shadow: 0 0 0 3px var(--soft); transform: scale(1.06); }
+.gift-big { display: grid; place-items: center; min-height: 170px; }
+.pebble-pop { font-size: 3rem; font-weight: 800; animation: pop-in .6s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes pop-in { from { transform: scale(.3); opacity: 0; } }
+.chest-box { width: 210px; margin: 0 auto; }
+.chest-box svg { width: 100%; height: auto; display: block; }
+.chest-box:not(.open) { animation: wobble .5s ease-in-out .3s 2; transform-origin: 50% 90%; }
+.chest-box.open { animation: pop-in .6s cubic-bezier(.3, 1.6, .5, 1) both; }
+.chest-rays { transform-box: fill-box; transform-origin: 50% 100%; animation: rays 3s linear infinite; }
+@keyframes rays { 50% { opacity: .5; } }
+.gift-choice { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; background: var(--card); border: 2px solid var(--line);
+  border-radius: 20px; padding: 12px; margin-top: 10px; box-shadow: var(--shadow); }
+.gift-choice:active { border-color: var(--accent); }
+.gift-choice b { display: block; font-size: 1.05rem; }
+.gift-choice small { display: block; color: var(--muted); font-size: .85rem; margin-top: 2px; }
+.gc-icon { font-size: 2.4rem; width: 64px; text-align: center; flex: none; }
+.gc-sky { width: 64px; height: 64px; flex: none; }
+.gc-sky svg { width: 100%; height: 100%; border-radius: 12px; }
+.big-btn.gold { background: #f2b01e; color: #14233a; border-color: transparent; }
 
 /* Schlüpfen: Ei wackelt → Riss → Deckel fliegt weg → Tier steigt aus der Schale → Glitzer → Name */
 .hatch-stage { position: relative; width: 220px; height: 220px; margin: 36px auto 14px; }

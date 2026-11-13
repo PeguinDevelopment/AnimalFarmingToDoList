@@ -39,6 +39,78 @@
   });
   const slotById = Object.fromEntries(SLOTS.map(s => [s.id, s]));
 
+  // ---------- Helfer: Bäume mit Volumen ----------
+  const shade = (hex, f) => {
+    const n = parseInt(hex.slice(1), 16);
+    return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.min(255, Math.round(v * f)).toString(16).padStart(2, '0')).join('');
+  };
+  const prng = s => () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  // Krone aus vielen Blättergruppen: dunkle Schattenseite unten rechts, helle Lichtseite oben links
+  function canopy(cx, cy, rx, ry, col, seed, n = 9) {
+    const r = prng(seed);
+    let base = '', hi = '', tex = '';
+    for (let i = 0; i < n; i++) {
+      const a = r() * Math.PI * 2, d = Math.sqrt(r());
+      const x = cx + Math.cos(a) * rx * .6 * d, y = cy + Math.sin(a) * ry * .6 * d;
+      const rr = Math.min(rx, ry) * (.45 + r() * .25) + Math.abs(rx - ry) * .12;
+      base += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rr.toFixed(1)}"/>`;
+      if (y < cy + ry * .15) hi += `<circle cx="${(x - rr * .2).toFixed(1)}" cy="${(y - rr * .22).toFixed(1)}" r="${(rr * .6).toFixed(1)}"/>`;
+      tex += `<circle cx="${(x + rr * .3).toFixed(1)}" cy="${(y - rr * .1).toFixed(1)}" r="${(rr * .14).toFixed(1)}"/>`;
+    }
+    return `<g fill="${shade(col, .8)}">${base}</g><g fill="${col}">${hi}</g><g fill="${shade(col, 1.18)}" opacity=".7">${tex}</g>`;
+  }
+  // verjüngter Stamm mit Wurzelansatz
+  const trunk = (h, w, col) => `<path d="M${-w * .75} 0 Q${-w * .45} ${-h * .12} ${-w * .4} ${-h * .3} Q${-w * .3} ${-h * .7} ${-w * .2} ${-h} L${w * .2} ${-h} Q${w * .3} ${-h * .7} ${w * .4} ${-h * .3} Q${w * .45} ${-h * .12} ${w * .75} 0 Z" fill="${col}"/>
+    <path d="M${w * .1} ${-h * .1} Q${w * .2} ${-h * .5} ${w * .05} ${-h * .9}" stroke="${shade(col, .78)}" stroke-width="1" fill="none"/>`;
+  // kahle Winterkrone mit Ästen, Zweigen und Schnee
+  function bareCrown(x0, y0, size, col, seed) {
+    const r = prng(seed);
+    let s = '', snow = '';
+    for (let i = 0; i < 6; i++) {
+      const a = (-160 + i * 28 + (r() - .5) * 14) * Math.PI / 180, L = size * (.6 + r() * .4);
+      const x1 = x0 + Math.cos(a) * L, y1 = y0 + Math.sin(a) * L;
+      s += `<path d="M${x0} ${y0} Q${((x0 + x1) / 2).toFixed(1)} ${(y0 + (y1 - y0) * .4).toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="${col}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+      for (let k = 0; k < 2; k++) {
+        const b = a + (k ? .5 : -.5), l = L * .38, xs = x0 + Math.cos(a) * L * (.55 + k * .2), ys = y0 + Math.sin(a) * L * (.55 + k * .2);
+        s += `<path d="M${xs.toFixed(1)} ${ys.toFixed(1)} l${(Math.cos(b) * l).toFixed(1)} ${(Math.sin(b) * l).toFixed(1)}" stroke="${col}" stroke-width="1.1" stroke-linecap="round"/>`;
+      }
+      snow += `<ellipse cx="${x1.toFixed(1)}" cy="${(y1 - 1).toFixed(1)}" rx="2.6" ry="1.4" fill="#fff"/>`;
+    }
+    return s + snow;
+  }
+  const dots = (seed, n, col, rad, cx, cy, rx, ry) => {
+    const r = prng(seed);
+    let s = '';
+    for (let i = 0; i < n; i++) s += `<circle cx="${(cx + (r() - .5) * 2 * rx).toFixed(1)}" cy="${(cy + (r() - .5) * 2 * ry).toFixed(1)}" r="${rad}" fill="${col}"/>`;
+    return s;
+  };
+  // Laubbaum: Stamm + (Gabel-)Äste + Krone je Jahreszeit, im Winter kahl
+  function decid(c, o) {
+    const crownY = -(o.h + o.ry * .75);
+    if (c.sea === 'winter') return trunk(o.h + o.ry * .3, o.tw, o.bark) + bareCrown(0, -(o.h + o.ry * .3), Math.max(o.rx, o.ry) * .9, o.bark, o.seed) + (o.extra && o.bark === '#f1f0ec' ? o.extra(c) : '');
+    const col = c.sea === 'herbst' ? o.autumn : c.sea === 'fruehling' ? o.spring : o.col;
+    let s = trunk(o.h + o.ry * .4, o.tw, o.bark);
+    if (o.fork) s += `<path d="M0 ${-o.h} q-6 -8 -${o.rx * .5} -${o.ry * .5} M0 ${-o.h} q6 -8 ${o.rx * .5} -${o.ry * .5}" stroke="${o.bark}" stroke-width="${o.tw * .45}" fill="none" stroke-linecap="round"/>`;
+    s += canopy(0, crownY, o.rx, o.ry, col, o.seed, o.n || 9);
+    if (c.sea === 'herbst' && o.autumn2) s += dots(o.seed + 5, 8, o.autumn2, 3.2, 0, crownY, o.rx * .7, o.ry * .6);
+    if (o.airy) s += dots(o.seed + 7, 6, shade(col, .7), 1.2, 0, crownY + o.ry * .6, o.rx * .8, 3);
+    return s + (o.extra ? o.extra(c) : '');
+  }
+  // Nadelbaum: Etagen von unten nach oben, Licht von links, Schnee im Winter
+  function conifer(c, o) {
+    let s = o.noTrunk ? '' : trunk(o.trunkH + 6, 5, '#6a5242');
+    const n = o.tiers, span = o.h - o.trunkH, step = span / n;
+    for (let i = 0; i < n; i++) {
+      const t = i / (n - 1), y = -o.trunkH - i * step, w = o.w0 * (1 - t * .82) * (o.airy ? .9 : 1);
+      const top = y - step * 1.7, drop = o.droop ? 5 : o.flat ? 1 : 3;
+      s += `<path d="M${-w} ${y + drop} Q${-w * .45} ${y - 1} 0 ${top} Q${w * .45} ${y - 1} ${w} ${y + drop} Q${w * .3} ${y + 1} 0 ${y + 2.5} Q${-w * .3} ${y + 1} ${-w} ${y + drop} Z" fill="${shade(o.col, .85 + (i % 2) * .08)}"/>`;
+      s += `<path d="M${-w * .9} ${y + drop - .5} Q${-w * .4} ${y - 1} 0 ${top + 1} L0 ${y + 1} Z" fill="${shade(o.col, 1.15)}" opacity=".55"/>`;
+      if (c.sea === 'winter' && !o.noSnow) s += `<path d="M${-w * .8} ${y - .5} Q${-w * .35} ${y - 3} 0 ${top + 2} Q${w * .35} ${y - 3} ${w * .8} ${y - .5}" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    }
+    if (o.cones) s += `<rect x="-5" y="${-o.h + 8}" width="2.4" height="5" rx="1.2" fill="#7a5236"/><rect x="2.6" y="${-o.h + 10}" width="2.4" height="5" rx="1.2" fill="#7a5236"/>`;
+    return s;
+  }
+
   // ---------- Helfer ----------
   const flower = (x, y, c, r = 2.2) => {
     let p = '';
@@ -98,6 +170,46 @@
     return s;
   };
 
+  // ---------- Premium-Sternbilder (nur aus der Schatztruhe; goldene Sterne) ----------
+  const PREMIUM = {
+    p_otter: { n: 'Otter', s: [[-30, -2], [-20, 4], [-8, 6], [6, 4], [18, 0], [28, -6], [-6, -8], [4, -8], [-1, -16]], l: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [2, 6], [3, 7], [6, 8], [7, 8]], big: [8] },
+    p_pinguin: { n: 'Pinguin', s: [[0, -26], [-9, -14], [9, -14], [-12, 4], [12, 4], [-7, 20], [7, 20], [4, -22]], l: [[0, 1], [0, 2], [1, 3], [2, 4], [3, 5], [4, 6], [5, 6], [0, 7]], big: [0] },
+    p_haekeln: { n: 'Häkelnadel & Knäuel', s: [[-14, 2], [-6, -8], [4, -4], [6, 8], [-4, 14], [-14, 10], [12, -14], [24, -26], [27, -23]], l: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0], [2, 6], [6, 7], [7, 8]], big: [8] },
+    p_edelweiss: { n: 'Edelweiß', s: [[0, 0], [0, -20], [17, -10], [17, 10], [0, 20], [-17, 10], [-17, -10]], l: [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6]], big: [0] },
+    p_kompass: { n: 'Kompass', s: [[0, -26], [24, 0], [0, 26], [-24, 0], [0, 0], [6, -6], [-6, 6]], l: [[0, 5], [5, 1], [1, 4], [4, 3], [3, 6], [6, 2], [0, 4], [4, 2]], big: [0, 4] },
+    p_buch: { n: 'Offenes Buch', s: [[-26, -8], [0, -2], [26, -8], [26, 14], [0, 20], [-26, 14]], l: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0], [1, 4]], big: [1] },
+    p_gipfel: { n: 'Gipfelstern', s: [[-28, 18], [-14, -4], [-4, 8], [8, -18], [28, 18], [8, -30]], l: [[0, 1], [1, 2], [2, 3], [3, 4]], big: [5] },
+    p_kakao: { n: 'Kakaotasse', s: [[-14, -6], [12, -6], [10, 16], [-12, 16], [12, 0], [20, 4], [12, 10], [-4, -16], [2, -22]], l: [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [7, 8]] },
+  };
+  const premiumConst = (k, night) => {
+    const c = PREMIUM[k];
+    let s = `<g stroke="#ffe9a8" stroke-width="1.1" opacity="${night ? .75 : .85}">${c.l.map(([a, b]) => `<line x1="${c.s[a][0]}" y1="${c.s[a][1]}" x2="${c.s[b][0]}" y2="${c.s[b][1]}"/>`).join('')}</g>`;
+    c.s.forEach(([x, y], i) => {
+      const r = (c.big || []).includes(i) ? 3 : 2.1;
+      s += `<circle cx="${x}" cy="${y}" r="${r * 2.6}" fill="#ffd86b" opacity="${night ? .28 : .18}"/><circle cx="${x}" cy="${y}" r="${r}" fill="#ffd86b"/>`;
+    });
+    if (night) s += `<text x="0" y="36" font-size="6.5" font-family="sans-serif" text-anchor="middle" fill="#ffe9a8" opacity=".85">✦ ${c.n}</text>`;
+    return s;
+  };
+
+  // Schatztruhe (geschlossen / offen mit Leuchten)
+  function chest(open) {
+    return `<svg viewBox="-60 -70 120 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      ${open ? `<g class="chest-rays" opacity=".9">${[...Array(10)].map((_, i) => `<path d="M0 -12 L${(Math.cos(i * .63 - 1.57) * 60).toFixed(1)} ${(Math.sin(i * .63 - 1.57) * 60 - 12).toFixed(1)}" stroke="#ffd86b" stroke-width="4" stroke-linecap="round" opacity=".5"/>`).join('')}</g>
+        <ellipse cx="0" cy="-14" rx="26" ry="10" fill="#fff3c4"/>` : ''}
+      <ellipse cx="0" cy="26" rx="44" ry="5" fill="#14233a" opacity=".12"/>
+      <rect x="-40" y="-12" width="80" height="36" rx="5" fill="#a0694a"/>
+      <path d="M-40 -2 h80 M-40 10 h80" stroke="#7b4a32" stroke-width="1.4"/>
+      <rect x="-40" y="-12" width="8" height="36" fill="#f2b01e"/><rect x="32" y="-12" width="8" height="36" fill="#f2b01e"/>
+      ${open
+        ? `<path d="M-40 -14 L-36 -46 Q0 -60 36 -46 L40 -14 Z" fill="#8a5236" transform="rotate(-8 -40 -14)"/>
+           <path d="M-40 -14 L-36 -46 Q0 -60 36 -46 L40 -14" stroke="#f2b01e" stroke-width="5" fill="none" transform="rotate(-8 -40 -14)"/>
+           <text x="0" y="-6" font-size="20" text-anchor="middle">✨</text>`
+        : `<path d="M-42 -12 Q0 -44 42 -12 Z" fill="#8a5236"/><path d="M-42 -12 Q0 -44 42 -12" stroke="#f2b01e" stroke-width="5" fill="none"/>
+           <rect x="-7" y="-18" width="14" height="16" rx="3" fill="#f2b01e"/><circle cx="0" cy="-11" r="2.6" fill="#7b4a32"/>`}
+    </svg>`;
+  }
+
   // ---------- Gadgets ----------
   // group 'land' = Landschaft (erscheint automatisch), 'himmel' = Himmelsplätze, sonst Bodenplätze
   const G = [
@@ -111,6 +223,8 @@
     { id: 'milchstrasse', name: 'Milchstraße', group: 'land', price: 18, info: 'leuchtet nachts quer über die Karte' },
     // --- Himmel ---
     ...Object.keys(CONST).map((k, i) => ({ id: 'stern_' + k, name: 'Sternbild ' + CONST[k].n, group: 'himmel', price: 6 + (i % 4) * 2, sky: true, d: c => constellation(k, c.tod === 'nacht') })),
+    // Premium: nicht käuflich, nur aus der Schatztruhe (price: null)
+    ...Object.keys(PREMIUM).map(k => ({ id: k, name: 'Premium-Sternbild ' + PREMIUM[k].n, group: 'premium', price: null, premium: true, sky: true, d: c => premiumConst(k, c.tod === 'nacht') })),
     { id: 'sternschnuppe', name: 'Sternschnuppe', group: 'himmel', price: 5, sky: true, d: () => `
       <path d="M-28 -12 L10 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".5"/><path d="M-14 -5 L10 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
       <path d="M12 0 L14 5 L19 6 L15 9 L16 14 L12 11 L8 14 L9 9 L5 6 L10 5 Z" fill="#ffe08a"/>` },
@@ -131,35 +245,74 @@
     { id: 'komet', name: 'Komet', group: 'himmel', price: 10, sky: true, d: () => `
       <path d="M-30 -14 Q-6 -4 6 2" stroke="#9fd6f7" stroke-width="7" stroke-linecap="round" opacity=".35"/>
       <path d="M-22 -10 Q-4 -2 6 2" stroke="#e3f2ff" stroke-width="3" stroke-linecap="round" opacity=".7"/><circle cx="7" cy="2.5" r="4" fill="#fff"/>` },
-    // --- Bäume ---
-    { id: 'tanne', name: 'Große Tanne', group: 'baeume', price: 2, d: c => fir(0, 0, 1.2, c.sea === 'winter') },
-    { id: 'birke', name: 'Birke', group: 'baeume', price: 4, d: c => c.sea === 'winter' ? bare(44).replace(DWOOD, '#f4f4f2') : `
-      <rect x="-3" y="-44" width="6" height="44" fill="#f4f4f2" ${OL}/><path d="M-3 -34 h3 M0 -24 h3 M-3 -14 h2.5 M0 -6 h3" stroke="#3d4652" stroke-width="1.6"/>
-      <ellipse cx="0" cy="-50" rx="13" ry="18" fill="${leaf(c, '#f2b01e')}"/>` },
-    { id: 'eiche', name: 'Eiche', group: 'baeume', price: 6, d: c => c.sea === 'winter' ? bare(36) : `
-      <rect x="-4" y="-30" width="8" height="30" fill="${DWOOD}"/>${crown(0, -44, 18, leaf(c, '#b5653a'))}` },
-    { id: 'ahorn', name: 'Ahorn', group: 'baeume', price: 6, d: c => c.sea === 'winter' ? bare(40) : `
-      <rect x="-3.5" y="-32" width="7" height="32" fill="${DWOOD}"/>${crown(0, -46, 16, leaf(c, '#d35400'))}` },
-    { id: 'apfelbaum', name: 'Apfelbaum', group: 'baeume', price: 7, d: c => c.sea === 'winter' ? bare(34) : `
-      <rect x="-3.5" y="-26" width="7" height="26" fill="${DWOOD}"/>${crown(0, -38, 15, leaf(c, '#c98a2e'))}
-      ${c.sea === 'fruehling' ? '<circle cx="-6" cy="-44" r="2" fill="#fff"/><circle cx="6" cy="-38" r="2" fill="#fff"/><circle cx="-1" cy="-32" r="2" fill="#fff"/>'
-        : '<circle cx="-7" cy="-42" r="2.4" fill="#d9381e"/><circle cx="6" cy="-37" r="2.4" fill="#d9381e"/><circle cx="-1" cy="-30" r="2.4" fill="#f2b01e"/>'}` },
+    // --- Bäume (botanisch erkennbare Wuchsformen; IDs der ersten 9 nie ändern) ---
+    { id: 'tanne', name: 'Weißtanne', group: 'baeume', price: 4, d: c => conifer(c, { h: 78, w0: 22, col: '#2a6b45', trunkH: 10, tiers: 8, flat: true, cones: true, seed: 3 }) },
+    { id: 'birke', name: 'Hängebirke', group: 'baeume', price: 5, d: c => decid(c, {
+      h: 34, tw: 5, bark: '#f1f0ec', rx: 15, ry: 24, col: '#6fae45', autumn: '#e8c02a', spring: '#a5d86a', seed: 11, n: 7, airy: true,
+      extra: () => `<path d="M-1.6 -6 h3 M0.5 -14 h2.2 M-2 -22 h2.6 M0 -30 h2" stroke="#2f3338" stroke-width="1.5"/>` }) },
+    { id: 'eiche', name: 'Stieleiche', group: 'baeume', price: 7, d: c => decid(c, {
+      h: 28, tw: 10, bark: '#5f4630', rx: 30, ry: 20, col: '#3d7a2e', autumn: '#a8742e', spring: '#86c24e', seed: 21, n: 12, fork: true }) },
+    { id: 'ahorn', name: 'Bergahorn', group: 'baeume', price: 6, d: c => decid(c, {
+      h: 30, tw: 8, bark: '#7d6a5a', rx: 24, ry: 22, col: '#3f8a35', autumn: '#e8901a', autumn2: '#d35400', spring: '#8fd05a', seed: 31, n: 10 }) },
+    { id: 'apfelbaum', name: 'Apfelbaum', group: 'baeume', price: 7, d: c => decid(c, {
+      h: 20, tw: 7, bark: '#6e5440', rx: 24, ry: 16, col: '#4c8f37', autumn: '#c9a03a', spring: '#8ccf5c', seed: 41, n: 9, fork: true,
+      extra: c => c.sea === 'fruehling' ? dots(41, 9, '#fff', 2.2, 0, -36, 20, 12) : dots(42, 7, '#d9381e', 2.6, 0, -34, 18, 11) }) },
     { id: 'weide', name: 'Trauerweide', group: 'baeume', price: 8, d: c => {
-      const col = c.sea === 'winter' ? '#c9b48a' : leaf(c, '#e3b23c');
-      let d = `<rect x="-3.5" y="-40" width="7" height="40" fill="${DWOOD}"/><ellipse cx="0" cy="-44" rx="18" ry="9" fill="${col}"/>`;
-      for (let i = -16; i <= 16; i += 4) d += `<path d="M${i} -42 q${i > 0 ? 2 : -2} 14 ${i > 0 ? 1 : -1} 28" stroke="${col}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+      if (c.sea === 'winter') return trunk(34, 9, '#6e5a44') + bareCrown(0, -34, 26, '#6e5a44', 51);
+      const col = c.sea === 'herbst' ? '#d9b43a' : c.sea === 'fruehling' ? '#a8d86a' : '#7fb24a';
+      let d = trunk(36, 9, '#6e5a44') + canopy(0, -46, 22, 10, col, 51, 7);
+      for (let i = -22; i <= 22; i += 3.2) d += `<path d="M${i.toFixed(1)} -44 q${(i / 6).toFixed(1)} 14 ${(i / 5).toFixed(1)} ${32 - Math.abs(i) * .35}" stroke="${shade(col, i % 2 ? .82 : 1)}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
       return d;
     } },
-    { id: 'kiefer', name: 'Kiefer', group: 'baeume', price: 5, d: c => `
-      <path d="M-2 0 Q-4 -30 1 -50 L4 -50 Q0 -30 3 0 Z" fill="${DWOOD}"/>
-      <ellipse cx="-6" cy="-50" rx="12" ry="5" fill="#2f6b3a"/><ellipse cx="6" cy="-42" rx="11" ry="4.4" fill="#2f6b3a"/><ellipse cx="1" cy="-57" rx="9" ry="4" fill="#2f6b3a"/>
-      ${c.sea === 'winter' ? '<path d="M-14 -53 h14 M-2 -60 h9 M-1 -45 h13" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' : ''}` },
-    { id: 'laerche', name: 'Lärche', group: 'baeume', price: 5, d: c => c.sea === 'winter' ? bare(46) : `
-      <rect x="-2" y="-10" width="4" height="10" fill="${DWOOD}"/>
-      <path d="M0 -56 L-10 -34 H10 Z M0 -42 L-13 -10 H13 Z" fill="${leaf(c, '#f2b01e')}"/>` },
-    { id: 'kastanienbaum', name: 'Kastanienbaum', group: 'baeume', price: 7, d: c => c.sea === 'winter' ? bare(38) : `
-      <rect x="-4" y="-30" width="8" height="30" fill="${DWOOD}"/>${crown(0, -44, 17, leaf(c, '#e8701a'))}
-      ${c.sea === 'fruehling' ? '<path d="M-8 -50 v-5 M5 -46 v-5 M-2 -38 v-5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>' : ''}` },
+    { id: 'kiefer', name: 'Waldkiefer', group: 'baeume', price: 5, d: c => `
+      <path d="M-3 0 Q-4 -30 -1 -58 L2 -58 Q1 -30 3 0 Z" fill="#6e5440"/><path d="M-1.6 -32 Q-1.2 -46 -1 -58 L2 -58 Q1.4 -46 1.6 -32 Z" fill="#c8693a"/>
+      <path d="M0 -50 l-10 -6 M1 -56 l9 -5" stroke="#c8693a" stroke-width="1.8"/>
+      ${canopy(-9, -60, 12, 6, '#3f6e3a', 61, 5)}${canopy(8, -64, 12, 6, '#3f6e3a', 62, 5)}${canopy(0, -70, 10, 5, '#3f6e3a', 63, 4)}
+      ${c.sea === 'winter' ? '<path d="M-18 -63 h14 M-1 -67 h14 M-6 -74 h10" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>' : ''}` },
+    { id: 'laerche', name: 'Europäische Lärche', group: 'baeume', price: 5, d: c => c.sea === 'winter'
+      ? trunk(70, 5, '#7a5a40') + [...Array(7)].map((_, i) => { const y = -14 - i * 8, w = 18 - i * 2.2; return `<path d="M0 ${y} l${-w} 6 M0 ${y} l${w} 6" stroke="#7a5a40" stroke-width="1.3"/>`; }).join('')
+      : conifer(c, { h: 74, w0: 18, col: c.sea === 'herbst' ? '#e0a21b' : c.sea === 'fruehling' ? '#9ad45e' : '#6fae45', trunkH: 10, tiers: 7, airy: true, seed: 71, noSnow: true }) },
+    { id: 'kastanienbaum', name: 'Rosskastanie', group: 'baeume', price: 7, d: c => decid(c, {
+      h: 26, tw: 9, bark: '#5a4636', rx: 26, ry: 24, col: '#3a7a30', autumn: '#c8742e', autumn2: '#e0a040', spring: '#7cc24a', seed: 81, n: 11,
+      extra: c => c.sea === 'fruehling' ? [...Array(7)].map((_, i) => { const r = prng(83 + i); const x = (r() - .5) * 36, y = -38 - r() * 30; return `<path d="M${x.toFixed(1)} ${y.toFixed(1)} l-2 4 h4 Z" fill="#fff"/>`; }).join('')
+        : c.sea === 'herbst' ? dots(84, 5, '#7a3f1e', 2.4, 0, -6, 22, 3) : '' }) },
+    // neue Arten
+    { id: 'fichte', name: 'Fichte', group: 'baeume', price: 4, d: c => conifer(c, { h: 84, w0: 20, col: '#1f5e36', trunkH: 8, tiers: 9, droop: true, seed: 91 }) },
+    { id: 'zirbe', name: 'Zirbelkiefer', group: 'baeume', price: 6, d: c => trunk(16, 6, '#6a5242') + canopy(0, -46, 15, 30, '#2f5d47', 101, 11) +
+      (c.sea === 'winter' ? '<path d="M-12 -62 h9 M2 -70 h9 M-6 -52 h12" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>' : '') },
+    { id: 'mammutbaum', name: 'Mammutbaum', group: 'baeume', price: 12, d: c => trunk(46, 14, '#9b4a2c') +
+      `<path d="M-4 -6 v-34 M2 -10 v-30" stroke="#7a3820" stroke-width="1.2"/>` + conifer(c, { h: 88, w0: 16, col: '#2f5d3a', trunkH: 38, tiers: 7, seed: 111, noTrunk: true }) },
+    { id: 'zeder', name: 'Libanon-Zeder', group: 'baeume', price: 9, d: c => trunk(50, 7, '#6a5242') +
+      [[-22, 32, 5], [-36, 27, 5], [-50, 20, 4.5], [-62, 12, 4]].map(([y, w, hh], i) => canopy(i % 2 ? 4 : -4, y, w, hh, '#3d6b4f', 121 + i, 12)).join('') +
+      (c.sea === 'winter' ? '<path d="M-20 -27 h18 M-12 -40 h22 M-10 -52 h16" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' : '') },
+    { id: 'rotbuche', name: 'Rotbuche', group: 'baeume', price: 7, d: c => decid(c, {
+      h: 30, tw: 8, bark: '#8a8f96', rx: 26, ry: 24, col: '#3f8a35', autumn: '#b5652a', autumn2: '#d08a3a', spring: '#9bd46a', seed: 131, n: 11 }) },
+    { id: 'linde', name: 'Winterlinde', group: 'baeume', price: 6, d: c => decid(c, {
+      h: 22, tw: 8, bark: '#6a5a4a', rx: 20, ry: 30, col: '#4a8f35', autumn: '#e6c229', spring: '#93d062', seed: 141, n: 11 }) },
+    { id: 'pappel', name: 'Pyramidenpappel', group: 'baeume', price: 5, d: c => decid(c, {
+      h: 10, tw: 5, bark: '#7a7468', rx: 8, ry: 38, col: '#3f8a35', autumn: '#e8c02a', spring: '#8fd05a', seed: 151, n: 8, narrow: true }) },
+    { id: 'vogelbeere', name: 'Vogelbeere', group: 'baeume', price: 5, d: c => decid(c, {
+      h: 26, tw: 5, bark: '#6a5a4a', rx: 16, ry: 15, col: '#4f9a3a', autumn: '#d9a03a', spring: '#93d062', seed: 161, n: 8, airy: true,
+      extra: c => c.sea === 'sommer' || c.sea === 'herbst' ? dots(162, 6, '#e8501a', 3, 0, -42, 12, 8) + dots(163, 6, '#d9381e', 2.2, 2, -40, 12, 8) : '' }) },
+    { id: 'ginkgo', name: 'Ginkgo', group: 'baeume', price: 8, d: c => decid(c, {
+      h: 26, tw: 6, bark: '#6e6458', rx: 14, ry: 26, col: '#5aa040', autumn: '#f5c518', spring: '#a8dc6a', seed: 171, n: 9, airy: true }) },
+    { id: 'olivenbaum', name: 'Olivenbaum', group: 'baeume', price: 8, d: c => `
+      <path d="M-7 0 Q-2 -8 -6 -14 Q-9 -20 -2 -26 L3 -26 Q8 -18 4 -12 Q2 -6 7 0 Z" fill="#7d776c"/>
+      <path d="M-3 -18 q-2 -4 1 -8 M3 -10 q3 -4 0 -8" stroke="#5f5a50" stroke-width="1.2" fill="none"/>
+      ${canopy(-8, -34, 15, 10, '#8fa67a', 181, 7)}${canopy(9, -36, 13, 9, '#7d9668', 182, 6)}
+      ${c.sea !== 'winter' ? dots(183, 6, '#3d3f2e', 1.6, 0, -34, 18, 8) : ''}` },
+    { id: 'affenbrotbaum', name: 'Affenbrotbaum', group: 'baeume', price: 12, d: c => `
+      <path d="M-14 0 Q-17 -24 -8 -40 L8 -40 Q17 -24 14 0 Z" fill="#a08870"/><path d="M-6 -4 Q-8 -22 -4 -36 M5 -6 Q7 -22 3 -36" stroke="#8a7460" stroke-width="1.4" fill="none"/>
+      <path d="M-6 -40 l-10 -10 l-5 2 M0 -40 v-12 M6 -40 l10 -9 l5 1 M-12 -48 l-4 -6 M12 -47 l3 -6" stroke="#8a7460" stroke-width="3" fill="none" stroke-linecap="round"/>
+      ${c.sea === 'sommer' || c.sea === 'fruehling' ? canopy(-16, -52, 7, 4, '#6b8f3a', 191, 3) + canopy(0, -56, 7, 4, '#6b8f3a', 192, 3) + canopy(17, -51, 7, 4, '#6b8f3a', 193, 3) : ''}` },
+    { id: 'schirmakazie', name: 'Schirmakazie', group: 'baeume', price: 10, d: c => `
+      <path d="M-2 0 L-1 -28 L-14 -46 M0 -28 L12 -46 M-1 -34 L0 -48" stroke="#5f4630" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+      ${canopy(0, -52, 34, 6, '#6b8f3a', 201, 9)}` },
+    { id: 'saguaro', name: 'Saguaro-Kaktus', group: 'baeume', price: 8, d: () => `
+      <path d="M-5 0 V-62 a5 5 0 0 1 10 0 V0 Z" fill="#4f8a4a"/>
+      <path d="M-5 -26 h-8 a4 4 0 0 1 -4 -4 V-46 a4 4 0 0 1 8 0 V-34 h4 Z M5 -34 h7 a4 4 0 0 0 4 -4 V-52 a4 4 0 0 0 -8 0 V-42 h-3 Z" fill="#4f8a4a"/>
+      <path d="M-2 -2 V-62 M2 -2 V-62 M-13 -30 V-46 M12 -38 V-52" stroke="#3d6f3a" stroke-width="1"/>
+      <circle cx="0" cy="-67" r="2.4" fill="#fff"/><circle cx="12" cy="-56" r="2" fill="#fff"/>` },
     // --- Brunnen ---
     { id: 'springbrunnen', name: 'Springbrunnen', group: 'brunnen', price: 15, d: () => `
       <ellipse cx="0" cy="-4" rx="26" ry="7" fill="#c9d3e0"/><ellipse cx="0" cy="-6" rx="22" ry="5" fill="${WATER}"/>
@@ -376,7 +529,7 @@
     } },
   ];
   const GROUPS = {
-    land: '🏞️ Landschaft', himmel: '✨ Himmel & Sternbilder', baeume: '🌳 Bäume', brunnen: '⛲ Brunnen',
+    land: '🏞️ Landschaft', himmel: '✨ Himmel & Sternbilder', premium: '🌟 Premium', baeume: '🌳 Bäume', brunnen: '⛲ Brunnen',
     berge: '⛰️ Berge', wald: '🌲 Wald', wasser: '💧 Wasser', geo: '🧭 Geographie', buch: '📚 Bücher', schoko: '🍫 Schokolade', haekeln: '🧶 Häkeln',
   };
   const byId = Object.fromEntries(G.map(g => [g.id, g]));
@@ -425,6 +578,108 @@
   };
   const rnd = seed => () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
 
+  /* Bergkette: Grat mit Schultern & Sätteln, Schattenflanken rechts, Schnee folgt exakt dem Hang.
+     Gibt (mit full=true) auch Punkte, Gipfel- und Sattel-Indizes zurück (für den Gletscher). */
+  function mountainRange(X, pk, r, edgeY, col, snowLine, night, op = 1, full = false) {
+    const pts = [[X, edgeY], ...pk, [X + RW, edgeY]];
+    const P = [[X, edgeY]], peaks = [], saddles = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const seq = [[x1, y1]];
+      if (i > 0 && i < pts.length - 2) seq.push([(x1 + x2) / 2 + (r() - .5) * 16, Math.min(165, Math.max(y1, y2) + 20 + r() * 26), 'saddle']);
+      seq.push([x2, y2, i + 1 < pts.length - 1 ? 'peak' : 'edge']);
+      for (let j = 0; j < seq.length - 1; j++) {
+        const [ax, ay] = seq[j], [bx, by, kind] = seq[j + 1];
+        [.3, .62].forEach(t => P.push([ax + (bx - ax) * t + (r() - .5) * 6, ay + (by - ay) * t + (r() - .5) * 8]));
+        P.push([bx, by]);
+        if (kind === 'peak') peaks.push(P.length - 1);
+        if (kind === 'saddle') saddles.push(P.length - 1);
+      }
+    }
+    const f = v => v.toFixed(1);
+    let s = `<path d="M${P.map(p => f(p[0]) + ' ' + f(p[1])).join(' L')} V${H} H${X} Z" fill="${col}" opacity="${op}"/>`;
+    // Schattenflanke rechts jedes Gipfels (bis zum nächsten Sattel)
+    const dark = shade(col, .8);
+    peaks.forEach(k => {
+      const end = saddles.find(sd => sd > k) ?? P.length - 1;
+      const face = P.slice(k, end + 1);
+      // Flanke läuft schräg aus: vom Gipfel über einen Sporn nach unten, nicht senkrecht
+      // Schattenflanke als Dreieck: Grat bis Sattel, dann zur Spornspitze unterhalb – keine senkrechten Streifen
+      const [sx, sy] = face[face.length - 1];
+      const tipY = Math.min(198, sy + 30), tipX = P[k][0] + (sx - P[k][0]) * .5;
+      s += `<path d="M${face.map(p => f(p[0]) + ' ' + f(p[1])).join(' L')} L${f(tipX)} ${f(tipY)} Z" fill="${dark}" opacity="${op}"/>`;
+    });
+    // Schnee: entlang des Grats bis zur Tiefe d, unten unregelmäßige Schneegrenze mit Rinnen
+    const walk = (k, dir, yT) => {
+      for (let i = k; i + dir >= 0 && i + dir < P.length; i += dir) {
+        const a = P[i], bb = P[i + dir];
+        if (bb[1] >= yT) { const t = (yT - a[1]) / ((bb[1] - a[1]) || 1); return { idx: i, p: [a[0] + (bb[0] - a[0]) * t, yT] }; }
+      }
+      return { idx: dir < 0 ? 0 : P.length - 1, p: P[dir < 0 ? 0 : P.length - 1] };
+    };
+    peaks.forEach(k => {
+      const [px, py] = P[k];
+      if (py >= snowLine) return;
+      const d = Math.min(snowLine - py, 34) + 4;
+      const L = walk(k, -1, py + d), R = walk(k, 1, py + d);
+      const ridge = P.slice(L.idx + 1, R.idx + 1);
+      let jag = '';
+      for (let i = 1; i <= 5; i++) {
+        const t = i / 6, x = R.p[0] + (L.p[0] - R.p[0]) * t;
+        jag += ` L${f(x)} ${f(py + d + (i % 2 ? 6 + r() * 6 : -2 + r() * 3))}`;
+      }
+      s += `<path d="M${f(L.p[0])} ${f(L.p[1])} L${ridge.map(p => f(p[0]) + ' ' + f(p[1])).join(' L')} L${f(R.p[0])} ${f(R.p[1])}${jag} Z" fill="${night ? '#c9d6e8' : '#fff'}" opacity="${op}"/>`;
+      // Schattenseite des Schnees
+      const rr = P.slice(k, R.idx + 1);
+      s += `<path d="M${rr.map(p => f(p[0]) + ' ' + f(p[1])).join(' L')} L${f(R.p[0])} ${f(R.p[1])} L${f(px + 2)} ${f(py + d + 4)} Z" fill="${night ? '#9fb2cc' : '#d6e4f1'}" opacity="${op}"/>`;
+    });
+    return full ? { svg: s, P, peaks, saddles } : s;
+  }
+
+  // Talgletscher: Firnbecken im Sattel, Zunge mit Seiten- & Mittelmoräne, Spalten, Gletschertor
+  function glacier(m, r, night) {
+    const f = v => v.toFixed(1);
+    const sd = m.saddles[1] ?? m.saddles[0];
+    if (sd == null) return '';
+    const [cx, y0] = m.P[sd], len = 174 - y0;
+    if (len < 30) return '';
+    let s = `<g opacity="${night ? .85 : 1}"><ellipse cx="${f(cx)}" cy="${f(y0 + 2)}" rx="46" ry="11" fill="#f6fbff"/>`;
+    s += tongue(cx, y0, cx + 4, 170, 36, 21, r, f);
+    return s + '</g>';
+  }
+  // Gletscherzunge entlang einer S-förmigen Mittellinie; Breite nimmt zur Stirn hin ab
+  function tongue(x0, y0, x1, y1, w0, w1, r, f, small = false) {
+    const bz = (t, a, b, c, d) => (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t * t * c + t ** 3 * d;
+    const c1 = [x0 - (small ? 4 : 16), y0 + (y1 - y0) * .32], c2 = [x1 + (small ? 4 : 18), y0 + (y1 - y0) * .66];
+    const N = 14, L = [], R = [], M = [], Mo = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, x = bz(t, x0, c1[0], c2[0], x1), y = bz(t, y0, c1[1], c2[1], y1);
+      const t2 = Math.min(1, t + .02), dx = bz(t2, x0, c1[0], c2[0], x1) - x, dy = bz(t2, y0, c1[1], c2[1], y1) - y;
+      const n = Math.hypot(dx, dy) || 1, nx = -dy / n, ny = dx / n, w = w0 + (w1 - w0) * t;
+      L.push([x + nx * w, y + ny * w]); R.push([x - nx * w, y - ny * w]);
+      M.push([x - nx * w * .28, y - ny * w * .28]); Mo.push([x, y, nx, ny, w]);
+    }
+    const line = pts => pts.map(p => f(p[0]) + ' ' + f(p[1])).join(' L');
+    let s = `<path d="M${line(L)} L${line([...R].reverse())} Z" fill="url(#glacier)"/>`;
+    // Seitenmoränen, Mittelmoräne
+    s += `<path d="M${line(L)}" stroke="#8a8f96" stroke-width="${small ? 1.4 : 2.8}" fill="none" stroke-linecap="round" opacity=".9"/>`;
+    s += `<path d="M${line(R)}" stroke="#7d828a" stroke-width="${small ? 1.4 : 2.8}" fill="none" stroke-linecap="round" opacity=".9"/>`;
+    if (!small) s += `<path d="M${line(M.slice(2))}" stroke="#6f747b" stroke-width="1.5" fill="none" opacity=".85"/>`;
+    // Spalten: unregelmäßig verteilt, quer zur Fließrichtung, talwärts gebogen
+    const n = small ? 3 : 14;
+    for (let k = 0; k < n; k++) {
+      const i = 2 + Math.floor(r() * (N - 4)), [x, y, nx, ny, w] = Mo[i];
+      const off = (r() - .5) * w * 1.2, len = w * (.25 + r() * .3);
+      const ax = x + nx * off - nx * len / 2, ay = y + ny * off - ny * len / 2, bx = ax + nx * len, by = ay + ny * len;
+      s += `<path d="M${f(ax)} ${f(ay)} Q${f((ax + bx) / 2 + ny * 2.5)} ${f((ay + by) / 2 + 2.5)} ${f(bx)} ${f(by)}" stroke="#7fb6d9" stroke-width="${small ? .9 : 1.2}" fill="none" stroke-linecap="round"/>`;
+    }
+    // Gletscherstirn mit blauem Eis und Gletschertor
+    const [ex, ey] = [x1, y1], ew = w1;
+    s += `<path d="M${f(ex - ew)} ${f(ey - 2)} L${f(ex + ew)} ${f(ey - 2)} L${f(ex + ew * .85)} ${f(ey + 6)} L${f(ex - ew * .85)} ${f(ey + 6)} Z" fill="#6fb6e0"/>`;
+    if (!small) s += `<path d="M${f(ex - 3)} ${f(ey + 6)} q3.5 -7 7 0 Z" fill="#2f6f9a"/>`;
+    return s;
+  }
+
   // Gemeinsame Bausteine für Wasser im Hintergrund (Küste, Polar, Insel, Vulkan)
   const seaBand = (X, winter) => `<path d="M${X} 166 H${X + RW} V216 H${X} Z" fill="${winter ? '#9fd0ee' : DWATER}"/>
     <path d="M${X + 20} 180 q12 -4 24 0 M${X + 120} 192 q12 -4 24 0 M${X + 220} 178 q12 -4 24 0 M${X + 300} 198 q12 -4 24 0" stroke="#fff" stroke-width="1.8" fill="none" opacity=".75"/>`;
@@ -457,17 +712,19 @@
       if (reg.i === 1) s += `<circle cx="${X + 250}" cy="40" r="15" fill="#f3efd0"/><circle cx="${X + 257}" cy="35" r="13" fill="${SKY.nacht[0]}"/>`;
     } else if (reg.i === 1) s += `<circle cx="${X + 250}" cy="${c.tod === 'tag' ? 40 : 70}" r="18" fill="#ffd23f"/>`;
 
-    // Berge mit festen Randhöhen, damit die Gebiete nahtlos aneinanderpassen
+    // Gebirge: hintere Dunstkette + vordere Kette mit Graten, Schattenflanken und hangtreuem Schnee.
+    // Feste Randhöhen (118/128), damit die Gebiete nahtlos aneinanderpassen.
     const [hi, lo] = BIOME[b] || [100, 140];
+    const snowLine = (snowy ? 200 : { gletscher: 125, berge: 100, fjord: 100, schlucht: 95, alm: 88, schneewald: 200 }[b] || 82) + (winter ? 35 : 0);
+    const pkFar = [30, 120, 210, 290].map(dx => [X + dx + (r() - .5) * 30, Math.max(10, Math.round(hi - 14 + r() * (lo - hi)))]);
+    s += mountainRange(X, pkFar, r, 118, night ? '#3a5078' : b === 'canyon' ? '#cf8a5a' : '#8fa6c6', snowLine - 8, night, .85);
     const pk = [60, 140, 220, 300].map(dx => [X + dx, Math.round(hi + r() * (lo - hi))]);
     const mount = b === 'canyon' ? '#b5653a' : night ? '#2f4366' : '#5f7ba3';
-    s += `<path d="M${X} 128 ${pk.map(p => 'L' + p.join(' ')).join(' ')} L${X + RW} 128 V${H} H${X} Z" fill="${mount}"/>`;
-    pk.filter(p => p[1] < 100 || snowy).forEach(([x, y]) => {
-      const k = (winter ? 1.9 : 1) * (y < 60 ? 1.4 : 1);
-      s += `<path d="M${x - 12 * k} ${y + 14 * k} L${x} ${y} L${x + 12 * k} ${y + 14 * k} L${x + 6 * k} ${y + 10 * k} L${x} ${y + 16 * k} L${x - 6 * k} ${y + 10 * k} Z" fill="#fff"/>`;
-    });
-    if (b === 'gletscher') pk.filter(p => p[1] < 65).forEach(([x, y]) =>
-      s += `<path d="M${x - 6} ${y + 12} Q${x - 4} ${y + 60} ${x + 4} 165 L${x + 30} 165 Q${x + 18} ${y + 50} ${x + 8} ${y + 12} Z" fill="#e3f2fb" opacity=".95"/>`);
+    const main = mountainRange(X, pk, r, 128, mount, snowLine, night, 1, true);
+    s += main.svg;
+    if (b === 'gletscher') s += glacier(main, r, night);
+    const sdG = main.saddles[1] ?? main.saddles[0];
+    const gx = b === 'gletscher' && sdG != null ? main.P[sdG][0] + 3 : null; // Gletschertor → Gletscherbach
     if (b === 'vulkan') s += `<path d="M${X + 110} 175 L${X + 165} 70 L${X + 195} 70 L${X + 250} 175 Z" fill="${night ? '#3a3f52' : '#5a5f72'}"/>
       <ellipse cx="${X + 180}" cy="71" rx="15" ry="4" fill="#e8701a"/><g class="smoke"><circle cx="${X + 184}" cy="56" r="8" fill="#e3e8ef" opacity=".8"/><circle cx="${X + 194}" cy="42" r="10" fill="#e3e8ef" opacity=".6"/><circle cx="${X + 208}" cy="28" r="12" fill="#e3e8ef" opacity=".45"/></g>`;
     if (b === 'canyon') s += `<path d="M${X + 20} 175 V120 H${X + 90} V175 Z M${X + 200} 175 V100 H${X + 250} V138 H${X + 290} V175 Z" fill="#c96a3a"/>
@@ -490,7 +747,11 @@
       s += `<ellipse cx="${X + 180}" cy="190" rx="150" ry="14" fill="${winter ? '#d4e9f6' : DWATER}"/>`;
       s += `<path d="M${X + 80} 190 q10 -3 20 0 M${X + 180} 194 q10 -3 20 0 M${X + 260} 187 q10 -3 20 0" stroke="#fff" stroke-width="1.6" fill="none" opacity=".7"/>`;
     }
-    if (b === 'gletscher' && has('gletschersee')) s += `<ellipse cx="${X + 180}" cy="184" rx="110" ry="11" fill="${winter ? '#d4e9f6' : '#2bd0c8'}"/><path d="M${X + 110} 184 h30 M${X + 180} 188 h40" stroke="#fff" stroke-width="1.6" opacity=".7"/>`;
+    if (gx != null) {
+      // Gletscherbach aus dem Gletschertor; mit „Gletschersee“ staut er sich zum türkisen Schmelzwassersee
+      s += creek(`M${gx} 176 Q${gx - 8} 188 ${gx + 6} 198 T${gx - 4} 214`, 4, winter);
+      if (has('gletschersee')) s += `<ellipse cx="${gx}" cy="190" rx="70" ry="9" fill="${winter ? '#d4e9f6' : '#2bd0c8'}"/><path d="M${gx - 40} 190 h22 M${gx + 6} 193 h26" stroke="#fff" stroke-width="1.6" opacity=".7"/>`;
+    }
     if (b === 'moor') for (let i = 0; i < 5; i++) {
       const x = X + 30 + r() * 300, y = 186 + r() * 18;
       s += `<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="${(18 + r() * 16).toFixed(0)}" ry="4" fill="#2f5d5c"/><path d="M${(x - 8).toFixed(0)} ${y.toFixed(0)} v-12 M${(x - 4).toFixed(0)} ${y.toFixed(0)} v-16 M${(x + 2).toFixed(0)} ${y.toFixed(0)} v-10" stroke="#5a7a3a" stroke-width="1.4"/>`;
@@ -541,7 +802,7 @@
 
     // Schild mit Gebietsnamen
     const lw = reg.name.length * 5.6 + 16;
-    s += `<g><rect x="${X + 8}" y="${H - 22}" width="${lw}" height="15" rx="7" fill="rgba(20,35,58,.5)"/><text x="${X + 16}" y="${H - 11}" font-size="9.5" font-family="sans-serif" font-weight="700" fill="#fff">${reg.name}</text></g>`;
+    s += `<g class="w-label" data-action="w-go" data-r="${reg.id}"><rect x="${X + 8}" y="${H - 22}" width="${lw}" height="15" rx="7" fill="rgba(20,35,58,.5)"/><text x="${X + 16}" y="${H - 11}" font-size="9.5" font-family="sans-serif" font-weight="700" fill="#fff">${reg.name}</text></g>`;
 
     if (locked) {
       s += `<rect x="${X}" y="0" width="${RW}" height="${H}" fill="#eef5fb" opacity=".72"/>
@@ -552,6 +813,22 @@
         </g>`;
     }
     return s;
+  }
+
+  // Farbverläufe (Himmel, Gletscher, Nordlicht) – einmal pro Seite bzw. in jeder Vorschau
+  const defsInner = () => `<defs>
+    ${Object.entries(SKY).map(([k, v]) => `<linearGradient id="wsky-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${v[0]}"/><stop offset=".55" stop-color="${v[1]}"/><stop offset="1" stop-color="${v[2]}"/></linearGradient>`).join('')}
+    <linearGradient id="glacier" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6fbff"/><stop offset=".6" stop-color="#d8ecf8"/><stop offset="1" stop-color="#a9d3ee"/></linearGradient>
+    <linearGradient id="aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3cf0c8" stop-opacity="0"/><stop offset=".5" stop-color="#3cf0c8" stop-opacity=".55"/><stop offset="1" stop-color="#1e88e5" stop-opacity="0"/></linearGradient>
+  </defs>`;
+
+  // Vorschau eines Gebiets (für das Kauf-Fenster)
+  function regionPreview(id, ownedIds) {
+    const reg = regionById[id];
+    if (!reg) return '';
+    const now = new Date();
+    const c = { tod: timeOfDay(now.getHours()), sea: season(now.getMonth()) };
+    return `<svg viewBox="${reg.i * RW} 0 ${RW} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${defsInner()}${region(reg, c, new Set(ownedIds || []), false)}</svg>`;
   }
 
   function gadgetAt(slot, gid, c) {
@@ -586,10 +863,7 @@
       (animalsIn[reg.id] ||= []).push(`<g class="w-anim" data-action="w-animal" data-id="${a.id}" style="animation-delay:${((i * 1.7) % 9).toFixed(1)}s">${a.svg.replace('<svg', `<svg x="${x - 17}" y="${y - 32}" width="34" height="34"`)}</g>`);
     });
 
-    const defs = `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-      ${Object.entries(SKY).map(([k, v]) => `<linearGradient id="wsky-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${v[0]}"/><stop offset=".55" stop-color="${v[1]}"/><stop offset="1" stop-color="${v[2]}"/></linearGradient>`).join('')}
-      <linearGradient id="aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3cf0c8" stop-opacity="0"/><stop offset=".5" stop-color="#3cf0c8" stop-opacity=".55"/><stop offset="1" stop-color="#1e88e5" stop-opacity="0"/></linearGradient>
-    </defs></svg>`;
+    const defs = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${defsInner()}</svg>`;
 
     const dispH = 300, dispW = Math.round(RW * dispH / H);
     let html = '';
@@ -638,6 +912,6 @@
 
   window.World = {
     RW, H, GADGETS: G, GROUPS, SLOTS, slotById, REGIONS, regionById, START_REGIONS, regionPrice, nextRegion, FINDS, byId, findById,
-    world, preview, previewFind, randomFind, timeOfDay, season,
+    world, preview, previewFind, regionPreview, randomFind, timeOfDay, season, chest,
   };
 })();

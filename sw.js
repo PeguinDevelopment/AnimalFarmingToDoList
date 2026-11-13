@@ -1,6 +1,6 @@
 // Offline-Cache. Bei Änderungen an der App die Versionsnummer erhöhen, damit das iPhone die neue Version lädt.
-const VERSION = 'plan-v1';
-const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'animals.js', 'manifest.webmanifest',
+const VERSION = 'plan-v2';
+const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'animals.js', 'world.js', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {

@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const A = window.Animals;
+  const Wd = window.World;
   const KEY = 'pfoetchenplan-v1';
   const $ = s => document.querySelector(s);
 
@@ -33,10 +34,23 @@
     'Jeder Berg wird Schritt für Schritt bestiegen. ⛰️', 'Auch kleine Bäche werden zu Flüssen. 💧',
     'Ein Kapitel nach dem anderen. 📖', 'Kurz durchatmen wie im Wald. 🌲'];
 
-  // ---------- Zustand ----------
+  /* ---------- Zustand ----------
+     Regeln, damit Backups & Erweiterungen nie etwas kaputt machen:
+     1. Alles hängt an festen IDs (Tiere, Gadgets, Gebiete, Plätze) – nie an Positionen in Listen.
+     2. Bei Änderungen am Datenformat SCHEMA erhöhen und in migrate() einen neuen Schritt ergänzen.
+     3. Unbekannte Felder/IDs (z. B. aus einem Backup einer neueren Version) werden mitgespeichert,
+        nur nicht angezeigt – nie gelöscht. */
+  const SCHEMA = 2;
+  const newMap = (name = 'Meine Wiese') => ({
+    id: 'm' + uid(), name, createdAt: Date.now(), archived: false,
+    unlocked: [...Wd.START_REGIONS],  // freigeschaltete Gebiete (IDs)
+    slots: {},                        // Platz-ID → Gadget-ID
+    finds: [],                        // Fundstücke {id, type, region, x, y}
+  });
   function defaultState() {
+    const m = newMap();
     return {
-      v: 1,
+      v: 1, schema: SCHEMA,
       categories: [
         { id: 'uni', name: 'Uni', color: '#084a85', animal: 'pinguin' },
         { id: 'therapie', name: 'Therapie', color: '#00897b', animal: 'steinbock' },
@@ -48,17 +62,45 @@
       animals: [],
       progress: {},
       checks: 0,
+      pebbles: 0,          // Kiesel – Währung für den Wiesen-Laden
+      inv: {},             // gekaufte Gadgets: { id: Anzahl } – gehören der Person, nicht der Karte
+      world: { active: m.id, maps: [m] },  // Karten (später archivierbar), eine ist aktiv
       settings: { appName: 'Plan', theme: 'meer', calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, tipClosed: false },
     };
   }
+  // Schrittweise Umstellung alter Speicherstände/Backups auf das aktuelle Format
+  const MIGRATIONS = {
+    // 1 → 2: Wiese als „Karte“ mit Gebiets-IDs statt Positionsnummern
+    2: s => {
+      const ids = Wd.REGIONS.map(r => r.id);
+      const m = newMap();
+      if (typeof s.regions === 'number') m.unlocked = ids.slice(0, Math.max(4, s.regions));
+      Object.entries(s.slots || {}).forEach(([k, g]) => {
+        const old = /^r(\d+)([bfs]\d)$/.exec(k);
+        m.slots[old && ids[+old[1]] ? `${ids[+old[1]]}:${old[2]}` : k] = g;
+      });
+      m.finds = (s.finds || []).map(f => f.region ? f : { ...f, region: ids[Math.floor((f.x || 0) / Wd.RW)] || ids[0], x: (f.x || 0) % Wd.RW });
+      if (Array.isArray(s.owned)) s.inv = Object.fromEntries(s.owned.map(id => [id, 1]));
+      delete s.regions; delete s.slots; delete s.finds; delete s.owned;
+      s.world = s.world || { active: m.id, maps: [m] };
+      return s;
+    },
+  };
   function migrate(s) {
+    for (let v = (s.schema || 1) + 1; v <= SCHEMA; v++) if (MIGRATIONS[v]) s = MIGRATIONS[v](s);
+    s.schema = Math.max(s.schema || 1, SCHEMA);
     const d = defaultState();
+    const world = s.world && Array.isArray(s.world.maps) && s.world.maps.length ? s.world : d.world;
+    world.maps = world.maps.map(m => ({ ...newMap(), ...m, slots: m.slots || {}, finds: m.finds || [], unlocked: m.unlocked?.length ? m.unlocked : [...Wd.START_REGIONS] }));
+    if (!world.maps.some(m => m.id === world.active)) world.active = world.maps[0].id;
     return {
-      ...d, ...s,
+      ...d, ...s, world,
       settings: (st => ({ ...st, theme: THEMES.some(t => t.id === st.theme) ? st.theme : 'meer' }))({ ...d.settings, ...(s.settings || {}) }),
       progress: s.progress || {},
       animals: (s.animals || []).map(a => a.kind === 'kuh' ? { ...a, kind: 'hochland', look: { ...a.look, fur: 0 } } : a),
       checks: s.checks ?? (s.tasks || []).reduce((n, t) => n + (t.rewarded ? 1 : 0) + (t.subtasks || []).filter(x => x.rewarded).length, 0),
+      pebbles: s.pebbles ?? s.checks ?? 0,
+      inv: s.inv || {},
       tasks: (s.tasks || []).map(t => ({ subtasks: [], note: '', ...t })),
       categories: (s.categories && s.categories.length ? s.categories : d.categories)
         .map(c => c.color === '#0b6fb8' ? { ...c, color: '#084a85' } : c) // altes Uni-Blau → dunkler
@@ -67,8 +109,7 @@
           const OLD = { therapie: 'hase', umzug: 'hund', sonstiges: 'katze', vorlesung: 'pferd' };
           const NEW = { therapie: 'steinbock', umzug: 'hochland', sonstiges: 'hund', vorlesung: 'hase' };
           if (OLD[c.id] && (c.animal === OLD[c.id] || c.animal === 'kuh')) return { ...c, animal: NEW[c.id] };
-          if (!A.KINDS[c.animal]) return { ...c, animal: 'pinguin' };
-          return c;
+          return c; // unbekannte Tiere bleiben gespeichert, angezeigt wird ersatzweise der Pinguin
         }),
     };
   }
@@ -85,7 +126,8 @@
     catch (e) { toast('Speichern hat nicht geklappt 😕'); }
   }
 
-  const ui = { view: 'heute', sheet: null, overlay: null, focus: null, timer: null, hatchQueue: [], addDraft: '', addCat: null, addImp: false, addToday: false, confirm: null, refocus: null };
+  const ui = { view: 'heute', sheet: null, overlay: null, focus: null, timer: null, hatchQueue: [], addDraft: '', addCat: null, addImp: false, addToday: false, confirm: null, refocus: null,
+    edit: false, placing: null, worldX: 0, shopGroup: 'land' };
 
   const catById = id => state.categories.find(c => c.id === id);
   const taskById = id => state.tasks.find(t => t.id === id);
@@ -93,13 +135,45 @@
   const latestOfKind = kind => [...state.animals].reverse().find(a => a.kind === kind);
   const mini = (kind, look) => A.draw(kind, look || { fur: 0, acc: 'keins' });
 
+  // ---------- Wiese: Inventar ----------
+  const ownedLand = () => Object.keys(state.inv).filter(id => Wd.byId[id]?.group === 'land' && state.inv[id] > 0);
+  const curMap = () => state.world.maps.find(m => m.id === state.world.active) || state.world.maps[0];
+  // Gadgets auf allen Karten (auch archivierten) zählen als „verbaut“
+  const placedCount = gid => state.world.maps.reduce((n, m) => n + Object.values(m.slots).filter(x => x === gid).length, 0);
+  const available = gid => (state.inv[gid] || 0) - placedCount(gid);
+  const openCount = () => curMap().unlocked.filter(id => Wd.regionById[id]).length;
+  const shownRegions = () => {
+    const open = Wd.REGIONS.filter(r => curMap().unlocked.includes(r.id));
+    const next = Wd.nextRegion(curMap().unlocked);
+    return next ? [...open, next] : open;
+  };
+  function startPlacing(gid) {
+    ui.placing = gid; ui.edit = true;
+    if (ui.sheet) { ui.sheet = null; $('#sheet-layer').hidden = true; }
+    ui.view = 'tiere';
+    render();
+  }
+  // Zu einem Gebiet scrollen (über die Kachel-Position, nicht über feste Pixel)
+  function scrollWorldTo(regionId, smooth) {
+    const wrap = $('#world-wrap'), tile = wrap && wrap.querySelector(`.w-region[data-r="${regionId}"]`);
+    if (!tile) return;
+    const x = tile.offsetLeft - (wrap.clientWidth - tile.clientWidth) / 2;
+    wrap.scrollTo({ left: Math.max(0, x), behavior: smooth ? 'smooth' : 'auto' });
+    ui.worldX = Math.max(0, x);
+  }
+
   // ---------- Belohnungen ----------
   function award(catId) {
     const cat = catById(catId);
     if (!cat) return null;
     state.checks = (state.checks || 0) + 1;
-    const un = A.UNLOCKS.find(u => u.at === state.checks);
-    if (un) ui.unlock = un.name;
+    state.pebbles = (state.pebbles || 0) + 1;
+    // Ab und zu ein Fundstück auf der Wiese
+    if (Math.random() < .12) {
+      const f = Wd.randomFind(curMap().unlocked);
+      curMap().finds.push({ id: uid(), type: f.type, region: f.region, x: f.x, y: f.y });
+      ui.unlock = `Fundstück! ${f.name.charAt(0).toUpperCase() + f.name.slice(1)} liegt jetzt auf deiner Wiese 🔍`;
+    }
     state.progress[catId] = (state.progress[catId] || 0) + 1;
     if (state.progress[catId] >= state.settings.perBaby) {
       state.progress[catId] = 0;
@@ -135,7 +209,7 @@
   }
 
   function cheer(fallback) {
-    if (ui.unlock) { const n = ui.unlock; ui.unlock = null; return `Neu auf deiner Wiese: ${n}`; }
+    if (ui.unlock) { const n = ui.unlock; ui.unlock = null; return n; }
     return fallback || pick(CHEERS);
   }
 
@@ -296,11 +370,22 @@
     const animals = [...state.animals].reverse();
     return `
       <h1 class="view-title">Tierwiese ⛰️</h1>
-      <div class="scene">${A.scene(state.checks || 0, state.animals)}</div>
-      <p class="hint" style="margin:-4px 4px 12px">${(() => {
-        const next = A.UNLOCKS.find(u => u.at > (state.checks || 0));
-        return next ? `Als Nächstes auf deiner Wiese: <b>${next.name}</b> – noch ${next.at - (state.checks || 0)}× abhaken.` : 'Deine Wiese ist komplett! 🏞️';
-      })()}</p>
+      <div class="world-bar">
+        <span class="pebbles" aria-label="${state.pebbles || 0} Kiesel">🪨 <b>${state.pebbles || 0}</b></span>
+        <button class="pill" data-action="shop">🛍️ Laden</button>
+        <button class="pill ${ui.edit ? 'on' : ''}" data-action="w-edit">${ui.edit ? '✓ Fertig' : '✏️ Gestalten'}</button>
+      </div>
+      ${ui.placing ? `<div class="place-banner">Tippe auf einen ${Wd.byId[ui.placing]?.sky ? '✨ Himmelsplatz' : 'freien Platz'} für <b>${esc(Wd.byId[ui.placing]?.name || '')}</b>
+        <button class="link" data-action="place-cancel">Abbrechen</button></div>` : ''}
+      <div class="world-wrap" id="world-wrap">${Wd.world({
+        map: curMap(), owned: ownedLand(),
+        edit: ui.edit, placing: ui.placing, animals: state.animals.map(a => ({ id: a.id, svg: A.draw(a.kind, a.look) })),
+      })}</div>
+      <div class="region-chips">${shownRegions().map(g => {
+        const locked = !curMap().unlocked.includes(g.id);
+        return `<button class="rchip ${locked ? 'locked' : ''}" data-action="w-go" data-r="${g.id}">${locked ? '🔒 ' : ''}${esc(g.name)}</button>`;
+      }).join('')}</div>
+      <p class="hint" style="margin:6px 4px 12px">← Wischen zum Erkunden · Tiere antippen · ${openCount()}/${Wd.REGIONS.length} Gebiete offen</p>
       <p class="muted" style="margin:0 4px 14px">${state.animals.length ? `${state.animals.length} Babytiere wohnen schon hier.` : 'Noch ist die Wiese leer – hak etwas ab, dann kommt das erste Babytier!'}</p>
       <div class="card">
         ${state.categories.map(c => `<div class="prog-row" style="--cat:${c.color}">${mini(c.animal)}
@@ -365,6 +450,12 @@
       b.classList.toggle('on', on);
       b.setAttribute('aria-current', on ? 'page' : 'false');
     });
+    // Wiese: Scrollposition nach dem Neuzeichnen beibehalten
+    const wrap = $('#world-wrap');
+    if (wrap) {
+      wrap.scrollLeft = ui.worldX || 0;
+      wrap.addEventListener('scroll', () => { ui.worldX = wrap.scrollLeft; }, { passive: true });
+    }
     restoreFocus($('#view'));
   }
 
@@ -502,10 +593,51 @@
         <div class="sheet-actions"><button class="big-btn primary" data-action="close-sheet">Fertig</button></div>`;
     },
 
+    shop() {
+      const p = Wd.nextRegion(curMap().unlocked);
+      const price = Wd.regionPrice(openCount());
+      const items = Wd.GADGETS.filter(g => g.group === ui.shopGroup);
+      return `
+        <h2>Wiesen-Laden 🛍️</h2>
+        <p class="pebble-big">🪨 <b>${state.pebbles || 0}</b> Kiesel <span class="muted">· jeder Haken = 1 Kiesel</span></p>
+        ${p ? `<div class="unlock-card">
+            <div><b>🗺️ Neues Gebiet: ${esc(p.name)}</b><br><span class="muted">${openCount()}/${Wd.REGIONS.length} Gebiete offen · 11 neue Plätze</span></div>
+            <button class="big-btn ${state.pebbles >= price ? 'primary' : ''}" data-action="w-unlock" ${state.pebbles >= price ? '' : 'disabled'}>🪨 ${price}</button>
+          </div>` : '<p class="muted">Du hast alle 40 Gebiete entdeckt! 🌍</p>'}
+        <div class="shop-tabs">${Object.entries(Wd.GROUPS).map(([k, v]) => `<button class="chip ${ui.shopGroup === k ? 'on' : ''}" style="padding:6px 12px" data-action="shop-group" data-g="${k}">${v}</button>`).join('')}</div>
+        <div class="shop-grid">${items.map(g => {
+          const own = state.inv[g.id] || 0, free = available(g.id), land = g.group === 'land';
+          const can = state.pebbles >= g.price && !(land && own);
+          return `<div class="shop-item">
+            <div class="shop-prev">${Wd.preview(g.id)}</div>
+            <b>${esc(g.name)}</b>
+            <small class="muted">${land ? esc(g.info || '') : own ? `${own}× gekauft${free ? ` · ${free} in der Kiste` : ''}` : g.sky ? 'für den Himmel' : '&nbsp;'}</small>
+            ${land && own ? '<span class="owned">✓ auf der Karte</span>'
+              : `<button class="buy ${can ? '' : 'off'}" data-action="buy" data-id="${g.id}" ${can ? '' : 'disabled'}>🪨 ${g.price}</button>`}
+            ${!land && free ? `<button class="link" data-action="place" data-id="${g.id}">Platzieren</button>` : ''}
+          </div>`;
+        }).join('')}</div>`;
+    },
+
+    slot(id) {
+      const sl = Wd.slotById[id]; if (!sl) return null;
+      const cur = curMap().slots[id];
+      const options = Wd.GADGETS.filter(g => g.group !== 'land' && !!g.sky === sl.sky && available(g.id) > 0);
+      return `
+        <h2>${sl.sky ? '✨ Himmelsplatz' : '📍 Platz'} · ${esc(Wd.regionById[sl.region]?.name || '')}</h2>
+        ${cur ? `<div class="slot-cur"><div class="shop-prev">${Wd.preview(cur)}</div><div><b>${esc(Wd.byId[cur]?.name || '')}</b><br>
+          <button class="big-btn" data-action="slot-clear" data-slot="${id}" style="margin-top:8px">↩︎ Zurück in die Kiste</button></div></div>` : '<p class="muted">Dieser Platz ist noch frei.</p>'}
+        <h3>${options.length ? 'Aus deiner Kiste hierhin stellen' : 'Deine Kiste ist leer'}</h3>
+        <div class="shop-grid">${options.map(g => `<button class="shop-item pick-item" data-action="slot-put" data-slot="${id}" data-id="${g.id}">
+          <div class="shop-prev">${Wd.preview(g.id)}</div><b>${esc(g.name)}</b><small class="muted">${available(g.id)}× in der Kiste</small></button>`).join('')}</div>
+        <div class="sheet-actions"><button class="big-btn soft" data-action="shop">🛍️ Zum Laden</button></div>`;
+    },
+
     confirmImport() {
       const b = pendingImport || {};
       return `<h2>Backup laden</h2>
         <p>Im Backup: <b>${(b.tasks || []).length} Aufgaben</b> und <b>${(b.animals || []).length} Babytiere</b>.</p>
+        ${(b.schema || 1) > SCHEMA ? '<p class="hint"><b>Hinweis:</b> Das Backup stammt aus einer neueren App-Version. Es geht nichts verloren, aber manche neuen Sachen siehst du erst nach einem App-Update.</p>' : ''}
         <button class="big-btn primary" data-action="import-replace">Alles übernehmen</button>
         <p class="hint" style="margin-top:-4px">Ersetzt, was gerade hier ist (${state.tasks.length} Aufgaben, ${state.animals.length} Tiere). Perfekt fürs neue Handy.</p>
         <button class="big-btn soft" data-action="import-animals">🐾 Nur die Tiere dazuholen</button>
@@ -806,6 +938,72 @@
     'open-animal': el => openSheet('animal', el.dataset.id),
     hop: el => { const s = el.querySelector('svg'); s.classList.remove('hop-now'); void s.offsetWidth; s.classList.add('hop-now'); },
     'a-fur': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.fur = +el.dataset.i; save(); refresh(); },
+    // --- Wiese & Laden ---
+    shop: () => { if (ui.sheet?.name === 'shop') return; openSheet('shop'); },
+    'shop-group': el => { ui.shopGroup = el.dataset.g; renderSheet(); },
+    buy: el => {
+      const g = Wd.byId[el.dataset.id];
+      if (!g || state.pebbles < g.price) return;
+      if (g.group === 'land' && state.inv[g.id]) return;
+      state.pebbles -= g.price;
+      state.inv[g.id] = (state.inv[g.id] || 0) + 1;
+      save();
+      if (g.group === 'land') { renderSheet(); render(); toast(`${g.name} ist jetzt auf deiner Karte! 🏞️`); return; }
+      startPlacing(g.id);
+      toast(`${g.name} gekauft! Tippe auf einen ${g.sky ? '✨ Himmelsplatz' : 'freien Platz'}.`);
+    },
+    place: el => startPlacing(el.dataset.id),
+    'place-cancel': () => { ui.placing = null; render(); },
+    'w-unlock': () => {
+      const m = curMap(), next = Wd.nextRegion(m.unlocked);
+      if (!next) return;
+      const price = Wd.regionPrice(openCount());
+      if (state.pebbles < price) { toast(`Dafür brauchst du ${price} 🪨 – noch ${price - state.pebbles} Haken!`); return; }
+      state.pebbles -= price; m.unlocked.push(next.id);
+      save();
+      if (ui.sheet) closeSheet();
+      ui.view = 'tiere'; render();
+      scrollWorldTo(next.id);
+      toast(`Neues Gebiet entdeckt: ${next.name}! 🗺️`);
+    },
+    'w-edit': () => { ui.edit = !ui.edit; if (!ui.edit) ui.placing = null; render(); },
+    'w-go': el => {
+      const r = el.dataset.r;
+      if (!curMap().unlocked.includes(r)) { openSheet('shop'); return; }
+      scrollWorldTo(r, true);
+    },
+    'w-slot': el => {
+      const id = el.dataset.slot;
+      if (ui.placing) {
+        const sl = Wd.slotById[id], g = Wd.byId[ui.placing];
+        if (!sl || !g || !!g.sky !== sl.sky) return;
+        if (curMap().slots[id]) { toast('Der Platz ist schon belegt – such dir einen freien aus.'); return; }
+        curMap().slots[id] = ui.placing;
+        ui.placing = null;
+        save(); render();
+        toast(`${g.name} steht jetzt auf deiner Wiese ✨`);
+        return;
+      }
+      openSheet('slot', id);
+    },
+    'w-gadget': el => {
+      if (ui.edit || ui.placing) { act['w-slot'](el); return; }
+      const g = Wd.byId[curMap().slots[el.dataset.slot]];
+      if (g) toast(g.name);
+    },
+    'w-animal': el => {
+      const a = state.animals.find(x => x.id === el.dataset.id);
+      if (!a) return;
+      el.classList.remove('hop-now'); void el.getBBox(); el.classList.add('hop-now');
+      toast(`${a.name} · ${A.KINDS[a.kind]?.baby || ''} 💛`);
+    },
+    'w-find': el => {
+      const f = curMap().finds.find(x => x.id === el.dataset.id);
+      const d = f && Wd.findById[f.type];
+      if (d) toast(`Fundstück: ${d.name} 🔍`);
+    },
+    'slot-clear': el => { delete curMap().slots[el.dataset.slot]; save(); refresh(); },
+    'slot-put': el => { if (available(el.dataset.id) > 0) { curMap().slots[el.dataset.slot] = el.dataset.id; save(); } closeSheet(); },
     'a-stone': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.stone = +el.dataset.i; save(); refresh(); },
     'a-acc': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.acc = el.dataset.acc; save(); refresh(); },
     'a-color': el => { const a = state.animals.find(x => x.id === el.dataset.id); a.look.color = el.dataset.color; save(); refresh(); },

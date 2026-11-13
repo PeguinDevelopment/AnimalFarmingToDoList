@@ -502,57 +502,6 @@
   const ACC_POOL = ['keins', 'keins', 'muetze', 'muetze', 'schal', 'schal', 'haekelblume', 'haekelblume',
     'schleife', 'bluemchen', 'herz', 'halstuch', 'glocke', 'buch', 'buch', 'schoki', 'schoki'];
 
-  // ---------- Die Wiese: wächst mit jedem Haken ----------
-  const UNLOCKS = [
-    { at: 3, name: 'Tannenwald 🌲' },
-    { at: 8, name: 'Berge ⛰️' },
-    { at: 15, name: 'Bach 💧' },
-    { at: 25, name: 'Springbrunnen ⛲' },
-    { at: 40, name: 'Bücherbank 📚' },
-    { at: 60, name: 'Schokohäuschen 🍫' },
-  ];
-  const tree = (x, y, s = 1) =>
-    `<rect x="${x - 2 * s}" y="${y - 2}" width="${4 * s}" height="${8 * s}" fill="#8a6a4f"/>` +
-    `<path d="M${x} ${y - 34 * s} L${x - 10 * s} ${y - 16 * s} H${x + 10 * s} Z M${x} ${y - 24 * s} L${x - 13 * s} ${y} H${x + 13 * s} Z" fill="#1d6b35"/>`;
-
-  const leafy = (x, y, c) => `<rect x="${x - 2}" y="${y - 8}" width="4" height="10" fill="#7a5236"/><circle cx="${x}" cy="${y - 16}" r="11" fill="${c}"/><circle cx="${x - 6}" cy="${y - 11}" r="6" fill="${c}"/>`;
-
-  function scene(checks, animals) {
-    const has = n => checks >= n;
-    const placed = [[34, 168], [96, 176], [232, 172], [300, 178], [160, 180]];
-    const crit = (animals || []).slice(-5).map((a, i) => {
-      const [x, y] = placed[i];
-      return draw(a.kind, a.look).replace('<svg', `<svg x="${x - 18}" y="${y - 32}" width="36" height="36"`);
-    }).join('');
-    let flowers = '';
-    [[20, 190], [70, 185], [130, 194], [205, 190], [270, 196], [345, 186], [120, 172], [252, 182]].forEach(([x, y], i) =>
-      flowers += `<circle cx="${x}" cy="${y}" r="2.2" fill="${i % 2 ? '#fff' : '#ffd84d'}"/>`);
-    return `<svg viewBox="0 0 360 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Deine Wiese">
-      <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#173a8f"/><stop offset=".55" stop-color="#3f8fe0"/><stop offset="1" stop-color="#9fd6f7"/></linearGradient></defs>
-      <rect width="360" height="200" fill="url(#sky)"/>
-      <circle cx="318" cy="34" r="16" fill="#ffd23f"/>
-      ${has(8) ? `<path d="M0 140 L70 60 L120 110 L170 40 L240 120 L290 70 L360 130 V200 H0 Z" fill="#5f7ba3"/>
-        <path d="M58 74 L70 60 L82 74 L76 70 L70 76 L64 70 Z M155 58 L170 40 L185 58 L178 53 L170 60 L162 53 Z M279 83 L290 70 L301 83 L296 79 L290 85 L284 79 Z" fill="#fff"/>` : ''}
-      <path d="M0 150 Q90 118 180 140 T360 134 V200 H0 Z" fill="#3fa34d"/>
-      ${has(3) ? tree(20, 150) + tree(42, 146, .85) + tree(62, 152, .7) + tree(334, 146) + tree(312, 150, .8) + leafy(84, 150, '#e8701a') + leafy(292, 150, '#d35400') + leafy(352, 154, '#f2b01e') : ''}
-      ${has(60) ? `<g transform="translate(270 118)"><rect x="0" y="12" width="34" height="24" fill="#a0694a"/>
-        <path d="M-4 14 L17 -2 L38 14 Z" fill="#6e3f2a"/><rect x="12" y="20" width="10" height="16" fill="#7b4a32"/>
-        <path d="M17 20 v16 M12 25 h10 M12 30 h10" stroke="#5c3424"/><rect x="3" y="17" width="6" height="6" fill="#ffe58a"/></g>` : ''}
-      <path d="M0 166 Q120 150 220 168 T360 164 V200 H0 Z" fill="#6cc24a"/>
-      ${has(15) ? `<path d="M236 200 Q250 182 290 178 Q330 174 360 160 V200 Z" fill="#1ea7e1"/>
-        <path d="M268 190 q8 -3 16 0 M300 182 q8 -3 16 0 M330 172 q6 -2 12 0" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>` : ''}
-      ${has(25) ? `<g transform="translate(180 152)">
-        <ellipse cx="0" cy="14" rx="26" ry="7" fill="#c9d3e0"/><ellipse cx="0" cy="12" rx="22" ry="5" fill="#9fd3ef"/>
-        <rect x="-3" y="-8" width="6" height="20" fill="#c9d3e0"/><ellipse cx="0" cy="-8" rx="11" ry="3.5" fill="#c9d3e0"/>
-        <path d="M0 -10 q-10 -14 -16 6 M0 -10 q10 -14 16 6 M0 -10 v-10" stroke="#7cc3ea" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-        <circle cx="-17" cy="0" r="1.6" fill="#7cc3ea"/><circle cx="17" cy="0" r="1.6" fill="#7cc3ea"/></g>` : ''}
-      ${has(40) ? `<g transform="translate(100 160)">
-        <rect x="-22" y="0" width="44" height="5" rx="2" fill="#a0784f"/><rect x="-20" y="5" width="3" height="10" fill="#8a6a4f"/><rect x="17" y="5" width="3" height="10" fill="#8a6a4f"/>
-        <rect x="-16" y="-4" width="16" height="4" rx="1" fill="#1e88e5"/><rect x="-14" y="-8" width="13" height="4" rx="1" fill="#2e9e44"/><rect x="-15" y="-12" width="14" height="4" rx="1" fill="#e8701a"/></g>` : ''}
-      ${flowers}${crit}
-    </svg>`;
-  }
-
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
   function randomLook(kind) {
@@ -612,5 +561,5 @@
     // ein paar echte Namen
     'Wanda', 'Lotte', 'Frieda', 'Momo', 'Otto', 'Ida', 'Bruno'];
 
-  window.Animals = { KINDS, ACCS, ACC_COLORS, STONES, draw, randomLook, egg, NAMES, scene, UNLOCKS, randomName: () => pick(NAMES) };
+  window.Animals = { KINDS, ACCS, ACC_COLORS, STONES, draw, randomLook, egg, NAMES, randomName: () => pick(NAMES) };
 })();

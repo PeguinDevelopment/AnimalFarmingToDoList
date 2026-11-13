@@ -13,6 +13,9 @@ Eine ruhige, übersichtliche To-do-App mit Babytieren zum Sammeln. Sie läuft al
 - **Babytiere:** Nach 3 Haken (einstellbar) schlüpft ein Tier, oft mit Häkelmütze, Häkelschal oder Häkelblume.
   Es gibt Pinguin-Küken, Fohlen, Steinböckchen, Hundewelpe, Kätzchen, Häschen, Fuchsbaby, Eisbärbaby, Highland-Kälbchen, Entenküken, Tigerbaby und Otterbaby (sammelt Steine).
   Name, Fell und Outfit lassen sich jederzeit ändern.
+- **Tierwiese:** eine Landschaft zum Wischen mit 40 Gebieten zum Freischalten (Wald, Berge, Gletscher, Fjord, Vulkaninsel …) und 440 Plätzen.
+  Jeder Haken gibt 1 🪨 Kiesel. Im Wiesen-Laden gibt es über 80 Sachen: Sternbilder für den Himmel, Bäume, Brunnen, Flüsse, Nordlicht, Bücherei, Schokohäuschen und mehr.
+  Sie richtet sich nach Tageszeit und Jahreszeit, und ab und zu taucht ein Fundstück auf.
 - **Kein Druck:** keine roten Fristen, keine Streaks, Tiere gehen nie verloren.
 - **Ruhemodus** (ohne Animationen), **3 Textgrößen** und **8 kräftige Farbthemen** (Meer, Himmel, Gipfel, Türkis, Wald, Herbst, Sonne, Nacht).
 - **Rückgängig** nach jedem Abhaken und Löschen.
@@ -56,7 +59,23 @@ Auf dem neuen Handy öffnet man die App und wählt **„Backup laden“**. Dort 
 Nach Änderungen am Code in `sw.js` die Versionsnummer erhöhen (`plan-v1` → `plan-v2`) und neu hochladen.
 Die App holt sich die neue Version beim nächsten Öffnen mit Internet. Ihre Daten bleiben dabei erhalten.
 
-## Neue Tiere hinzufügen
+## Erweitern, ohne etwas kaputt zu machen
 
-In `animals.js` unter `KINDS` einen neuen Eintrag anlegen: Name, Fellfarben und eine `draw`-Funktion mit SVG in einem 100×100-Raster.
-Das neue Tier erscheint dann automatisch in der Auswahl.
+Alle gespeicherten Daten hängen an **festen IDs** (Tiere, Gadgets, Gebiete, Plätze) und nie an Positionen in Listen.
+Deshalb gelten diese Regeln:
+
+1. **IDs nie ändern oder wiederverwenden.** Namen und Aussehen darfst du jederzeit ändern, die `id` nicht.
+2. **Neues immer anhängen:**
+   - Tier: `animals.js` → `KINDS`
+   - Gadget: `world.js` → Liste `G` (mit `group`, `price`, `d`; Himmels-Gadgets mit `sky: true`)
+   - Gebiet: `world.js` → `REGIONS`. Es erscheint dann als nächstes Gebiet zum Freischalten.
+   - Gebietstyp (Aussehen): `world.js` → `BIOME` und `region()`
+   - Fundstück: `world.js` → `FINDS`
+3. **Datenformat geändert?** In `app.js` `SCHEMA` um 1 erhöhen und in `MIGRATIONS` einen Schritt ergänzen.
+   Alte Backups werden beim Laden Schritt für Schritt umgestellt.
+4. **Nichts wird stillschweigend gelöscht:** Unbekannte IDs, z. B. aus einem Backup einer neueren Version, bleiben gespeichert und werden nur nicht angezeigt.
+5. Nach jeder Änderung die Versionsnummer in `sw.js` erhöhen.
+
+**Karten:** Die Wiese ist als „Karte“ gespeichert (`state.world.maps`). Darin stehen die freigeschalteten Gebiete, die Plätze und die Fundstücke.
+Eine volle Karte kann später archiviert werden (`archived: true`) und eine neue begonnen werden.
+Die gekauften Gadgets (`state.inv`), die Kiesel und die Tiere gehören der Person, nicht der Karte, und ziehen deshalb mit um.

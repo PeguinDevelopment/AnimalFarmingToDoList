@@ -1,24 +1,24 @@
-/* ---------- Farbthemen ---------- */
-:root, [data-theme="minze"] {
-  --bg: #f1faf6; --card: #ffffff; --ink: #3a3347; --muted: #6f7a80;
-  --accent: #2f9673; --accent-ink: #ffffff; --soft: #d6f2e6; --line: #d6ece2;
-  --grid: rgba(47, 150, 115, .07);
-  --hl-y: #ffe76a; --hl-g: #bdf09a;
-  --shadow: 0 1px 0 rgba(58, 51, 71, .04), 0 6px 18px rgba(58, 51, 71, .06);
-  --cat-ink: #3a3347;
+/* ---------- Farbthemen (kräftig: Blau, Grün, Türkis, Herbst) ---------- */
+:root, [data-theme="meer"] {
+  --bg: #eef5fb; --card: #ffffff; --ink: #14233a; --muted: #55657a;
+  --accent: #0b6fb8; --accent-ink: #ffffff; --soft: #cfe5f7; --line: #d3e2f0;
+  --grid: rgba(11, 111, 184, .08);
+  --hl-y: #ffe14d; --hl-g: #9be36a;
+  --shadow: 0 1px 0 rgba(20, 35, 58, .05), 0 6px 18px rgba(20, 35, 58, .08);
+  --cat-ink: #ffffff;
 }
-[data-theme="sand"] { --bg: #fbf7f0; --accent: #94683a; --soft: #f1e6d3; --line: #ece2d2; --grid: rgba(148, 104, 58, .07); }
-[data-theme="wald"] { --bg: #f2f6ef; --accent: #3f7a4a; --soft: #dcebd6; --line: #dde7d6; --grid: rgba(63, 122, 74, .07); }
-[data-theme="fels"] { --bg: #f4f5f7; --accent: #5b6b82; --soft: #e1e6ee; --line: #e0e3e9; --grid: rgba(91, 107, 130, .07); }
-[data-theme="lavendel"] { --bg: #f7f4ff; --accent: #7e63d1; --soft: #e8e1fb; --line: #e2dbf5; --grid: rgba(126, 99, 209, .07); }
-[data-theme="pfirsich"] { --bg: #fff7ef; --accent: #cf6d34; --soft: #ffe4cf; --line: #f5e1d0; --grid: rgba(207, 109, 52, .07); }
-[data-theme="himmel"] { --bg: #f1f7ff; --accent: #3a80c8; --soft: #dbe9fa; --line: #d8e4f2; --grid: rgba(58, 128, 200, .07); }
+[data-theme="himmel"] { --bg: #edf6ff; --accent: #1677d6; --soft: #cde4fb; --line: #d2e3f5; --grid: rgba(22, 119, 214, .08); }
+[data-theme="gipfel"] { --bg: #f4f7fc; --accent: #1d3f9e; --soft: #d5def5; --line: #d8e0f0; --grid: rgba(29, 63, 158, .08); }
+[data-theme="tuerkis"] { --bg: #ebf8f7; --accent: #00857f; --soft: #c6ece9; --line: #cfe8e5; --grid: rgba(0, 133, 127, .08); }
+[data-theme="wald"] { --bg: #eef7ee; --accent: #23843a; --soft: #cdeccf; --line: #d3e8d4; --grid: rgba(35, 132, 58, .08); }
+[data-theme="herbst"] { --bg: #f3f6f1; --accent: #c44d12; --soft: #fbd9c2; --line: #e6e2d6; --grid: rgba(196, 77, 18, .07); }
+[data-theme="sonne"] { --bg: #f2f7fb; --accent: #f0a500; --accent-ink: #14233a; --soft: #ffe8a8; --line: #dde6ee; --grid: rgba(240, 165, 0, .09); }
 [data-theme="nacht"] {
-  --bg: #1f1d2b; --card: #2a2739; --ink: #ece8f6; --muted: #a8a2bd;
-  --accent: #c9a7ff; --accent-ink: #1f1d2b; --soft: #3a3450; --line: #3a3650;
-  --grid: rgba(255, 255, 255, .03);
-  --hl-y: rgba(255, 221, 87, .38); --hl-g: rgba(150, 230, 120, .3);
-  --shadow: 0 6px 18px rgba(0, 0, 0, .25);
+  --bg: #0d1a2e; --card: #15263f; --ink: #e8f1fb; --muted: #9fb3cc;
+  --accent: #3cc8e8; --accent-ink: #0d1a2e; --soft: #1f3a5c; --line: #22395a;
+  --grid: rgba(255, 255, 255, .035);
+  --hl-y: rgba(255, 214, 51, .4); --hl-g: rgba(120, 220, 90, .35);
+  --shadow: 0 6px 18px rgba(0, 0, 0, .3);
 }
 
 /* ---------- Grundlagen ---------- */
@@ -103,7 +103,7 @@ section { margin-bottom: 8px; }
 .cat { margin-bottom: 16px; }
 .cat-head {
   width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
-  background: var(--cat); color: var(--cat-ink); border-radius: 20px; padding: 6px 14px 6px 8px; min-height: 58px;
+  background: var(--cat); color: var(--cat-ink); border-radius: 20px; text-shadow: 0 1px 1px rgba(0,0,0,.18); padding: 6px 14px 6px 8px; min-height: 58px;
   box-shadow: var(--shadow);
 }
 .cat-animal { width: 46px; height: 46px; flex: none; background: rgba(255, 255, 255, .55); border-radius: 50%; display: grid; place-items: center; }
@@ -161,8 +161,27 @@ section { margin-bottom: 8px; }
 .done-toggle { color: var(--muted); font-weight: 700; font-size: .9rem; padding: 10px 8px; min-height: 44px; }
 
 /* ---------- Heute ---------- */
-.hello { display: flex; align-items: center; gap: 14px; }
-.hello .mascot { width: 84px; height: 84px; flex: none; }
+.hello { display: flex; align-items: center; gap: 12px; padding: 4px 4px 0; }
+.hello .mascot { width: 68px; height: 68px; flex: none; }
+.list-card { padding: 6px 8px; }
+.row-animal { width: 34px; height: 34px; flex: none; margin-right: 4px; }
+.row-animal svg { width: 100%; height: 100%; display: block; }
+.quiet-line {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 18px 4px 6px; padding: 10px 14px; border-radius: 16px; background: var(--soft); font-size: .95rem;
+}
+.quiet-paws { display: inline-flex; align-items: center; gap: 5px; }
+.quiet-paws svg { width: 30px; height: 30px; margin-right: 2px; }
+.quiet-paws .paw { width: 13px; height: 13px; }
+.fold-btn {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  margin: 14px 0 10px; padding: 14px 16px; min-height: 52px; border-radius: 18px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); font-weight: 800; font-size: 1.05rem;
+}
+.more-btn {
+  width: 100%; min-height: 48px; margin: 4px 0 2px; border-radius: 14px;
+  color: var(--accent); font-weight: 800; background: var(--soft);
+}
 .hello .mascot svg { width: 100%; height: 100%; }
 .hello h1 { font-size: 1.35rem; margin-bottom: 4px; }
 .hello p { margin: 0; }
@@ -252,7 +271,14 @@ section { margin-bottom: 8px; }
 #nav button.on .ni { filter: none; opacity: 1; }
 
 /* ---------- Bottom Sheet ---------- */
-#sheet-layer { position: fixed; inset: 0; z-index: 40; }
+#sheet-layer { position: fixed; inset: 0; z-index: 55; } /* über Fokus/Timer, unter dem Schlüpf-Fenster */
+.split-box { text-align: left; background: var(--soft); border-radius: 18px; padding: 14px; margin-top: 14px; }
+.split-box p { margin: 0 0 10px; }
+.split-box input { width: 100%; border: 2px solid var(--line); background: var(--card); border-radius: 14px; padding: 12px 14px; min-height: 48px; }
+.split-box input:focus { outline: none; border-color: var(--accent); }
+.split-list { margin: 0 0 10px; padding-left: 1.4em; font-weight: 600; }
+.split-list li { padding: 3px 0; }
+.split-list li.is-done { color: var(--muted); text-decoration: line-through; }
 .scrim { position: absolute; inset: 0; background: rgba(40, 32, 50, .38); animation: fade .2s; }
 .sheet {
   position: absolute; left: 0; right: 0; bottom: 0; max-width: 620px; margin: 0 auto;

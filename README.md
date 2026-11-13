@@ -1,6 +1,6 @@
 # Plan 🐾
 
-Eine ruhige To-do-App mit Babytieren zum Sammeln. Sie ist ADHS- und autismusfreundlich und läuft als Web-App auf dem iPhone, ohne App Store.
+Eine ruhige, übersichtliche To-do-App mit Babytieren zum Sammeln. Sie läuft als Web-App auf dem iPhone, ohne App Store.
 
 ## Was die App kann
 
@@ -14,7 +14,7 @@ Eine ruhige To-do-App mit Babytieren zum Sammeln. Sie ist ADHS- und autismusfreu
   Es gibt Pinguin-Küken, Fohlen, Steinböckchen, Hundewelpe, Kätzchen, Häschen, Fuchsbaby, Eisbärbaby, Highland-Kälbchen und Entenküken.
   Name, Fell und Outfit lassen sich jederzeit ändern.
 - **Kein Druck:** keine roten Fristen, keine Streaks, Tiere gehen nie verloren.
-- **Ruhemodus** (ohne Animationen), **3 Textgrößen** und **6 Farbthemen** inklusive Nachtmodus.
+- **Ruhemodus** (ohne Animationen), **3 Textgrößen** und **8 kräftige Farbthemen** (Meer, Himmel, Gipfel, Türkis, Wald, Herbst, Sonne, Nacht).
 - **Rückgängig** nach jedem Abhaken und Löschen.
 
 Alle Daten bleiben **nur auf dem iPhone**. Es gibt keinen Account und keine Cloud. Die ganze App ist kleiner als 200 KB.

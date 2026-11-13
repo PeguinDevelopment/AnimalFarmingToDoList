@@ -10,18 +10,19 @@
   const clone = o => JSON.parse(JSON.stringify(o));
   const dayKey = (t = Date.now()) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-  const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#3a3347" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  const COLORS = ['#b8d4a0', '#ffc89a', '#ffe08a', '#c7e38f', '#a8dcc4', '#9cd6e8', '#9cc9f0', '#c9b6f2', '#b5c7e8', '#d9c3a5'];
+  const MAX_VISIBLE = 6; // so viele offene Aufgaben pro Liste, der Rest ist eingeklappt
+  const COLORS = ['#084a85', '#1e88e5', '#1d3f9e', '#00897b', '#0e9fb0', '#2e9e44', '#5f8f1a', '#d35400', '#b23a12', '#b8860b'];
   const THEMES = [
-    { id: 'minze', name: 'Minze', a: '#d6f2e6', b: '#2f9673', meta: '#f1faf6' },
-    { id: 'sand', name: 'Sand', a: '#f1e6d3', b: '#94683a', meta: '#fbf7f0' },
-    { id: 'lavendel', name: 'Lavendel', a: '#e8e1fb', b: '#7e63d1', meta: '#f7f4ff' },
-    { id: 'pfirsich', name: 'Pfirsich', a: '#ffe4cf', b: '#cf6d34', meta: '#fff7ef' },
-    { id: 'himmel', name: 'Himmel', a: '#dbe9fa', b: '#3a80c8', meta: '#f1f7ff' },
-    { id: 'wald', name: 'Wald', a: '#dcebd6', b: '#3f7a4a', meta: '#f2f6ef' },
-    { id: 'fels', name: 'Fels', a: '#e1e6ee', b: '#5b6b82', meta: '#f4f5f7' },
-    { id: 'nacht', name: 'Nacht', a: '#2a2739', b: '#c9a7ff', meta: '#1f1d2b' },
+    { id: 'meer', name: 'Meer', a: '#cfe5f7', b: '#0b6fb8', meta: '#eef5fb' },
+    { id: 'himmel', name: 'Himmel', a: '#cde4fb', b: '#1677d6', meta: '#edf6ff' },
+    { id: 'gipfel', name: 'Gipfel', a: '#ffffff', b: '#1d3f9e', meta: '#f4f7fc' },
+    { id: 'tuerkis', name: 'Türkis', a: '#c6ece9', b: '#00857f', meta: '#ebf8f7' },
+    { id: 'wald', name: 'Wald', a: '#cdeccf', b: '#23843a', meta: '#eef7ee' },
+    { id: 'herbst', name: 'Herbst', a: '#2e9e44', b: '#c44d12', meta: '#f3f6f1' },
+    { id: 'sonne', name: 'Sonne', a: '#1e88e5', b: '#f0a500', meta: '#f2f7fb' },
+    { id: 'nacht', name: 'Nacht', a: '#0d1a2e', b: '#3cc8e8', meta: '#0d1a2e' },
   ];
   const CHEERS = ['Geschafft! 🌿', 'Super gemacht! ✨', 'Ein Haken mehr 💛', 'Yay! 🎉', 'Jeder Haken zählt 🍀',
     'Stark! 💪', 'Das war ein Schritt nach vorn 🐾', 'Gut gemacht – auch kleine Dinge sind Dinge 💛',
@@ -37,29 +38,30 @@
     return {
       v: 1,
       categories: [
-        { id: 'uni', name: 'Uni', color: '#9cc9f0', animal: 'pinguin' },
-        { id: 'therapie', name: 'Therapie', color: '#c9b6f2', animal: 'hase' },
-        { id: 'umzug', name: 'Umzug', color: '#ffc89a', animal: 'hund' },
-        { id: 'sonstiges', name: 'Sonstiges', color: '#a8dcc4', animal: 'katze' },
-        { id: 'vorlesung', name: 'In der Vorlesung', color: '#d9c3a5', animal: 'pferd' },
+        { id: 'uni', name: 'Uni', color: '#084a85', animal: 'pinguin' },
+        { id: 'therapie', name: 'Therapie', color: '#00897b', animal: 'steinbock' },
+        { id: 'umzug', name: 'Umzug', color: '#d35400', animal: 'hochland' },
+        { id: 'sonstiges', name: 'Sonstiges', color: '#2e9e44', animal: 'hund' },
+        { id: 'vorlesung', name: 'In der Vorlesung', color: '#1d3f9e', animal: 'hase' },
       ],
       tasks: [],
       animals: [],
       progress: {},
       checks: 0,
-      settings: { appName: 'Plan', theme: 'minze', calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, tipClosed: false },
+      settings: { appName: 'Plan', theme: 'meer', calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, tipClosed: false },
     };
   }
   function migrate(s) {
     const d = defaultState();
     return {
       ...d, ...s,
-      settings: { ...d.settings, ...(s.settings || {}) },
+      settings: (st => ({ ...st, theme: THEMES.some(t => t.id === st.theme) ? st.theme : 'meer' }))({ ...d.settings, ...(s.settings || {}) }),
       progress: s.progress || {},
       animals: s.animals || [],
       checks: s.checks ?? (s.tasks || []).reduce((n, t) => n + (t.rewarded ? 1 : 0) + (t.subtasks || []).filter(x => x.rewarded).length, 0),
       tasks: (s.tasks || []).map(t => ({ subtasks: [], note: '', ...t })),
-      categories: s.categories && s.categories.length ? s.categories : d.categories,
+      categories: (s.categories && s.categories.length ? s.categories : d.categories)
+        .map(c => c.color === '#0b6fb8' ? { ...c, color: '#084a85' } : c), // altes Uni-Blau → dunkler
     };
   }
   function load() {
@@ -175,7 +177,8 @@
         ${opts.showCat ? `<span class="task-cat">${esc(cat.name)}</span>` : ''}
         ${subs.length ? `<span class="task-sub"><span class="mini-bar"><i style="width:${Math.round(sd / subs.length * 100)}%"></i></span>${sd}/${subs.length} Schritte</span>` : ''}
       </button>
-      ${t.today && !t.done ? '<span class="sun" title="Für heute">☀️</span>' : ''}
+      ${t.today && !t.done && !opts.showCat ? '<span class="sun" title="Für heute">☀️</span>' : ''}
+      ${opts.showCat ? `<span class="row-animal" title="${esc(kindOf(cat).baby)}">${mini(cat.animal, latestOfKind(cat.animal)?.look)}</span>` : ''}
     </div>`;
   }
 
@@ -195,13 +198,17 @@
     const h = new Date().getHours();
     const greet = h < 5 ? 'Hallo, Nachteule' : h < 11 ? 'Guten Morgen' : h < 17 ? 'Hallo du' : h < 22 ? 'Guten Abend' : 'Hallo, Nachteule';
     const last = state.animals[state.animals.length - 1];
-    const mascot = last ? A.draw(last.kind, last.look, { cls: 'idle-hop' }) : A.draw('pinguin', { fur: 0, acc: 'muetze', color: '#9cc9f0' }, { cls: 'idle-hop' });
+    const mascot = last ? A.draw(last.kind, last.look) : A.draw('pinguin', { fur: 0, acc: 'muetze', color: '#00a5a0' });
     const tk = dayKey();
     const doneToday = state.tasks.reduce((n, t) => n + (t.done && t.doneAt && dayKey(t.doneAt) === tk ? 1 : 0)
       + (t.subtasks || []).filter(s => s.done && s.doneAt && dayKey(s.doneAt) === tk).length, 0);
-    const todays = state.tasks.filter(t => t.today && (!t.done || (t.doneAt && dayKey(t.doneAt) === tk)));
-    todays.sort((a, b) => (a.done - b.done));
+    const todayOpen = state.tasks.filter(t => t.today && !t.done);
+    const todayDone = state.tasks.filter(t => t.today && t.done && t.doneAt && dayKey(t.doneAt) === tk).length;
     const imp = state.tasks.filter(t => t.important && !t.done && !t.today);
+    const impOpen = !!state.settings.impOpen;
+    // Spruch wechselt nur einmal am Tag, nicht bei jedem Antippen
+    const dayNum = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+    const tagline = TAGLINES[dayNum % TAGLINES.length];
 
     // Kategorie, die dem nächsten Tier am nächsten ist
     let best = null;
@@ -217,23 +224,29 @@
       ${isIOS && !standalone && !state.settings.tipClosed ? `<div class="card install-tip">
         <b>Tipp:</b> Tippe unten in Safari auf <b>Teilen</b> (□↑) und dann auf <b>„Zum Home-Bildschirm“</b> – dann ist die App wie eine richtige App da. 📲
         <button class="x" data-action="close-tip" aria-label="Tipp schließen">✕</button></div>` : ''}
-      <section class="card hello">
+      <section class="hello">
         <div class="mascot">${mascot}</div>
-        <div><h1>${greet} 🌿</h1><p class="muted">${esc(pick(TAGLINES))}</p></div>
+        <div><h1>${greet}</h1><p class="muted">${esc(tagline)}</p></div>
       </section>
-      <div class="stats">
-        <div class="stat"><b>${doneToday}</b><span>heute geschafft</span></div>
-        <div class="stat"><b>${state.animals.length}</b><span>Babytiere gesammelt</span></div>
-        ${best ? `<div class="stat wide" style="--cat:${best.color}">${mini(best.animal)}<div><div class="paws" style="padding:0 0 4px">${paws(best.id)}</div><span>${esc(nextBabyText(best))} (${esc(best.name)})</span></div></div>` : ''}
+
+      <div class="sec-head"><h2>☀️ Für heute</h2>${todayOpen.length ? '<button class="link" data-action="pick-today">ändern</button>' : ''}</div>
+      ${todayOpen.length ? `<div class="card list-card">${todayOpen.map(t => taskRow(t, { showCat: true })).join('')}</div>`
+        : `<div class="card empty">
+            <p>${todayDone ? 'Alles für heute geschafft. 🎉<br>Du darfst jetzt Pause machen.' : 'Such dir 1–3 Sachen für heute aus.<br>Mehr musst du nicht.'}</p>
+            <button class="big-btn soft" data-action="pick-today">${todayDone ? '☀️ Noch etwas aussuchen' : '☀️ Für heute aussuchen'}</button>
+            ${!todayDone && state.tasks.some(t => !t.done) ? '<button class="link" data-action="focus">Oder: 🎯 Gib mir einfach eine Sache</button>' : ''}</div>`}
+      ${todayOpen.length ? '<button class="big-btn primary" data-action="focus">🎯 Mit einer Sache anfangen</button>' : ''}
+
+      <div class="quiet-line">
+        <span>✓ <b>${doneToday}</b> heute geschafft</span>
+        ${best ? `<span class="quiet-paws" style="--cat:${best.color}" title="${esc(nextBabyText(best))}">${mini(best.animal)}${paws(best.id)}</span>` : ''}
       </div>
-      <button class="big-btn primary" data-action="focus">🎯 Nur eine Sache</button>
-      <div class="sec-head"><h2>☀️ Für heute</h2>${todays.length ? '<button class="link" data-action="pick-today">ändern</button>' : ''}</div>
-      ${todays.length ? `<div class="card" style="padding:6px 8px">${todays.map(t => taskRow(t, { showCat: true })).join('')}</div>`
-        : `<div class="card empty"><p>Such dir 1–3 Sachen für heute aus.<br>Mehr musst du nicht. 💛</p>
-           <button class="big-btn soft" data-action="pick-today">☀️ Für heute aussuchen</button></div>`}
-      ${imp.length ? `<div class="sec-head"><h2>💛 Wichtig</h2></div>
-        <div class="card" style="padding:6px 8px">${imp.slice(0, 5).map(t => taskRow(t, { showCat: true })).join('')}
-        ${imp.length > 5 ? `<button class="done-toggle" data-action="nav" data-view="listen">+ ${imp.length - 5} weitere in den Listen</button>` : ''}</div>` : ''}
+
+      ${imp.length ? `<button class="fold-btn" data-action="imp-open" aria-expanded="${impOpen}">
+          <span>💛 Wichtig</span><span class="muted">${imp.length} ${impOpen ? '▾' : '▸'}</span></button>
+        ${impOpen ? `<div class="card list-card">${imp.slice(0, state.settings.impAll ? imp.length : MAX_VISIBLE).map(t => taskRow(t, { showCat: true })).join('')}
+          ${imp.length > MAX_VISIBLE ? `<button class="more-btn" data-action="imp-all">
+            ${state.settings.impAll ? 'Weniger anzeigen ▴' : `${imp.length - MAX_VISIBLE} weitere anzeigen ▾`}</button>` : ''}</div>` : ''}` : ''}
     `;
   }
 
@@ -254,7 +267,9 @@
           </button>
           ${col ? '' : `<div class="cat-body">
             <div class="paws">${paws(c.id)} <span>${esc(nextBabyText(c))}</span></div>
-            ${open.map(t => taskRow(t)).join('')}
+            ${open.slice(0, s.showMore[c.id] ? open.length : MAX_VISIBLE).map(t => taskRow(t)).join('')}
+            ${open.length > MAX_VISIBLE ? `<button class="more-btn" data-action="show-more" data-cat="${c.id}">
+              ${s.showMore[c.id] ? 'Weniger anzeigen ▴' : `${open.length - MAX_VISIBLE} weitere anzeigen ▾`}</button>` : ''}
             <form class="quick" data-form="quick" data-cat="${c.id}">
               <input type="text" name="t" data-key="quick-${c.id}" placeholder="+ Aufgabe hinzufügen" enterkeyhint="done" autocomplete="off" aria-label="Neue Aufgabe in ${esc(c.name)}">
             </form>
@@ -342,11 +357,14 @@
       b.classList.toggle('on', on);
       b.setAttribute('aria-current', on ? 'page' : 'false');
     });
-    if (ui.refocus) {
-      const el = document.querySelector(`[data-key="${ui.refocus}"]`);
-      ui.refocus = null;
-      if (el) el.focus();
-    }
+    restoreFocus($('#view'));
+  }
+
+  // Setzt den Cursor nach dem Neuzeichnen zurück ins passende Eingabefeld
+  function restoreFocus(scope) {
+    if (!ui.refocus || !scope) return;
+    const el = scope.querySelector(`[data-key="${ui.refocus}"]`);
+    if (el) { ui.refocus = null; el.focus(); }
   }
 
   function refresh({ sheet = true } = {}) {
@@ -372,11 +390,7 @@
     const html = fn && fn(ui.sheet.arg);
     if (html == null) return closeSheet();
     $('#sheet-body').innerHTML = html;
-    if (ui.refocus) {
-      const el = $('#sheet-body').querySelector(`[data-key="${ui.refocus}"]`);
-      ui.refocus = null;
-      if (el) el.focus();
-    }
+    restoreFocus($('#sheet-body'));
   }
 
   const catChips = (sel, action) => state.categories.map(c =>
@@ -504,6 +518,10 @@
     renderOverlay();
   }
   function renderOverlay() {
+    drawOverlay();
+    restoreFocus($('#overlay'));
+  }
+  function drawOverlay() {
     const el = $('#overlay');
     if (!ui.overlay) { el.hidden = true; el.innerHTML = ''; return; }
     el.hidden = false;
@@ -524,11 +542,20 @@
       el.innerHTML = `<div class="ov-inner">
         <button class="ov-close" data-action="ov-close" aria-label="Schließen">✕</button>
         <div class="focus-card" style="--cat:${cat.color}">
-          ${A.draw(cat.animal, look, { cls: 'big idle-hop' })}
+          ${A.draw(cat.animal, look, { cls: 'big' })}
           <div><span class="task-cat" style="--cat:${cat.color}">${esc(cat.name)}</span></div>
           <h1 class="${t.important ? 'is-imp' : ''}"><span class="hl">${esc(t.title)}</span></h1>
-          ${next ? `<div class="next-step">Nächster Mini-Schritt:<b>${esc(next.title)}</b>
+          ${next && !ui.focus.split ? `<div class="next-step">Nächster Mini-Schritt:<b>${esc(next.title)}</b>
             <button class="pill" data-action="focus-sub" data-id="${t.id}" data-sub="${next.id}">✓ Schritt geschafft</button></div>` : ''}
+          ${ui.focus.split ? `<div class="split-box">
+            <p><b>Was wäre der allerkleinste erste Schritt?</b><br>
+            <span class="muted">z. B. „Datei öffnen“, „Nummer raussuchen“, „Kiste holen“</span></p>
+            ${t.subtasks.length ? `<ol class="split-list">${t.subtasks.map(s => `<li class="${s.done ? 'is-done' : ''}">${esc(s.title)}</li>`).join('')}</ol>` : ''}
+            <form data-form="sub-add" data-id="${t.id}">
+              <input type="text" name="t" data-key="focus-sub-add" placeholder="${t.subtasks.length ? 'Und danach …?' : 'Erster Mini-Schritt …'}" enterkeyhint="done" autocomplete="off" aria-label="Mini-Schritt">
+            </form>
+            <button class="big-btn primary" data-action="focus-split-done" style="margin-top:10px">Fertig – los geht's</button>
+          </div>` : ''}
         </div>
         <button class="big-btn primary" data-action="toggle" data-id="${t.id}">✓ Geschafft!</button>
         <button class="big-btn soft" data-action="timer" data-id="${t.id}">⏳ Nur 5 Minuten anfangen</button>
@@ -701,6 +728,9 @@
     'open-task': el => openSheet('task', el.dataset.id),
     'close-sheet': () => closeSheet(),
     collapse: el => { const c = state.settings.collapsed; c[el.dataset.cat] = !c[el.dataset.cat]; save(); render(); },
+    'show-more': el => { const s = state.settings.showMore; s[el.dataset.cat] = !s[el.dataset.cat]; save(); render(); },
+    'imp-all': () => { state.settings.impAll = !state.settings.impAll; save(); render(); },
+    'imp-open': () => { state.settings.impOpen = !state.settings.impOpen; save(); render(); },
     'show-done': el => { const s = state.settings.showDone; s[el.dataset.cat] = !s[el.dataset.cat]; save(); render(); },
     'close-tip': () => { state.settings.tipClosed = true; save(); render(); },
     add: () => { ui.addDraft = ''; ui.addImp = false; ui.addToday = false; openSheet('add'); setTimeout(() => $('[data-key="dump"]')?.focus(), 50); },
@@ -730,6 +760,7 @@
     'sub-del': el => { const t = taskById(el.dataset.id); t.subtasks = t.subtasks.filter(s => s.id !== el.dataset.sub); save(); refresh(); },
     focus: () => startFocus(),
     'focus-skip': () => {
+      ui.focus.split = false;
       ui.focus.skipped.push(ui.focus.id);
       let p = focusPool();
       if (!p.length) { ui.focus.skipped = [ui.focus.id]; p = focusPool(); }
@@ -737,7 +768,8 @@
       ui.focus.id = pick(p).id; renderOverlay();
     },
     'focus-sub': (el, ev) => toggleSub(el.dataset.id, el.dataset.sub, ev),
-    'focus-smaller': el => { openSheet('task', el.dataset.id); setTimeout(() => $('[data-key="sub-add"]')?.focus(), 80); },
+    'focus-smaller': () => { ui.focus.split = true; ui.refocus = 'focus-sub-add'; renderOverlay(); },
+    'focus-split-done': () => { ui.focus.split = false; renderOverlay(); },
     'ov-close': () => { ui.overlay = null; ui.focus = null; renderOverlay(); render(); },
     timer: el => { if (ui.sheet) { ui.sheet = null; $('#sheet-layer').hidden = true; } startTimer(el.dataset.id); },
     'timer-set': el => startTimer(ui.timer.id, +el.dataset.m),
@@ -827,8 +859,8 @@
     } else if (f.dataset.form === 'sub-add') {
       const t = taskById(f.dataset.id);
       t.subtasks.push({ id: uid(), title, done: false });
-      ui.refocus = 'sub-add';
-      save(); render(); renderSheet();
+      ui.refocus = ui.overlay === 'focus' && !ui.sheet ? 'focus-sub-add' : 'sub-add';
+      save(); refresh();
     }
   });
 

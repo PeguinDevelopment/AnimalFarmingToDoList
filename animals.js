@@ -12,8 +12,8 @@
     ).join('');
 
   const blush = (y = 57, dx = 17) =>
-    `<ellipse cx="${50 - dx}" cy="${y}" rx="4.4" ry="2.6" fill="#ff8fa8" opacity=".45"/>` +
-    `<ellipse cx="${50 + dx}" cy="${y}" rx="4.4" ry="2.6" fill="#ff8fa8" opacity=".45"/>`;
+    `<ellipse cx="${50 - dx}" cy="${y}" rx="4.4" ry="2.6" fill="#ff8a50" opacity=".3"/>` +
+    `<ellipse cx="${50 + dx}" cy="${y}" rx="4.4" ry="2.6" fill="#ff8a50" opacity=".3"/>`;
 
   const mouth = (y = 58) =>
     `<path d="M50 ${y} v1.6 M50 ${y + 1.6} q-2.4 2.5 -4.7 .2 M50 ${y + 1.6} q2.4 2.5 4.7 .2" stroke="${INK}" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;
@@ -64,9 +64,9 @@
       draw: f => `
         <path d="M72 84 q15 2 12 14" stroke="${f.mane}" stroke-width="6" fill="none" stroke-linecap="round"/>
         <path d="M33 30 L31 12 L44 23 Z" fill="${f.main}" ${OL} stroke-linejoin="round"/>
-        <path d="M34.5 26 L33.5 17 L40 23 Z" fill="#f3c0c8"/>
+        <path d="M34.5 26 L33.5 17 L40 23 Z" fill="#f5c6a5"/>
         <path d="M67 30 L69 12 L56 23 Z" fill="${f.main}" ${OL} stroke-linejoin="round"/>
-        <path d="M65.5 26 L66.5 17 L60 23 Z" fill="#f3c0c8"/>
+        <path d="M65.5 26 L66.5 17 L60 23 Z" fill="#f5c6a5"/>
         ${body(f.main, f.muzzle, '#7d6a63')}
         ${head(f.main, 47, 26)}
         ${f.blaze ? '<ellipse cx="50" cy="44" rx="3.6" ry="10" fill="#fff"/>' : ''}
@@ -93,9 +93,9 @@
         <path d="M60 27 Q65 8 79 11 Q68 14 65 29 Z" fill="#9a8a74" ${OL} stroke-linejoin="round"/>
         <path d="M66.5 17 l-3 -2 M70 13.6 l-2.4 -2.6 M64 22 l-3 -1.4" stroke="#fff" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>
         <ellipse cx="23" cy="41" rx="10" ry="4.5" transform="rotate(-15 23 41)" fill="${f.main}" ${OL}/>
-        <ellipse cx="24" cy="41" rx="5.5" ry="2.2" transform="rotate(-15 24 41)" fill="#f3c0c8"/>
+        <ellipse cx="24" cy="41" rx="5.5" ry="2.2" transform="rotate(-15 24 41)" fill="#f5c6a5"/>
         <ellipse cx="77" cy="41" rx="10" ry="4.5" transform="rotate(15 77 41)" fill="${f.main}" ${OL}/>
-        <ellipse cx="76" cy="41" rx="5.5" ry="2.2" transform="rotate(15 76 41)" fill="#f3c0c8"/>
+        <ellipse cx="76" cy="41" rx="5.5" ry="2.2" transform="rotate(15 76 41)" fill="#f5c6a5"/>
         ${body(f.main, f.belly, '#5f544c')}
         ${head(f.main)}
         <path d="M46.5 66 q3.5 11 7 0 z" fill="${f.dark}"/>
@@ -123,7 +123,7 @@
         <ellipse cx="26" cy="47" rx="8" ry="15" transform="rotate(18 26 47)" fill="${f.ear}" ${OL}/>
         <ellipse cx="74" cy="47" rx="8" ry="15" transform="rotate(-18 74 47)" fill="${f.ear}" ${OL}/>
         <ellipse cx="50" cy="60" rx="12" ry="8.5" fill="${f.snout}"/>
-        <ellipse cx="50" cy="64.2" rx="2.3" ry="2.2" fill="#ff8fa8"/>
+        <ellipse cx="50" cy="64.2" rx="2.3" ry="2.2" fill="#e8735a"/>
         <ellipse cx="50" cy="56" rx="3.8" ry="2.8" fill="${INK}"/>
         ${mouth(58.4)}
         ${eyes(48, 11)}${blush(56, 19)}`,
@@ -142,14 +142,14 @@
       draw: f => `
         <path d="M72 88 q16 -2 12 -18" stroke="${f.main}" stroke-width="6" fill="none" stroke-linecap="round"/>
         <path d="M27 38 L29 13 L47 25 Z" fill="${f.main}" ${OL} stroke-linejoin="round"/>
-        <path d="M31 32 L32 19 L42 26 Z" fill="#ffb7c5"/>
+        <path d="M31 32 L32 19 L42 26 Z" fill="#f5c6a5"/>
         <path d="M73 38 L71 13 L53 25 Z" fill="${f.main}" ${OL} stroke-linejoin="round"/>
-        <path d="M69 32 L68 19 L58 26 Z" fill="#ffb7c5"/>
+        <path d="M69 32 L68 19 L58 26 Z" fill="#f5c6a5"/>
         ${body(f.main, f.belly)}
         ${head(f.main)}
         ${f.stripes ? `<path d="M50 22 v7 M44 23 l1 6 M56 23 l-1 6" stroke="${f.stripes}" stroke-width="2.4" stroke-linecap="round"/>` : ''}
         ${eyes(49, 10)}
-        <path d="M47.6 55 h4.8 l-2.4 2.6 z" fill="#ff9fb4" stroke="#ff9fb4" stroke-linejoin="round"/>
+        <path d="M47.6 55 h4.8 l-2.4 2.6 z" fill="#d9785a" stroke="#d9785a" stroke-linejoin="round"/>
         ${mouth(57.6)}
         <path d="M31 55 l-10 -2 M31 59 l-10 2 M69 55 l10 -2 M69 59 l10 2" stroke="${INK}" stroke-opacity=".35" stroke-width="1.2" stroke-linecap="round"/>
         ${blush(56, 17)}`,
@@ -167,13 +167,13 @@
       draw: f => `
         <circle cx="74" cy="88" r="6" fill="#fff" ${OL}/>
         <ellipse cx="39" cy="20" rx="7.5" ry="17" transform="rotate(-10 39 20)" fill="${f.main}" ${OL}/>
-        <ellipse cx="39" cy="21" rx="3.6" ry="12" transform="rotate(-10 39 21)" fill="#ffc2cf"/>
+        <ellipse cx="39" cy="21" rx="3.6" ry="12" transform="rotate(-10 39 21)" fill="#f5c6a5"/>
         <ellipse cx="61" cy="20" rx="7.5" ry="17" transform="rotate(10 61 20)" fill="${f.main}" ${OL}/>
-        <ellipse cx="61" cy="21" rx="3.6" ry="12" transform="rotate(10 61 21)" fill="#ffc2cf"/>
+        <ellipse cx="61" cy="21" rx="3.6" ry="12" transform="rotate(10 61 21)" fill="#f5c6a5"/>
         ${body(f.main, f.belly)}
         ${head(f.main)}
         ${eyes(49, 10)}
-        <ellipse cx="50" cy="55.5" rx="2.8" ry="2" fill="#ff9fb4"/>
+        <ellipse cx="50" cy="55.5" rx="2.8" ry="2" fill="#d9785a"/>
         ${mouth(57.3)}
         <rect x="48.5" y="60.4" width="3" height="3.2" rx=".8" fill="#fff" stroke="${INK}" stroke-opacity=".3" stroke-width=".8"/>
         ${blush(56, 17)}`,
@@ -283,7 +283,7 @@
   };
 
   // ---------- Zubehör ----------
-  const ACC_COLORS = ['#9cc9f0', '#a8d8c8', '#b8a8e8', '#ffd38a', '#f6b27a', '#c7e38f', '#d9c3a5', '#8fb3d9'];
+  const ACC_COLORS = ['#1e88e5', '#00a5a0', '#2e9e44', '#f2b01e', '#e8701a', '#1d3f9e', '#7cb342', '#b23a12'];
 
   const shade = (hex, f = 0.82) => {
     const n = parseInt(hex.slice(1), 16);
@@ -440,7 +440,9 @@
   ];
   const tree = (x, y, s = 1) =>
     `<rect x="${x - 2 * s}" y="${y - 2}" width="${4 * s}" height="${8 * s}" fill="#8a6a4f"/>` +
-    `<path d="M${x} ${y - 34 * s} L${x - 10 * s} ${y - 16 * s} H${x + 10 * s} Z M${x} ${y - 24 * s} L${x - 13 * s} ${y} H${x + 13 * s} Z" fill="#4f9a6a"/>`;
+    `<path d="M${x} ${y - 34 * s} L${x - 10 * s} ${y - 16 * s} H${x + 10 * s} Z M${x} ${y - 24 * s} L${x - 13 * s} ${y} H${x + 13 * s} Z" fill="#1d6b35"/>`;
+
+  const leafy = (x, y, c) => `<rect x="${x - 2}" y="${y - 8}" width="4" height="10" fill="#7a5236"/><circle cx="${x}" cy="${y - 16}" r="11" fill="${c}"/><circle cx="${x - 6}" cy="${y - 11}" r="6" fill="${c}"/>`;
 
   function scene(checks, animals) {
     const has = n => checks >= n;
@@ -453,17 +455,18 @@
     [[20, 190], [70, 185], [130, 194], [205, 190], [270, 196], [345, 186], [120, 172], [252, 182]].forEach(([x, y], i) =>
       flowers += `<circle cx="${x}" cy="${y}" r="2.2" fill="${i % 2 ? '#fff' : '#ffd84d'}"/>`);
     return `<svg viewBox="0 0 360 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Deine Wiese">
-      <rect width="360" height="200" style="fill:var(--sky, #e3f2fb)"/>
-      <circle cx="318" cy="34" r="16" style="fill:var(--sun, #ffe58a)"/>
-      ${has(8) ? `<path d="M0 140 L70 60 L120 110 L170 40 L240 120 L290 70 L360 130 V200 H0 Z" fill="#a9b8cf"/>
+      <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#173a8f"/><stop offset=".55" stop-color="#3f8fe0"/><stop offset="1" stop-color="#9fd6f7"/></linearGradient></defs>
+      <rect width="360" height="200" fill="url(#sky)"/>
+      <circle cx="318" cy="34" r="16" fill="#ffd23f"/>
+      ${has(8) ? `<path d="M0 140 L70 60 L120 110 L170 40 L240 120 L290 70 L360 130 V200 H0 Z" fill="#5f7ba3"/>
         <path d="M58 74 L70 60 L82 74 L76 70 L70 76 L64 70 Z M155 58 L170 40 L185 58 L178 53 L170 60 L162 53 Z M279 83 L290 70 L301 83 L296 79 L290 85 L284 79 Z" fill="#fff"/>` : ''}
-      <path d="M0 150 Q90 118 180 140 T360 134 V200 H0 Z" fill="#a8d89a"/>
-      ${has(3) ? tree(20, 150) + tree(42, 146, .85) + tree(62, 152, .7) + tree(334, 146) + tree(312, 150, .8) : ''}
+      <path d="M0 150 Q90 118 180 140 T360 134 V200 H0 Z" fill="#3fa34d"/>
+      ${has(3) ? tree(20, 150) + tree(42, 146, .85) + tree(62, 152, .7) + tree(334, 146) + tree(312, 150, .8) + leafy(84, 150, '#e8701a') + leafy(292, 150, '#d35400') + leafy(352, 154, '#f2b01e') : ''}
       ${has(60) ? `<g transform="translate(270 118)"><rect x="0" y="12" width="34" height="24" fill="#a0694a"/>
         <path d="M-4 14 L17 -2 L38 14 Z" fill="#6e3f2a"/><rect x="12" y="20" width="10" height="16" fill="#7b4a32"/>
         <path d="M17 20 v16 M12 25 h10 M12 30 h10" stroke="#5c3424"/><rect x="3" y="17" width="6" height="6" fill="#ffe58a"/></g>` : ''}
-      <path d="M0 166 Q120 150 220 168 T360 164 V200 H0 Z" fill="#c5e8b4"/>
-      ${has(15) ? `<path d="M236 200 Q250 182 290 178 Q330 174 360 160 V200 Z" fill="#9fd3ef"/>
+      <path d="M0 166 Q120 150 220 168 T360 164 V200 H0 Z" fill="#6cc24a"/>
+      ${has(15) ? `<path d="M236 200 Q250 182 290 178 Q330 174 360 160 V200 Z" fill="#1ea7e1"/>
         <path d="M268 190 q8 -3 16 0 M300 182 q8 -3 16 0 M330 172 q6 -2 12 0" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>` : ''}
       ${has(25) ? `<g transform="translate(180 152)">
         <ellipse cx="0" cy="14" rx="26" ry="7" fill="#c9d3e0"/><ellipse cx="0" cy="12" rx="22" ry="5" fill="#9fd3ef"/>
@@ -472,7 +475,7 @@
         <circle cx="-17" cy="0" r="1.6" fill="#7cc3ea"/><circle cx="17" cy="0" r="1.6" fill="#7cc3ea"/></g>` : ''}
       ${has(40) ? `<g transform="translate(100 160)">
         <rect x="-22" y="0" width="44" height="5" rx="2" fill="#a0784f"/><rect x="-20" y="5" width="3" height="10" fill="#8a6a4f"/><rect x="17" y="5" width="3" height="10" fill="#8a6a4f"/>
-        <rect x="-16" y="-4" width="16" height="4" rx="1" fill="#9cc9f0"/><rect x="-14" y="-8" width="13" height="4" rx="1" fill="#c7e38f"/><rect x="-15" y="-12" width="14" height="4" rx="1" fill="#ffd38a"/></g>` : ''}
+        <rect x="-16" y="-4" width="16" height="4" rx="1" fill="#1e88e5"/><rect x="-14" y="-8" width="13" height="4" rx="1" fill="#2e9e44"/><rect x="-15" y="-12" width="14" height="4" rx="1" fill="#e8701a"/></g>` : ''}
       ${flowers}${crit}
     </svg>`;
   }
@@ -498,7 +501,7 @@
     return `<svg${cls} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${opts.title || k.baby}">${title}${k.draw(f)}${acc.draw(l.color, k.anchors)}</svg>`;
   }
 
-  function egg(color = '#a8dcc4') {
+  function egg(color = '#00a5a0') {
     return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <ellipse cx="50" cy="95" rx="22" ry="3.5" fill="#3a3347" opacity=".08"/>
       <path d="M50 8 C28 8 18 44 18 62 C18 82 32 94 50 94 C68 94 82 82 82 62 C82 44 72 8 50 8 Z" fill="#fffaf2" ${OL}/>
@@ -511,11 +514,29 @@
     </svg>`;
   }
 
-  const NAMES = ['Krümel', 'Mochi', 'Bohne', 'Flocke', 'Keks', 'Pünktchen', 'Wölkchen', 'Nugget', 'Muffin', 'Erbse',
-    'Socke', 'Tofu', 'Bruno', 'Lotte', 'Fridolin', 'Mimi', 'Knöpfchen', 'Honig', 'Zimt', 'Butterblume', 'Pelle',
-    'Wuschel', 'Hummel', 'Nudel', 'Kiki', 'Poldi', 'Frieda', 'Schnuffel', 'Momo', 'Paula', 'Matti', 'Nelly',
-    'Pfefferkorn', 'Rosine', 'Mümmel', 'Toffee', 'Brezel', 'Kirsche', 'Lupo', 'Fips', 'Gustav', 'Ida', 'Juna',
-    'Baloo', 'Polly', 'Smilla', 'Kalle', 'Mathilda', 'Wanda', 'Elsa', 'Otto', 'Hazel', 'Bao', 'Pudding'];
+  const NAMES = [
+    // süß & verfressen
+    'Krümel', 'Mochi', 'Bohne', 'Keks', 'Nugget', 'Muffin', 'Erbse', 'Tofu', 'Honig', 'Zimt', 'Nudel', 'Pudding',
+    'Brezel', 'Rosine', 'Toffee', 'Kakao', 'Schoki', 'Praline', 'Trüffel', 'Nougat', 'Karamell', 'Marzipan', 'Waffel',
+    'Plätzchen', 'Gummibärchen', 'Haselnuss', 'Mandel', 'Pistazie', 'Erdnuss', 'Bonbon', 'Lakritz', 'Krapfen',
+    'Pfannkuchen', 'Dattel', 'Kichererbse', 'Kekskrümel', 'Schokotröpfchen', 'Pfefferkorn', 'Sesam', 'Knödel',
+    // flauschig & knuddelig
+    'Wuschel', 'Puschel', 'Flausch', 'Fussel', 'Bommel', 'Knuddel', 'Schnuffel', 'Wusel', 'Purzel', 'Kuller',
+    'Tapsi', 'Hoppel', 'Pfötchen', 'Piepsi', 'Mümmel', 'Flummi', 'Watte', 'Knöpfchen', 'Pünktchen', 'Tüpfel',
+    'Kringel', 'Socke', 'Schnupsi', 'Wackel', 'Zottel', 'Fluffi', 'Stupsi', 'Murmel', 'Klecks', 'Brummel',
+    // Wald & Berge
+    'Moos', 'Farn', 'Zapfi', 'Tannenzapfen', 'Eichel', 'Pilzchen', 'Kiesel', 'Gipfel', 'Bergkristall', 'Edelweiß',
+    'Lärche', 'Fichtennadel', 'Steinchen', 'Gämschen', 'Alpenglühen', 'Lawinchen', 'Firn', 'Grat', 'Hütte', 'Wanderschuh',
+    // Wasser & Geographie
+    'Sprudel', 'Tröpfchen', 'Fontäne', 'Bächlein', 'Quelle', 'Welle', 'Muschel', 'Perle', 'Strudel', 'Gischt',
+    'Fjord', 'Delta', 'Atlas', 'Kompass', 'Globus', 'Lagune', 'Atoll', 'Düne', 'Vulkan', 'Gletscher', 'Meridian',
+    // Himmel & Herbst
+    'Wölkchen', 'Flocke', 'Schneeflocke', 'Sternchen', 'Komet', 'Nebel', 'Brise', 'Kastanie', 'Bucheckerl',
+    'Laubblatt', 'Kürbis', 'Apfelstrudel', 'Herbstblatt', 'Löwenzahn', 'Kleeblatt', 'Butterblume', 'Hummel',
+    // Bücher
+    'Lesezeichen', 'Eselsohr', 'Kapitel', 'Fußnote', 'Seitchen', 'Bücherwurm',
+    // ein paar echte Namen
+    'Wanda', 'Lotte', 'Frieda', 'Momo', 'Otto', 'Ida', 'Bruno'];
 
   window.Animals = { KINDS, ACCS, ACC_COLORS, draw, randomLook, egg, NAMES, scene, UNLOCKS, randomName: () => pick(NAMES) };
 })();

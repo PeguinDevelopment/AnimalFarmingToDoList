@@ -52,36 +52,57 @@
         <path d="M45.5 57 Q50 55.5 54.5 57 Q50 62.5 45.5 57 Z" fill="#f6a04d"/>`,
     },
 
-    kuh: {
-      label: 'Kuh', baby: 'Kälbchen',
+    pferd: {
+      label: 'Pferd', baby: 'Fohlen',
       furs: [
-        { name: 'schwarz-weiß', spot: '#3d3a45' },
-        { name: 'braun-weiß', spot: '#8a5a3c' },
-        { name: 'Erdbeerkälbchen', spot: '#f4a7b9' },
-        { name: 'grau-weiß', spot: '#8b879a' },
+        { name: 'braun', main: '#be8a62', mane: '#6e4a35', muzzle: '#e6c3a5' },
+        { name: 'Schimmel', main: '#f2efea', mane: '#bdb6c4', muzzle: '#f7dfe2' },
+        { name: 'Fuchs mit Blesse', main: '#d9905a', mane: '#f3dcb5', muzzle: '#f2c9a8', blaze: true },
+        { name: 'Palomino', main: '#e8c27c', mane: '#fff3d6', muzzle: '#f6dcc0' },
       ],
       anchors: STD,
-      draw: f => {
-        const b = '#fffdf8';
-        return `
-        <path d="M72 86 q12 0 12 -12" stroke="${b}" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <circle cx="84" cy="73" r="3" fill="${f.spot}"/>
-        ${body(b, '#fff', '#8d7b74')}
-        <ellipse cx="40" cy="77" rx="7" ry="5" fill="${f.spot}"/>
-        <ellipse cx="37" cy="24" rx="3.2" ry="5.5" transform="rotate(-20 37 24)" fill="#f3dfae" ${OL}/>
-        <ellipse cx="63" cy="24" rx="3.2" ry="5.5" transform="rotate(20 63 24)" fill="#f3dfae" ${OL}/>
-        <ellipse cx="22" cy="42" rx="11" ry="5.5" transform="rotate(-25 22 42)" fill="${b}" ${OL}/>
-        <ellipse cx="23" cy="42" rx="6" ry="2.8" transform="rotate(-25 23 42)" fill="#f7c6cf"/>
-        <ellipse cx="78" cy="42" rx="11" ry="5.5" transform="rotate(25 78 42)" fill="${b}" ${OL}/>
-        <ellipse cx="77" cy="42" rx="6" ry="2.8" transform="rotate(25 77 42)" fill="#f7c6cf"/>
-        ${head(b)}
-        <ellipse cx="63" cy="35" rx="8" ry="6" fill="${f.spot}"/>
-        <ellipse cx="34" cy="44" rx="4.5" ry="3.5" fill="${f.spot}"/>
-        <ellipse cx="50" cy="62" rx="15" ry="9.5" fill="#f7c6cf"/>
-        <ellipse cx="44.5" cy="62" rx="1.8" ry="2.4" fill="#d4949f"/>
-        <ellipse cx="55.5" cy="62" rx="1.8" ry="2.4" fill="#d4949f"/>
-        ${eyes(47, 10)}${blush(54, 20)}`;
-      },
+      draw: f => `
+        <path d="M72 84 q15 2 12 14" stroke="${f.mane}" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M33 30 L31 12 L44 23 Z" fill="${f.main}" ${OL} stroke-linejoin="round"/>
+        <path d="M34.5 26 L33.5 17 L40 23 Z" fill="#f3c0c8"/>
+        <path d="M67 30 L69 12 L56 23 Z" fill="${f.main}" ${OL} stroke-linejoin="round"/>
+        <path d="M65.5 26 L66.5 17 L60 23 Z" fill="#f3c0c8"/>
+        ${body(f.main, f.muzzle, '#7d6a63')}
+        ${head(f.main, 47, 26)}
+        ${f.blaze ? '<ellipse cx="50" cy="44" rx="3.6" ry="10" fill="#fff"/>' : ''}
+        <ellipse cx="50" cy="62" rx="15" ry="10.5" fill="${f.muzzle}"/>
+        <ellipse cx="44.5" cy="63" rx="1.7" ry="2.3" fill="${INK}" opacity=".45"/>
+        <ellipse cx="55.5" cy="63" rx="1.7" ry="2.3" fill="${INK}" opacity=".45"/>
+        <path d="M46 68 q4 2.5 8 0" stroke="${INK}" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".7"/>
+        ${eyes(46, 10.5)}${blush(53, 20)}
+        <path d="M41 22 q1 10 8 13 q0 -7 4 -9 q2 6 7 7 q-2 -11 -10 -13 q-5 -1 -9 2 z" fill="${f.mane}" ${OL}/>`,
+    },
+
+    steinbock: {
+      label: 'Steinbock', baby: 'Steinböckchen',
+      furs: [
+        { name: 'nussbraun', main: '#b59c80', belly: '#efe4d6', dark: '#6f5d4c' },
+        { name: 'felsgrau', main: '#aaa49c', belly: '#ebe8e3', dark: '#635d57' },
+        { name: 'sandhell', main: '#d8c4a6', belly: '#f7efe2', dark: '#8b7558' },
+      ],
+      anchors: STD,
+      draw: f => `
+        <ellipse cx="73" cy="81" rx="4" ry="3" fill="${f.dark}"/>
+        <path d="M40 27 Q35 8 21 11 Q32 14 35 29 Z" fill="#9a8a74" ${OL} stroke-linejoin="round"/>
+        <path d="M33.5 17 l3 -2 M30 13.6 l2.4 -2.6 M36 22 l3 -1.4" stroke="#fff" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M60 27 Q65 8 79 11 Q68 14 65 29 Z" fill="#9a8a74" ${OL} stroke-linejoin="round"/>
+        <path d="M66.5 17 l-3 -2 M70 13.6 l-2.4 -2.6 M64 22 l-3 -1.4" stroke="#fff" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>
+        <ellipse cx="23" cy="41" rx="10" ry="4.5" transform="rotate(-15 23 41)" fill="${f.main}" ${OL}/>
+        <ellipse cx="24" cy="41" rx="5.5" ry="2.2" transform="rotate(-15 24 41)" fill="#f3c0c8"/>
+        <ellipse cx="77" cy="41" rx="10" ry="4.5" transform="rotate(15 77 41)" fill="${f.main}" ${OL}/>
+        <ellipse cx="76" cy="41" rx="5.5" ry="2.2" transform="rotate(15 76 41)" fill="#f3c0c8"/>
+        ${body(f.main, f.belly, '#5f544c')}
+        ${head(f.main)}
+        <path d="M46.5 66 q3.5 11 7 0 z" fill="${f.dark}"/>
+        <ellipse cx="50" cy="59" rx="11" ry="8" fill="${f.belly}"/>
+        <path d="M47.5 56.4 h5 l-2.5 2.5 z" fill="${INK}" stroke="${INK}" stroke-linejoin="round"/>
+        ${mouth(58.9)}
+        ${eyes(48, 10)}${blush(56, 18)}`,
     },
 
     hund: {
@@ -262,7 +283,7 @@
   };
 
   // ---------- Zubehör ----------
-  const ACC_COLORS = ['#f7a8b8', '#a8d8c8', '#b8a8e8', '#ffd38a', '#9cc9f0', '#f6b27a', '#c7e38f', '#e9a3d9'];
+  const ACC_COLORS = ['#9cc9f0', '#a8d8c8', '#b8a8e8', '#ffd38a', '#f6b27a', '#c7e38f', '#d9c3a5', '#8fb3d9'];
 
   const shade = (hex, f = 0.82) => {
     const n = parseInt(hex.slice(1), 16);
@@ -375,9 +396,86 @@
     },
   };
 
+  const hold = a => a.hold || [50, 82];
+  Object.assign(ACCS, {
+    buch: {
+      label: 'Buch 📖',
+      draw: (c, a) => {
+        const [x, y] = hold(a);
+        return `<g transform="translate(${x} ${y})">
+          <path d="M-13 -6 L0 -3 L13 -6 L13 7 L0 10 L-13 7 Z" fill="${c}" ${OL} stroke-linejoin="round"/>
+          <path d="M-11 -4.5 L0 -1.8 V8 L-11 5.3 Z M11 -4.5 L0 -1.8 V8 L11 5.3 Z" fill="#fffaf0"/>
+          <path d="M-9 -1.2 l7 1.7 M-9 2 l7 1.7 M9 -1.2 l-7 1.7 M9 2 l-7 1.7" stroke="${INK}" stroke-opacity=".25" stroke-width="1" stroke-linecap="round"/>
+        </g>`;
+      },
+    },
+    schoki: {
+      label: 'Schokolade 🍫',
+      draw: (c, a) => {
+        const [x, y] = hold(a);
+        return `<g transform="translate(${x} ${y}) rotate(-12)">
+          <rect x="-8" y="-8" width="16" height="15" rx="1.6" fill="#7b4a32" ${OL}/>
+          <path d="M-8 -3 h16 M0 -8 v6" stroke="#5c3424" stroke-width="1.2"/>
+          <path d="M-5 -6.5 l2 0 M3 -6.5 l2 0" stroke="#a06a4c" stroke-width="1.2" stroke-linecap="round"/>
+          <rect x="-8.8" y="0" width="17.6" height="8.5" rx="1.6" fill="${c}" ${OL}/>
+          <path d="M-5 4 h10" stroke="#fff" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>
+        </g>`;
+      },
+    },
+  });
+  KINDS.ente.anchors.hold = [50, 76];
+
   // Häkelsachen kommen etwas häufiger vor 🧶
   const ACC_POOL = ['keins', 'keins', 'muetze', 'muetze', 'schal', 'schal', 'haekelblume', 'haekelblume',
-    'schleife', 'schleife', 'bluemchen', 'herz', 'halstuch', 'glocke'];
+    'schleife', 'bluemchen', 'herz', 'halstuch', 'glocke', 'buch', 'buch', 'schoki', 'schoki'];
+
+  // ---------- Die Wiese: wächst mit jedem Haken ----------
+  const UNLOCKS = [
+    { at: 3, name: 'Tannenwald 🌲' },
+    { at: 8, name: 'Berge ⛰️' },
+    { at: 15, name: 'Bach 💧' },
+    { at: 25, name: 'Springbrunnen ⛲' },
+    { at: 40, name: 'Bücherbank 📚' },
+    { at: 60, name: 'Schokohäuschen 🍫' },
+  ];
+  const tree = (x, y, s = 1) =>
+    `<rect x="${x - 2 * s}" y="${y - 2}" width="${4 * s}" height="${8 * s}" fill="#8a6a4f"/>` +
+    `<path d="M${x} ${y - 34 * s} L${x - 10 * s} ${y - 16 * s} H${x + 10 * s} Z M${x} ${y - 24 * s} L${x - 13 * s} ${y} H${x + 13 * s} Z" fill="#4f9a6a"/>`;
+
+  function scene(checks, animals) {
+    const has = n => checks >= n;
+    const placed = [[34, 168], [96, 176], [232, 172], [300, 178], [160, 180]];
+    const crit = (animals || []).slice(-5).map((a, i) => {
+      const [x, y] = placed[i];
+      return draw(a.kind, a.look).replace('<svg', `<svg x="${x - 18}" y="${y - 32}" width="36" height="36"`);
+    }).join('');
+    let flowers = '';
+    [[20, 190], [70, 185], [130, 194], [205, 190], [270, 196], [345, 186], [120, 172], [252, 182]].forEach(([x, y], i) =>
+      flowers += `<circle cx="${x}" cy="${y}" r="2.2" fill="${i % 2 ? '#fff' : '#ffd84d'}"/>`);
+    return `<svg viewBox="0 0 360 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Deine Wiese">
+      <rect width="360" height="200" style="fill:var(--sky, #e3f2fb)"/>
+      <circle cx="318" cy="34" r="16" style="fill:var(--sun, #ffe58a)"/>
+      ${has(8) ? `<path d="M0 140 L70 60 L120 110 L170 40 L240 120 L290 70 L360 130 V200 H0 Z" fill="#a9b8cf"/>
+        <path d="M58 74 L70 60 L82 74 L76 70 L70 76 L64 70 Z M155 58 L170 40 L185 58 L178 53 L170 60 L162 53 Z M279 83 L290 70 L301 83 L296 79 L290 85 L284 79 Z" fill="#fff"/>` : ''}
+      <path d="M0 150 Q90 118 180 140 T360 134 V200 H0 Z" fill="#a8d89a"/>
+      ${has(3) ? tree(20, 150) + tree(42, 146, .85) + tree(62, 152, .7) + tree(334, 146) + tree(312, 150, .8) : ''}
+      ${has(60) ? `<g transform="translate(270 118)"><rect x="0" y="12" width="34" height="24" fill="#a0694a"/>
+        <path d="M-4 14 L17 -2 L38 14 Z" fill="#6e3f2a"/><rect x="12" y="20" width="10" height="16" fill="#7b4a32"/>
+        <path d="M17 20 v16 M12 25 h10 M12 30 h10" stroke="#5c3424"/><rect x="3" y="17" width="6" height="6" fill="#ffe58a"/></g>` : ''}
+      <path d="M0 166 Q120 150 220 168 T360 164 V200 H0 Z" fill="#c5e8b4"/>
+      ${has(15) ? `<path d="M236 200 Q250 182 290 178 Q330 174 360 160 V200 Z" fill="#9fd3ef"/>
+        <path d="M268 190 q8 -3 16 0 M300 182 q8 -3 16 0 M330 172 q6 -2 12 0" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>` : ''}
+      ${has(25) ? `<g transform="translate(180 152)">
+        <ellipse cx="0" cy="14" rx="26" ry="7" fill="#c9d3e0"/><ellipse cx="0" cy="12" rx="22" ry="5" fill="#9fd3ef"/>
+        <rect x="-3" y="-8" width="6" height="20" fill="#c9d3e0"/><ellipse cx="0" cy="-8" rx="11" ry="3.5" fill="#c9d3e0"/>
+        <path d="M0 -10 q-10 -14 -16 6 M0 -10 q10 -14 16 6 M0 -10 v-10" stroke="#7cc3ea" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <circle cx="-17" cy="0" r="1.6" fill="#7cc3ea"/><circle cx="17" cy="0" r="1.6" fill="#7cc3ea"/></g>` : ''}
+      ${has(40) ? `<g transform="translate(100 160)">
+        <rect x="-22" y="0" width="44" height="5" rx="2" fill="#a0784f"/><rect x="-20" y="5" width="3" height="10" fill="#8a6a4f"/><rect x="17" y="5" width="3" height="10" fill="#8a6a4f"/>
+        <rect x="-16" y="-4" width="16" height="4" rx="1" fill="#9cc9f0"/><rect x="-14" y="-8" width="13" height="4" rx="1" fill="#c7e38f"/><rect x="-15" y="-12" width="14" height="4" rx="1" fill="#ffd38a"/></g>` : ''}
+      ${flowers}${crit}
+    </svg>`;
+  }
 
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
@@ -400,7 +498,7 @@
     return `<svg${cls} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${opts.title || k.baby}">${title}${k.draw(f)}${acc.draw(l.color, k.anchors)}</svg>`;
   }
 
-  function egg(color = '#f7b6c8') {
+  function egg(color = '#a8dcc4') {
     return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <ellipse cx="50" cy="95" rx="22" ry="3.5" fill="#3a3347" opacity=".08"/>
       <path d="M50 8 C28 8 18 44 18 62 C18 82 32 94 50 94 C68 94 82 82 82 62 C82 44 72 8 50 8 Z" fill="#fffaf2" ${OL}/>
@@ -419,5 +517,5 @@
     'Pfefferkorn', 'Rosine', 'Mümmel', 'Toffee', 'Brezel', 'Kirsche', 'Lupo', 'Fips', 'Gustav', 'Ida', 'Juna',
     'Baloo', 'Polly', 'Smilla', 'Kalle', 'Mathilda', 'Wanda', 'Elsa', 'Otto', 'Hazel', 'Bao', 'Pudding'];
 
-  window.Animals = { KINDS, ACCS, ACC_COLORS, draw, randomLook, egg, NAMES, randomName: () => pick(NAMES) };
+  window.Animals = { KINDS, ACCS, ACC_COLORS, draw, randomLook, egg, NAMES, scene, UNLOCKS, randomName: () => pick(NAMES) };
 })();

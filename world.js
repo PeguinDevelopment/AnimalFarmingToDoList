@@ -30,14 +30,25 @@
   const nextRegion = unlocked => REGIONS.find(r => !unlocked.includes(r.id)) || null;
 
   // Plätze: pro Gebiet 4 hinten, 4 vorne, 3 am Himmel. IDs hängen am Gebiet (z. B. "wald:b0") – nie an der Reihenfolge.
-  const SLOTS = [];
-  REGIONS.forEach(reg => {
-    const X = reg.i * RW;
-    [45, 135, 225, 315].forEach((dx, i) => SLOTS.push({ id: `${reg.id}:b${i}`, x: X + dx, y: 206, s: .75, region: reg.id, sky: false }));
-    [70, 160, 250, 340].forEach((dx, i) => SLOTS.push({ id: `${reg.id}:f${i}`, x: X + dx, y: 250, s: 1, region: reg.id, sky: false }));
-    [[60, 36], [180, 70], [300, 44]].forEach(([dx, y], i) => SLOTS.push({ id: `${reg.id}:s${i}`, x: X + dx, y, s: 1, region: reg.id, sky: true }));
-  });
-  const slotById = Object.fromEntries(SLOTS.map(s => [s.id, s]));
+  const SLOTS = [], slotById = {};
+  function buildSlots() {
+    SLOTS.length = 0; Object.keys(slotById).forEach(k => delete slotById[k]);
+    REGIONS.forEach(reg => {
+      const X = reg.i * RW;
+      [45, 135, 225, 315].forEach((dx, i) => SLOTS.push({ id: `${reg.id}:b${i}`, x: X + dx, y: 206, s: .75, region: reg.id, sky: false }));
+      [70, 160, 250, 340].forEach((dx, i) => SLOTS.push({ id: `${reg.id}:f${i}`, x: X + dx, y: 250, s: 1, region: reg.id, sky: false }));
+      [[60, 36], [180, 70], [300, 44]].forEach(([dx, y], i) => SLOTS.push({ id: `${reg.id}:s${i}`, x: X + dx, y, s: 1, region: reg.id, sky: true }));
+    });
+    SLOTS.forEach(s => { slotById[s.id] = s; });
+  }
+  buildSlots();
+  // Farben der Landschaft – eine Edition kann sie überschreiben (siehe Ende der Datei)
+  const COL = {
+    far: '#8fa6c6', farNight: '#3a5078', mount: '#5f7ba3', mountNight: '#2f4366', sun: '#ffd23f', moon: '#f3efd0',
+    path: '#c9d3e0', pathWinter: '#dbe6ef', sprinkle: ['#fff', '#f2b01e'], night: '#0b1630', skyPreview: '#0f2350',
+    lockFill: '#eef5fb', lockStroke: '#1e88e5', lockText: '#0b6fb8', currency: '🪨', spotIcon: '🐾',
+  };
+  let EW = null; // Welt-Erweiterung der aktiven Edition (Landschaftstypen mit eigenen Zeichen-Funktionen)
 
   // ---------- Helfer: Bäume mit Volumen ----------
   const shade = (hex, f) => {
@@ -783,19 +794,24 @@
         for (let x = X + 20; x <= X + RW; x += 20) d += ` L${x} ${ya(x).toFixed(1)}`;
         s += `<path class="aurora" d="${d}" stroke="url(#aurora)" stroke-width="${44 - k * 10}" fill="none" opacity="${.8 - k * .2}"/>`;
       }
-      if (reg.i === 1) s += `<circle cx="${X + 250}" cy="40" r="15" fill="#f3efd0"/><circle cx="${X + 257}" cy="35" r="13" fill="${SKY.nacht[0]}"/>`;
-    } else if (reg.i === 1) s += `<circle cx="${X + 250}" cy="${c.tod === 'tag' ? 40 : 70}" r="18" fill="#ffd23f"/>`;
+      if (reg.i === 1) s += `<circle cx="${X + 250}" cy="40" r="15" fill="${COL.moon}"/><circle cx="${X + 257}" cy="35" r="13" fill="${SKY.nacht[0]}"/>`;
+    } else if (reg.i === 1) s += `<circle cx="${X + 250}" cy="${c.tod === 'tag' ? 40 : 70}" r="18" fill="${COL.sun}"/>`;
+    const bio = EW && EW.biomes && EW.biomes[b];
+    const ctx = { X, r, c, sea: c.sea, winter: c.sea === 'winter', night, has, land: LAND[c.sea], RW, H };
+    if (bio && bio.sky) s += bio.sky(ctx);
 
     // Gebirge: hintere Dunstkette + vordere Kette mit Graten, Schattenflanken und hangtreuem Schnee.
     // Feste Randhöhen (118/128), damit die Gebiete nahtlos aneinanderpassen.
     const [hi, lo] = BIOME[b] || [100, 140];
     const snowLine = (snowy ? 200 : { gletscher: 125, berge: 100, fjord: 100, schlucht: 95, alm: 88, schneewald: 200 }[b] || 82) + (winter ? 35 : 0);
     const pkFar = [30, 120, 210, 290].map(dx => [X + dx + (r() - .5) * 30, Math.max(10, Math.round(hi - 14 + r() * (lo - hi)))]);
-    s += mountainRange(X, pkFar, r, 118, night ? '#3a5078' : b === 'canyon' ? '#cf8a5a' : '#8fa6c6', snowLine - 8, night, .85);
+    s += mountainRange(X, pkFar, r, 118, night ? COL.farNight : b === 'canyon' ? '#cf8a5a' : COL.far, snowLine - 8, night, .85);
     const pk = [60, 140, 220, 300].map(dx => [X + dx, Math.round(hi + r() * (lo - hi))]);
-    const mount = b === 'canyon' ? '#b5653a' : night ? '#2f4366' : '#5f7ba3';
+    const mount = b === 'canyon' ? '#b5653a' : night ? COL.mountNight : COL.mount;
     const main = mountainRange(X, pk, r, 128, mount, snowLine, night, 1, true);
     s += main.svg;
+    ctx.main = main;
+    if (bio && bio.back) s += bio.back(ctx);   // Edition: Dinge vor den Bergen, hinter dem Hügel
     if (b === 'gletscher') s += glacier(main, r, night);
     const sdG = main.saddles[1] ?? main.saddles[0];
     const gx = b === 'gletscher' && sdG != null ? main.P[sdG][0] + 3 : null; // Gletschertor → Gletscherbach
@@ -810,7 +826,8 @@
     // Hügel bzw. Wasser im Hintergrund
     const hy = 160 + r() * 16;
     const hillCol = b === 'canyon' ? '#d9894a' : b === 'moor' ? '#4f7a46' : land.hill;
-    s += `<path d="M${X} 172 Q${X + 90} ${hy.toFixed(0)} ${X + 180} 172 T${X + RW} 172 V${H} H${X} Z" fill="${hillCol}"/>`;
+    s += `<path d="M${X} 172 Q${X + 90} ${hy.toFixed(0)} ${X + 180} 172 T${X + RW} 172 V${H} H${X} Z" fill="${(bio && bio.hill) || hillCol}"/>`;
+    if (bio && bio.mid) s += bio.mid(ctx);     // Edition: Dinge auf dem Hügel (Bäume, Häuser, Wasser …)
     if (b === 'kueste' || b === 'polar' || b === 'insel' || b === 'vulkan') s += seaBand(X, winter);
     if (b === 'fjord') s += `<path d="M${X + 120} 216 Q${X + 150} 180 ${X + 170} 150 L${X + 200} 150 Q${X + 220} 185 ${X + 260} 216 Z" fill="${DWATER}"/>`;
     if (b === 'polar') [[60, 196, 1.2], [180, 186, .8], [290, 200, 1]].forEach(([dx, y, k]) =>
@@ -855,8 +872,9 @@
     // Vorderer Boden, Weg, Bäche
     const gy = 204 + r() * 10;
     const groundCol = b === 'canyon' ? '#e0a060' : b === 'moor' ? '#6f8f4a' : land.ground;
-    s += `<path d="M${X} 214 Q${X + 90} ${gy.toFixed(0)} ${X + 180} 214 T${X + RW} 214 V${H} H${X} Z" fill="${groundCol}"/>`;
-    s += `<path d="M${X} 238 Q${X + 90} ${(230 + r() * 8).toFixed(0)} ${X + 180} 238 T${X + RW} 238" stroke="${winter ? '#dbe6ef' : '#c9d3e0'}" stroke-width="7" fill="none" opacity=".8"/>`;
+    s += `<path d="M${X} 214 Q${X + 90} ${gy.toFixed(0)} ${X + 180} 214 T${X + RW} 214 V${H} H${X} Z" fill="${(bio && bio.ground) || groundCol}"/>`;
+    s += `<path d="M${X} 238 Q${X + 90} ${(230 + r() * 8).toFixed(0)} ${X + 180} 238 T${X + RW} 238" stroke="${winter ? COL.pathWinter : COL.path}" stroke-width="7" fill="none" opacity=".8"/>`;
+    if (bio && bio.front) s += bio.front(ctx); // Edition: Dinge im Vordergrund
     if ((b === 'wald' || b === 'birken' || b === 'schneewald') && has('waldbach')) s += creek(`M${X + 110} 176 Q${X + 60} 200 ${X + 140} 222 T${X + 90} ${H}`, 9, winter);
     if (b === 'fluss') s += creek(`M${X + 150} 172 Q${X + 290} 192 ${X + 210} 216 T${X + 330} ${H}`, has('fluss') ? 20 : 8, winter);
     if (b === 'kueste' || b === 'vulkan') s += `<path d="M${X + 8} 216 q8 -12 18 -6 q6 -8 14 0 v6 Z M${X + 160} 218 q10 -14 22 -6 q6 -6 12 2 v4 Z" fill="${DSTONE}"/>`;
@@ -866,24 +884,25 @@
       const x = (X + r() * RW).toFixed(0), y = (218 + r() * 40).toFixed(0);
       if (sea === 'herbst') s += `<ellipse cx="${x}" cy="${y}" rx="2.6" ry="1.4" fill="${land.leaf[i % land.leaf.length]}" transform="rotate(${(r() * 90).toFixed(0)} ${x} ${y})"/>`;
       else if (winter) s += `<circle cx="${x}" cy="${y}" r="1.4" fill="#fff"/>`;
-      else s += `<circle cx="${x}" cy="${y}" r="1.8" fill="${i % 3 ? '#fff' : '#f2b01e'}"/>`;
+      else s += `<circle cx="${x}" cy="${y}" r="1.8" fill="${COL.sprinkle[i % 3 ? 0 : 1]}"/>`;
     }
     if (b === 'blumen' && !winter) {
       const n = has('blumenmeer') ? 80 : 22;
       for (let i = 0; i < n; i++) s += flower(Math.round(X + r() * RW), Math.round(216 + r() * 40), ['#fff', '#1e88e5', '#f2b01e', '#00a5a0'][i % 4], has('blumenmeer') ? 2.6 : 2);
     }
-    if (night) s += `<rect x="${X}" y="140" width="${RW}" height="${H - 140}" fill="#0b1630" opacity=".3"/>`;
+    if (night) s += `<rect x="${X}" y="140" width="${RW}" height="${H - 140}" fill="${COL.night}" opacity=".3"/>`;
+    if (bio && bio.glow) s += bio.glow(ctx);   // Edition: Leuchtendes, das nachts nicht abgedunkelt wird
 
     // Schild mit Gebietsnamen
     const lw = reg.name.length * 5.6 + 16;
     s += `<g class="w-label" data-action="w-go" data-r="${reg.id}"><rect x="${X + 8}" y="${H - 22}" width="${lw}" height="15" rx="7" fill="rgba(20,35,58,.5)"/><text x="${X + 16}" y="${H - 11}" font-size="9.5" font-family="sans-serif" font-weight="700" fill="#fff">${reg.name}</text></g>`;
 
     if (locked) {
-      s += `<rect x="${X}" y="0" width="${RW}" height="${H}" fill="#eef5fb" opacity=".72"/>
+      s += `<rect x="${X}" y="0" width="${RW}" height="${H}" fill="${COL.lockFill}" opacity=".72"/>
         <g class="w-lock" data-action="w-unlock" data-r="${reg.i}">
-          <rect x="${X + 70}" y="96" width="220" height="70" rx="16" fill="#fff" stroke="#1e88e5" stroke-width="2"/>
+          <rect x="${X + 70}" y="96" width="220" height="70" rx="16" fill="#fff" stroke="${COL.lockStroke}" stroke-width="2"/>
           <text x="${X + 180}" y="124" font-size="15" font-family="sans-serif" font-weight="800" text-anchor="middle" fill="#14233a">🔒 ${reg.name}</text>
-          <text x="${X + 180}" y="148" font-size="12" font-family="sans-serif" font-weight="700" text-anchor="middle" fill="#0b6fb8">Für ${locked} 🪨 freischalten</text>
+          <text x="${X + 180}" y="148" font-size="12" font-family="sans-serif" font-weight="700" text-anchor="middle" fill="${COL.lockText}">Für ${locked} ${COL.currency} freischalten</text>
         </g>`;
     }
     return s;
@@ -938,7 +957,8 @@
   const defsInner = () => `<defs>
     ${Object.entries(SKY).map(([k, v]) => `<linearGradient id="wsky-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${v[0]}"/><stop offset=".55" stop-color="${v[1]}"/><stop offset="1" stop-color="${v[2]}"/></linearGradient>`).join('')}
     <linearGradient id="glacier" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6fbff"/><stop offset=".6" stop-color="#d8ecf8"/><stop offset="1" stop-color="#a9d3ee"/></linearGradient>
-    <linearGradient id="aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3cf0c8" stop-opacity="0"/><stop offset=".5" stop-color="#3cf0c8" stop-opacity=".55"/><stop offset="1" stop-color="#1e88e5" stop-opacity="0"/></linearGradient>
+    <linearGradient id="aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${COL.aurora1 || '#3cf0c8'}" stop-opacity="0"/><stop offset=".5" stop-color="${COL.aurora1 || '#3cf0c8'}" stop-opacity=".55"/><stop offset="1" stop-color="${COL.aurora2 || '#1e88e5'}" stop-opacity="0"/></linearGradient>
+    ${(EW && EW.defs) || ''}
   </defs>`;
 
   // Vorschau eines Gebiets (für das Kauf-Fenster)
@@ -1002,7 +1022,7 @@
           const occ = occupied[sp.id], me = occ === o.moving, cy = sp.y - sp.size / 2;
           s += `<g class="w-aspot ${occ ? 'full' : 'empty'} ${me ? 'me' : ''}" data-action="w-aspot" data-spot="${sp.id}">
             <circle cx="${sp.x}" cy="${cy}" r="${(sp.size * .6).toFixed(1)}" fill="rgba(255,255,255,${occ ? .15 : .6})" stroke="${me ? '#f2b01e' : '#fff'}" stroke-width="${me ? 3 : 2}" stroke-dasharray="${me ? '0' : '4 3'}"/>
-            ${occ ? '' : `<text x="${sp.x}" y="${cy + 5}" font-size="${sp.size * .45}" text-anchor="middle">🐾</text>`}</g>`;
+            ${occ ? '' : `<text x="${sp.x}" y="${cy + 5}" font-size="${sp.size * .45}" text-anchor="middle">${COL.spotIcon}</text>`}</g>`;
         });
         if (o.edit && !o.moving) sl.forEach(x => {
           if (placingSky !== null && placingSky !== x.sky) return;
@@ -1026,13 +1046,58 @@
     if (!g) return '';
     const c = { tod: 'nacht', sea: season(new Date().getMonth()) };
     if (g.group === 'land') {
-      const ic = { waldbach: '🏞️', bergbach: '🏔️', gletschersee: '🧊', fluss: '🌊', blumenmeer: '🌼', nordlicht: '🌌', milchstrasse: '🌠' }[g.id] || '🏞️';
+      const ic = g.icon || { waldbach: '🏞️', bergbach: '🏔️', gletschersee: '🧊', fluss: '🌊', blumenmeer: '🌼', nordlicht: '🌌', milchstrasse: '🌠' }[g.id] || '🏞️';
       return `<svg viewBox="0 0 40 40" aria-hidden="true"><text x="20" y="28" font-size="22" text-anchor="middle">${ic}</text></svg>`;
     }
-    if (g.sky) return `<svg viewBox="-40 -38 80 80" aria-hidden="true"><rect x="-40" y="-38" width="80" height="80" rx="10" fill="#0f2350"/>${g.d(c)}</svg>`;
+    if (g.sky) return `<svg viewBox="-40 -38 80 80" aria-hidden="true"><rect x="-40" y="-38" width="80" height="80" rx="10" fill="${COL.skyPreview}"/>${g.d(c)}</svg>`;
     return `<svg viewBox="-45 -90 90 95" aria-hidden="true">${g.d({ tod: 'tag', sea: c.sea })}</svg>`;
   }
   const previewFind = type => findById[type] ? `<svg viewBox="-8 -12 16 16" aria-hidden="true">${findById[type].d}</svg>` : '';
+
+  // Allgemeiner Sternbild-Zeichner: fig = { n: Name, s: [[x,y]…], l: [[a,b]…], big: [i…] }; gold = Premium-Look
+  function starfig(fig, night, gold) {
+    const line = gold ? '#ffe9a8' : '#cfe3ff', star = gold ? '#ffd86b' : (night ? '#fff' : '#eaf4ff');
+    let s = `<g stroke="${line}" stroke-width="${gold ? 1.1 : .9}" opacity="${night ? .6 : .75}">${fig.l.map(([a, b]) => `<line x1="${fig.s[a][0]}" y1="${fig.s[a][1]}" x2="${fig.s[b][0]}" y2="${fig.s[b][1]}"/>`).join('')}</g>`;
+    fig.s.forEach(([x, y], i) => {
+      const r = (fig.big || []).includes(i) ? (gold ? 3 : 2.7) : (gold ? 2.1 : 1.9);
+      if (night || gold) s += `<circle cx="${x}" cy="${y}" r="${r * 2.5}" fill="${star}" opacity="${night ? .25 : .16}"/>`;
+      s += `<circle cx="${x}" cy="${y}" r="${r}" fill="${star}"/>`;
+    });
+    if (night) s += `<text x="0" y="36" font-size="6.5" font-family="sans-serif" text-anchor="middle" fill="${line}" opacity=".8">${gold ? '✦ ' : ''}${fig.n}</text>`;
+    return s;
+  }
+
+  /* ---------- Editionen ----------
+     window.EDITION.world(H) kann Gebiete, Landschaftstypen, Farben, Laden, Gruppen und Fundstücke ersetzen.
+     IDs der Tier-Edition bleiben davon unberührt; jede Edition hat ihre eigenen Daten. */
+  const ED = window.EDITION;
+  if (ED && ED.world) {
+    const Hw = { RW, H, OL, WOOD, DWOOD, STONE, DSTONE, WATER, DWATER, COLS, flower, fir, books, shelfBooks, shade, prng, canopy, trunk, bareCrown,
+      dots, decid, conifer, shrub, crown, creek, seaBand, starfig, leaf };
+    EW = ED.world(Hw);
+    if (EW.regions) {
+      REGIONS.splice(0, REGIONS.length, ...EW.regions.map(([id, name, biome], i) => ({ id, name, biome, i })));
+      Object.keys(regionById).forEach(k => delete regionById[k]);
+      REGIONS.forEach(r => { regionById[r.id] = r; });
+      START_REGIONS.splice(0, START_REGIONS.length, ...REGIONS.slice(0, 4).map(r => r.id));
+      buildSlots();
+    }
+    if (EW.biomeHeights) Object.assign(BIOME, EW.biomeHeights);
+    if (EW.sky) Object.assign(SKY, EW.sky);
+    if (EW.land) Object.assign(LAND, EW.land);
+    if (EW.colors) Object.assign(COL, EW.colors);
+    if (EW.gadgets) {
+      G.splice(0, G.length, ...EW.gadgets);
+      Object.keys(byId).forEach(k => delete byId[k]);
+      G.forEach(g => { byId[g.id] = g; });
+    }
+    if (EW.groups) { Object.keys(GROUPS).forEach(k => delete GROUPS[k]); Object.assign(GROUPS, EW.groups); }
+    if (EW.finds) {
+      FINDS.splice(0, FINDS.length, ...EW.finds);
+      Object.keys(findById).forEach(k => delete findById[k]);
+      FINDS.forEach(f => { findById[f.id] = f; });
+    }
+  }
 
   window.World = {
     RW, H, GADGETS: G, GROUPS, SLOTS, slotById, REGIONS, regionById, START_REGIONS, regionPrice, nextRegion, FINDS, byId, findById,

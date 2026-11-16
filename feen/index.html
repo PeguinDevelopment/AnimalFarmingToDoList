@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de" data-edition="feen">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FeenwaldToDoList</title>
+  <meta name="theme-color" content="#fff5f9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="FeenwaldToDoList">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../feen.css">
+</head>
+<body>
+  <div id="app">
+    <header id="top"></header>
+    <main id="view" tabindex="-1"></main>
+  </div>
+
+  <nav id="nav" aria-label="Hauptmenü">
+    <button data-action="nav" data-view="heute"><span class="ni">☀️</span><span>Heute</span></button>
+    <button data-action="nav" data-view="listen"><span class="ni">📜</span><span>Listen</span></button>
+    <button data-action="nav" data-view="tiere"><span class="ni">🧚</span><span>Feenwald</span></button>
+    <button data-action="nav" data-view="einstellungen"><span class="ni">⚙️</span><span>Einstellen</span></button>
+  </nav>
+
+  <div id="sheet-layer" hidden>
+    <div class="scrim" data-action="close-sheet"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <button class="sheet-close" data-action="close-sheet" aria-label="Schließen">✕</button>
+      <div id="sheet-body"></div>
+    </div>
+  </div>
+
+  <div id="overlay" hidden></div>
+  <div id="hatch" hidden></div>
+  <div id="gift" hidden></div>
+  <div id="intro" hidden role="dialog" aria-modal="true" aria-label="Einführung"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="fx" aria-hidden="true"></div>
+  <input type="file" id="file-in" accept=".json,application/json,text/plain" hidden>
+
+  <!-- Reihenfolge wichtig: zuerst die Edition, dann der gemeinsame Code -->
+  <script src="../edition-feen.js"></script>
+  <script src="../animals.js"></script>
+  <script src="../world.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

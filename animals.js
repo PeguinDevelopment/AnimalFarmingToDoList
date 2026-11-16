@@ -504,8 +504,9 @@
 
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
+  const firstKind = () => KINDS[Object.keys(KINDS)[0]];
   function randomLook(kind) {
-    const k = KINDS[kind] || KINDS.pinguin;
+    const k = KINDS[kind] || firstKind();
     return {
       fur: Math.floor(Math.random() * k.furs.length),
       stone: Math.floor(Math.random() * STONES.length),
@@ -515,7 +516,7 @@
   }
 
   function draw(kind, look, opts = {}) {
-    const k = KINDS[kind] || KINDS.pinguin;
+    const k = KINDS[kind] || firstKind();   // unbekannte Art: erste Art der Edition als Ersatz
     const l = look || { fur: 0, acc: 'keins', color: ACC_COLORS[0] };
     const f = k.furs[l.fur] || k.furs[0];
     const acc = ACCS[l.acc] || ACCS.keins;
@@ -554,5 +555,21 @@
     'Marienkäferchen', 'Pusteblume', 'Herbstblättchen', 'Sonnenschein', 'Mondkind', 'Bücherwürmchen',
   ];
 
-  window.Animals = { KINDS, ACCS, ACC_COLORS, STONES, draw, randomLook, egg, NAMES, randomName: () => pick(NAMES) };
+  /* ---------- Editionen ----------
+     Eine Edition (window.EDITION, z. B. die Feen-Edition) kann Wesen, Zubehör, Farben, Namen und das Ei ersetzen.
+     Ohne Edition bleibt alles wie oben definiert (Tier-Edition). */
+  let eggFn = egg;
+  const ED = window.EDITION;
+  if (ED && ED.animals) {
+    const H = { INK, OL, eyes, blush, mouth, body, head, STD, shade, stitch, hold };
+    const e = ED.animals(H);
+    if (e.kinds) { Object.keys(KINDS).forEach(k => delete KINDS[k]); Object.assign(KINDS, e.kinds); }
+    if (e.accs) { Object.keys(ACCS).forEach(k => { if (k !== 'keins') delete ACCS[k]; }); Object.assign(ACCS, e.accs); }
+    if (e.accPool) ACC_POOL.splice(0, ACC_POOL.length, ...e.accPool);
+    if (e.accColors) ACC_COLORS.splice(0, ACC_COLORS.length, ...e.accColors);
+    if (e.names) NAMES.splice(0, NAMES.length, ...e.names);
+    if (e.egg) eggFn = e.egg;
+  }
+
+  window.Animals = { KINDS, ACCS, ACC_COLORS, STONES, draw, randomLook, egg: (...a) => eggFn(...a), NAMES, randomName: () => pick(NAMES) };
 })();

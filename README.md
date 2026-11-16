@@ -1,12 +1,26 @@
-# Plan 🐾
+# AnimalFarmingToDoList 🐾
 
 Eine ruhige, übersichtliche To-do-App mit Babytieren zum Sammeln.
 Wer Aufgaben abhakt, lässt Babytiere schlüpfen und gestaltet nach und nach eine eigene Landschaft.
 
-Plan ist eine **Progressive Web App (PWA)**: Sie läuft im Browser, lässt sich auf iPhone, iPad, Android und dem Desktop wie eine normale App installieren und funktioniert danach auch offline.
+AnimalFarmingToDoList ist eine **Progressive Web App (PWA)**: Sie läuft im Browser, lässt sich auf iPhone, iPad, Android und dem Desktop wie eine normale App installieren und funktioniert danach auch offline.
 Es gibt keinen Account und keinen Server, alle Daten bleiben auf dem Gerät.
 
 > Wie man die App veröffentlicht und auf Geräten installiert, steht in **[DEPLOY.md](DEPLOY.md)**.
+
+## Zwei Editionen
+
+Derselbe Code liefert zwei eigenständige Apps:
+
+| | AnimalFarmingToDoList | FeenwaldToDoList |
+|---|---|---|
+| Adresse | `/` | `/feen/` |
+| Stil | kräftiges Blau, Grün, Türkis und Herbstfarben auf Karopapier | Rosa-Pastell mit Glitzer, Märchenbuch-Seiten statt Karo |
+| Sammeln | 12 Babytiere | 11 Fabelwesen: Einhornfohlen, Drachenbaby, Feenkind, Greifenküken, Phönixküken, Pegasusfohlen, Fuchsgeistchen, Mondhäschen, Flügelkätzchen, Pilzwichtelchen, Büchereulchen |
+| Welt | Tierwiese mit 40 Gebieten | Feenwald mit 30 Gebieten in 10 Landschaften, z. B. Märchenwald, Rosengarten, Kristallhöhle, Bibliothek, Wolkenschloss |
+| Währung | 🪨 Kiesel | 💎 Kristalle |
+
+Beide Editionen lassen sich nebeneinander installieren. Sie haben getrennte Speicherstände, und ein Backup der einen Edition wird von der anderen nicht geladen.
 
 ## Funktionen
 
@@ -40,7 +54,7 @@ Es gibt keinen Account und keinen Server, alle Daten bleiben auf dem Gerät.
 - Keine Fristen, keine Streaks, nichts geht verloren
 
 **Bedienung**
-- Beim ersten Öffnen erklärt eine kurze Einführung in 7 Seiten die wichtigsten Funktionen
+- Beim ersten Öffnen erklärt eine kurze Einführung in 5 Seiten die wichtigsten Funktionen
 - 8 Farbthemen, darunter ein Nachtmodus
 - 3 Textgrößen
 - Ruhemodus ohne Animationen; die Einstellung „Bewegung reduzieren“ des Systems wird automatisch beachtet
@@ -60,8 +74,26 @@ Es gibt keinen Account und keinen Server, alle Daten bleiben auf dem Gerät.
 | `animals.js` | Babytiere, Zubehör und Namen |
 | `world.js` | Tierwiese: Gebiete, Landschaft, Gadgets, Sternbilder und Fundstücke |
 | `styles.css` | Gestaltung und Farbthemen |
-| `sw.js` | Service Worker für den Offline-Betrieb |
+| `sw.js` | Service Worker für den Offline-Betrieb (für beide Editionen) |
 | `manifest.webmanifest`, `icons/` | Angaben und Icons für die Installation |
+| `edition-feen.js` | Feen-Edition: Fabelwesen, Feenwald, Texte, Farbthemen, Einführung |
+| `feen.css` | Gestaltung der Feen-Edition (wird nach `styles.css` geladen) |
+| `feen/` | Startseite, Manifest und Icons der Feen-Edition |
+
+### Wie eine Edition funktioniert
+
+Eine Edition ist eine Datei, die **vor** `animals.js`, `world.js` und `app.js` geladen wird und `window.EDITION` setzt. Ohne sie läuft die Tier-Edition.
+Alles, was die Edition nicht angibt, bleibt beim Standard. Sie kann ersetzen:
+
+- `animals(H)`: Arten, Zubehör, Namen und das Ei
+- `world(H)`: Gebiete, Landschaften, Himmel, Gadgets, Sternbilder und Fundstücke
+- `intro(I)`: die Einführungsseiten
+- `text`: Begriffe wie Währung, Tierhaus oder Wiese
+- `themes`, `colors`, `cheers`, `taglines`, `categories`, `starter`
+- `storageKey`, `appName`, `backupPrefix`, `swPath`
+
+Für eine weitere Edition: `edition-feen.js` und den Ordner `feen/` kopieren, `id` und `storageKey` neu vergeben und die Dateien in `sw.js` eintragen.
+Die `storageKey` einer veröffentlichten Edition nie ändern, sonst sind die Daten nicht mehr auffindbar.
 
 ## Lokal starten
 
@@ -71,7 +103,7 @@ Im Projektordner einen einfachen Webserver starten, zum Beispiel:
 python -m http.server 8000
 ```
 
-Danach `http://localhost:8000` öffnen. Ein Doppelklick auf `index.html` funktioniert auch, dann allerdings ohne Offline-Modus.
+Danach `http://localhost:8000` öffnen, die Feen-Edition unter `http://localhost:8000/feen/`. Ein Doppelklick auf `index.html` funktioniert auch, dann allerdings ohne Offline-Modus.
 
 In den Einstellungen gibt es einen versteckten Debug-Bereich: Tippt man fünfmal schnell auf „Mit 💛 gemacht“, erscheint er. Dort kann man
 - die Einführung sofort zeigen,
@@ -100,7 +132,12 @@ In den Einstellungen gibt es einen versteckten Debug-Bereich: Tippt man fünfmal
 }
 ```
 
-Fehlt eine Liste in der App, wird sie angelegt. Bereits erledigte Aufgaben zählen dabei gleich für die Babytiere.
+Der Import **fügt nur hinzu**, er löscht und überschreibt nie etwas.
+- Fehlt eine Kategorie in der App, wird sie angelegt. Ohne Angabe von `animal` und `color` bekommt sie ein Tier und eine Farbe, die noch frei sind.
+- Aufgaben, die es in derselben Kategorie schon gibt, werden übersprungen. Man kann dieselbe Datei also gefahrlos mehrfach laden.
+- Bereits erledigte Aufgaben zählen gleich für die Babytiere.
+
+Beim ersten Start gibt es nur die Kategorien **Allgemein** (Pinguin) und **Uni** (Highland-Kälbchen). Alle weiteren legt man selbst an oder importiert sie.
 Persönliche Listen gehören in den Ordner `import/`, der per `.gitignore` aus dem Repository herausgehalten wird.
 
 ## Erweitern, ohne etwas kaputt zu machen

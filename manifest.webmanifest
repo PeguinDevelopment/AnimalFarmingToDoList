@@ -1,6 +1,6 @@
 {
-  "name": "Plan",
-  "short_name": "Plan",
+  "name": "AnimalFarmingToDoList",
+  "short_name": "AnimalFarmingToDoList",
   "description": "Eine liebe To-do-Liste mit Babytieren zum Sammeln.",
   "lang": "de",
   "start_url": "./",

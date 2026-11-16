@@ -2,7 +2,18 @@
   'use strict';
   const A = window.Animals;
   const Wd = window.World;
-  const KEY = 'pfoetchenplan-v1';
+  // Edition: ohne window.EDITION läuft die Tier-Edition (AnimalFarming). Jede Edition hat eigene Daten.
+  const ED = window.EDITION || {};
+  const EDITION_ID = ED.id || 'tiere';
+  const KEY = ED.storageKey || 'pfoetchenplan-v1';
+  const APP_NAME = ED.appName || 'AnimalFarmingToDoList';
+  // Wortschatz: alle sichtbaren Begriffe, die sich je nach Edition ändern
+  const TX = Object.assign({
+    cur: 'Kiesel', curN: 'Kiesel', curIcon: '🪨', curDat: 'Kieseln',
+    baby: 'Babytier', babies: 'Babytiere', creature: 'Tier', creatures: 'Tiere', creaturesDat: 'Tieren',
+    world: 'Tierwiese', worldIcon: '⛰️', meadow: 'Wiese', shop: 'Wiesen-Laden', home: 'Tierhaus', spot: 'Pfoten-Platz', spotIcon: '🐾',
+    paw: '🐾', hello: 'Hallo! 👋', hatchHead: 'Überraschung!', chest: 'Schatztruhe', egg: 'Ei',
+  }, ED.text || {});
   const $ = s => document.querySelector(s);
 
   // ---------- Helfer ----------
@@ -14,8 +25,8 @@
   const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   const MAX_VISIBLE = 6; // so viele offene Aufgaben pro Liste, der Rest ist eingeklappt
-  const COLORS = ['#084a85', '#1e88e5', '#1d3f9e', '#00897b', '#0e9fb0', '#2e9e44', '#5f8f1a', '#d35400', '#b23a12', '#b8860b'];
-  const THEMES = [
+  const COLORS = ED.colors || ['#084a85', '#1e88e5', '#1d3f9e', '#00897b', '#0e9fb0', '#2e9e44', '#5f8f1a', '#d35400', '#b23a12', '#b8860b'];
+  const THEMES = ED.themes || [
     { id: 'meer', name: 'Meer', a: '#cfe5f7', b: '#0b6fb8', meta: '#eef5fb' },
     { id: 'himmel', name: 'Himmel', a: '#cde4fb', b: '#1677d6', meta: '#edf6ff' },
     { id: 'gipfel', name: 'Gipfel', a: '#ffffff', b: '#1d3f9e', meta: '#f4f7fc' },
@@ -25,10 +36,10 @@
     { id: 'sonne', name: 'Sonne', a: '#1e88e5', b: '#f0a500', meta: '#f2f7fb' },
     { id: 'nacht', name: 'Nacht', a: '#0d1a2e', b: '#3cc8e8', meta: '#0d1a2e' },
   ];
-  const CHEERS = ['Geschafft! 🌿', 'Super gemacht! ✨', 'Ein Haken mehr 💛', 'Yay! 🎉', 'Jeder Haken zählt 🍀',
+  const CHEERS = ED.cheers || ['Geschafft! 🌿', 'Super gemacht! ✨', 'Ein Haken mehr 💛', 'Yay! 🎉', 'Jeder Haken zählt 🍀',
     'Stark! 💪', 'Das war ein Schritt nach vorn 🐾', 'Gut gemacht – auch kleine Dinge sind Dinge 💛',
     'Wieder ein Stück den Berg hoch ⛰️', 'Erledigt! Zeit für ein Stück Schokolade? 🍫'];
-  const TAGLINES = ['Eins nach dem anderen. Du musst heute nicht alles schaffen.', 'Kleine Schritte zählen genauso.',
+  const TAGLINES = ED.taglines || ['Eins nach dem anderen. Du musst heute nicht alles schaffen.', 'Kleine Schritte zählen genauso.',
     'Such dir was Kleines aus – das reicht für den Anfang.', 'Pausen sind auch produktiv. 🌿',
     'Deine Tierchen freuen sich über jeden Haken.', 'Du machst das gut. Wirklich.',
     'Jeder Berg wird Schritt für Schritt bestiegen. ⛰️', 'Auch kleine Bäche werden zu Flüssen. 💧',
@@ -48,19 +59,23 @@
     finds: [],                        // Fundstücke {id, type, region, x, y}
     animalSpots: {},                  // Tier-ID → selbst gewählter Tierplatz (z. B. "wald:af3")
   });
+  // Start-Bewohner und Start-Kategorien je Edition
+  const STARTER = ED.starter || { id: 'start-pinguin', kind: 'pinguin', look: { fur: 0, acc: 'muetze', color: '#2e9e44', stone: 0 }, name: 'Krümel', catName: 'Allgemein', spot: 'wald:af4' };
+  const START_CATS = ED.categories || [
+    // Start mit nur zwei Kategorien – weitere legt man selbst an oder sie kommen per Import dazu
+    { id: 'allgemein', name: 'Allgemein', color: '#00897b', animal: 'pinguin' },
+    { id: 'uni', name: 'Uni', color: '#084a85', animal: 'hochland' },
+  ];
   function defaultState() {
     const m = newMap();
+    m.animalSpots[STARTER.id] = STARTER.spot;   // Start-Bewohner steht gleich gut sichtbar im ersten Gebiet
+    const { spot, ...starter } = STARTER;
     return {
-      v: 1, schema: SCHEMA,
-      categories: [
-        { id: 'uni', name: 'Uni', color: '#084a85', animal: 'pinguin' },
-        { id: 'therapie', name: 'Therapie', color: '#00897b', animal: 'steinbock' },
-        { id: 'umzug', name: 'Umzug', color: '#d35400', animal: 'hochland' },
-        { id: 'sonstiges', name: 'Sonstiges', color: '#2e9e44', animal: 'hund' },
-        { id: 'vorlesung', name: 'In der Vorlesung', color: '#1d3f9e', animal: 'hase' },
-      ],
+      v: 1, schema: SCHEMA, edition: EDITION_ID,
+      categories: START_CATS.map(c => ({ ...c })),
       tasks: [],
-      animals: [],
+      // Start-Bewohner wohnt von Anfang an auf der Wiese (ohne Schlüpf-Fenster)
+      animals: [{ ...starter, look: { ...starter.look }, bornAt: Date.now(), welcomed: true }],
       progress: {},
       checks: 0,
       pebbles: 0,          // Kiesel – Währung für den Wiesen-Laden
@@ -68,7 +83,7 @@
       world: { active: m.id, maps: [m] },  // Karten (später archivierbar), eine ist aktiv
       daily: { last: null, days: 0, chests: 0 }, // Tagesgeschenk: gesammelte Tage bis zur Truhe (keine Serie nötig)
       vouchers: 0,         // Wunsch-Gutscheine aus der Schatztruhe
-      settings: { appName: 'Plan', theme: 'meer', calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, tipClosed: false, introSeen: false },
+      settings: { appName: APP_NAME, theme: THEMES[0].id, calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, tipClosed: false, introSeen: false },
     };
   }
   // Schrittweise Umstellung alter Speicherstände/Backups auf das aktuelle Format
@@ -98,9 +113,9 @@
     if (!world.maps.some(m => m.id === world.active)) world.active = world.maps[0].id;
     return {
       ...d, ...s, world,
-      settings: (st => ({ ...st, theme: THEMES.some(t => t.id === st.theme) ? st.theme : 'meer' }))({ ...d.settings, ...(s.settings || {}) }),
+      settings: (st => ({ ...st, appName: !st.appName || st.appName === 'Plan' ? APP_NAME : st.appName, theme: THEMES.some(t => t.id === st.theme) ? st.theme : THEMES[0].id }))({ ...d.settings, ...(s.settings || {}) }),
       progress: s.progress || {},
-      animals: (s.animals || []).map(a => a.kind === 'kuh' ? { ...a, kind: 'hochland', look: { ...a.look, fur: 0 } } : a),
+      animals: (s.animals || d.animals).map(a => a.kind === 'kuh' ? { ...a, kind: 'hochland', look: { ...a.look, fur: 0 } } : a),
       checks: s.checks ?? (s.tasks || []).reduce((n, t) => n + (t.rewarded ? 1 : 0) + (t.subtasks || []).filter(x => x.rewarded).length, 0),
       pebbles: s.pebbles ?? s.checks ?? 0,
       inv: s.inv || {},
@@ -108,6 +123,7 @@
       categories: (s.categories && s.categories.length ? s.categories : d.categories)
         .map(c => c.color === '#0b6fb8' ? { ...c, color: '#084a85' } : c) // altes Uni-Blau → dunkler
         .map(c => {
+          if (ED.id) return c; // nur Tier-Edition: alte Standard-Tiere umstellen
           // Alte Standard-Tiere auf die neue Reihenfolge umstellen – nur wenn nie selbst geändert
           const OLD = { therapie: 'hase', umzug: 'hund', sonstiges: 'katze', vorlesung: 'pferd' };
           const NEW = { therapie: 'steinbock', umzug: 'hochland', sonstiges: 'hund', vorlesung: 'hase' };
@@ -197,25 +213,57 @@
   const miniRow = (title, cls, sub) => `<div class="task ${cls}" style="--cat:#084a85">
     <span class="check" aria-hidden="true">${CHECK}</span>
     <span class="task-main"><span class="task-title"><span class="hl">${title}</span></span>${sub || ''}</span></div>`;
-  const INTRO = [
-    { title: 'Willkommen bei Plan', art: () => `<div class="intro-art big">${A.draw('pinguin', { fur: 0, acc: 'muetze', color: '#00a5a0' })}</div>`,
-      points: ['Deine To-do-Liste: <mark>ruhig, übersichtlich</mark> und mit Babytieren.', 'Auf den nächsten Seiten siehst du kurz, was die App kann.', 'Du kannst jederzeit auf <b>Überspringen</b> tippen.'] },
-    { title: 'Aufgaben eintragen', art: () => `<div class="intro-art list">
-        ${miniRow('Literatur lesen', 'is-imp')}${miniRow('Mail schreiben', 'is-done')}
-        ${miniRow('Kisten packen', '', '<span class="task-sub"><span class="mini-bar"><i style="width:50%"></i></span>2/4 Schritte</span>')}</div>`,
-      points: ['Listen wie <b>Uni</b> oder <b>Umzug</b>, jede mit eigener Farbe.', '<mark>Wichtig</mark> wird gelb markiert, <mark class="g">erledigt</mark> grün.', 'Große Aufgaben teilst du in <b>kleine Schritte</b>. Jeder Schritt zählt.'] },
-    { title: 'Für heute', art: () => `<div class="intro-art list">
-        <p class="intro-label">☀️ Für heute</p>${miniRow('Fragebogen ausfüllen', 'is-imp')}${miniRow('Wäsche waschen', '')}
-        <div class="intro-btn">🎯 Mit einer Sache anfangen</div></div>`,
-      points: ['Such dir <mark>1 bis 3 Sachen</mark> für heute aus. Mehr musst du nicht.', '<b>Eine Sache</b> zeigt dir nur eine einzige Aufgabe.', '<b>5 Minuten anfangen</b> hilft, wenn der Start schwerfällt.'] },
-    { title: 'Babytiere', art: () => `<div class="intro-art row"><div class="intro-egg">${A.egg('#00a5a0')}</div><span class="intro-arrow">→</span><div class="intro-egg">${A.draw('steinbock', { fur: 0, acc: 'schal', color: '#1e88e5' })}</div></div>`,
-      points: ['Jeder Haken zählt. Nach <mark>3 Haken</mark> schlüpft ein Babytier.', 'Du gibst ihm einen Namen und suchst ihm einen Platz aus.', 'Tiere gehen <b>nie</b> verloren.'] },
-    { title: 'Deine Tierwiese', art: () => `<div class="intro-art map">${Wd.regionPreview('wald', [])}</div>`,
-      points: ['Jeder Haken bringt dir <mark>1 🪨 Kiesel</mark>.', 'Damit schaltest du neue Gebiete frei und holst dir Bäume, Brunnen und Sternbilder.', 'Vor jedem Kauf siehst du eine Vorschau und den Preis.'] },
-    { title: 'Jeden Tag ein Geschenk', art: () => `<div class="intro-art row"><span class="intro-pebbles">🪨 +2</span><span class="intro-arrow">…</span><div class="intro-chest">${Wd.chest(false)}</div></div>`,
-      points: ['Beim ersten Öffnen am Tag bekommst du <mark>Kiesel geschenkt</mark>.', 'Nach 7 Tagen gibt es eine <b>Schatztruhe</b>.', 'Die Tage müssen nicht hintereinander sein. Pausen sind okay.'] },
-    { title: 'So, wie es dir guttut', art: () => `<div class="intro-art row swatches-row">${THEMES.slice(0, 6).map(t => `<i style="--a:${t.a};--b:${t.b}"></i>`).join('')}</div>`,
-      points: ['In den <b>Einstellungen</b> wählst du Farben, Textgröße und den Ruhemodus.', 'Kein Druck: keine Fristen, keine Serien, die abreißen.', 'Mach ab und zu ein <mark>Backup</mark>. 💾'] },
+  // Hintergrundbild füllt den ganzen Rahmen (wird bei Bedarf beschnitten statt schmaler zu werden)
+  // (unten verankert: beschnitten wird nur der Himmel, nie der Boden)
+  const coverSvg = svg => svg.replace('<svg ', '<svg preserveAspectRatio="xMidYMax slice" ');
+  const introAnimal = (kind, acc, color, fur = 0) => A.draw(kind, { fur, acc, color, stone: 3 });
+  /* Alle Maße sind Vielfache eines Kästchens (26 px), damit Schrift und Bilder genau auf dem Karo liegen. */
+  /* Willkommens-Animation (für jede Edition nutzbar): Ei wackelt → Held schlüpft → Gruß (4 s) → die Familie hüpft nach und nach dazu.
+     Die Wesen stecken IN der Landschafts-Grafik (gleiche Koordinaten) → sie stehen immer auf dem Boden.
+     cfg: { region, owned, hero:[art, zubehör, farbe], eggColor, back:[[art, zubehör, farbe, x]…], front:[…], hello, hearts:[…] } */
+  function welcomeScene(cfg) {
+    const X = Wd.regionById[cfg.region].i * Wd.RW;
+    const place = (svg, x, footY, size) => svg.replace('<svg', `<svg x="${X + x - size / 2}" y="${footY - size}" width="${size}" height="${size}"`);
+    let d = 2.7;
+    const pop = ([k, a, c, x], footY, size) => `<g class="wl-pop" style="animation-delay:${(d += .28).toFixed(2)}s">${place(introAnimal(k, a, c), x, footY, size)}</g>`;
+    const hx = X + 180, hFoot = 257, hs = 66, hearts = cfg.hearts || ['💛', '✨', '💛'];
+    const scene = `${cfg.back.map(b => pop(b, 208, 50)).join('')}${cfg.front.map(f => pop(f, 257, 60)).join('')}
+      <g class="wl-egg">${place(A.egg(cfg.eggColor), 180, hFoot, hs)}</g>
+      <g class="wl-born">${place(introAnimal(...cfg.hero), 180, hFoot, hs)}</g>
+      <g class="wl-bubble"><rect x="${hx - 34}" y="${hFoot - hs - 26}" width="68" height="20" rx="10" fill="#fff"/>
+        <path d="M${hx - 5} ${hFoot - hs - 6} l5 6 l5 -6 Z" fill="#fff"/>
+        <text x="${hx}" y="${hFoot - hs - 12}" font-size="11" font-weight="800" font-family="sans-serif" text-anchor="middle" fill="#14233a">${cfg.hello || TX.hello}</text></g>
+      <g class="wl-heart"><text x="${X + 60}" y="112" font-size="18">${hearts[0]}</text><text x="${X + 172}" y="100" font-size="18">${hearts[1]}</text><text x="${X + 290}" y="112" font-size="18">${hearts[2]}</text></g>`;
+    const bg = Wd.regionPreview(cfg.region, cfg.owned || []).replace('<svg ', '<svg preserveAspectRatio="xMidYMax slice" ');
+    return `<div class="intro-art map welcome">${bg.replace(/<\/svg>\s*$/, scene + '</svg>')}</div>`;
+  }
+  // Eine Edition kann ihre eigene Einführung liefern (ED.intro bekommt die Bausteine)
+  const INTRO = ED.intro ? ED.intro({ A, Wd, TX, miniRow, introAnimal, coverSvg, welcomeScene, ICON_CHEST: () => ICON_CHEST }) : [
+    { title: 'Willkommen bei AnimalFarming ToDoList!', art: () => welcomeScene({
+        region: 'blumenwiese', owned: ['blumenmeer'], hero: ['pinguin', 'muetze', '#2e9e44'], eggColor: '#2e9e44',
+        back: [['hochland', 'glocke', '#1d3f9e', 62], ['otter', 'schal', '#1e88e5', 132], ['eisbaer', 'schal', '#2e9e44', 228], ['fuchs', 'haekelblume', '#f2b01e', 298]],
+        front: [['hase', 'schleife', '#1e88e5', 38], ['tiger', 'muetze', '#e8701a', 106], ['ente', 'keins', '', 254], ['steinbock', 'halstuch', '#00a5a0', 322]],
+      }),
+      points: ['Hier wird aus jedem Haken ein Stück <mark>Tierfamilie</mark>.', 'Keine langweilige To-do-Liste: Babytiere, eine eigene Welt, Schatztruhen und noch viel mehr.', 'Produktiv sein und dabei Spaß haben. <b>Die Tiere warten schon auf dich!</b> 🐾'] },
+    { title: 'Bau dir deine eigene Welt.', art: () => `<div class="intro-art map">${coverSvg(Wd.regionPreview('gletscher', ['gletschersee', 'nordlicht', 'milchstrasse']))}
+        <div class="map-crew">${introAnimal('pinguin', 'schal', '#e8701a')}${introAnimal('otter', 'keins', '')}${introAnimal('hase', 'muetze', '#00a5a0')}</div></div>`,
+      points: ['Jeder Haken bringt dir <mark>1 🪨 Kiesel</mark>.', 'Damit holst du dir Bäume, Brunnen, Sternbilder und schaltest neue Gebiete frei: vom Schwarzwald bis zum Gletscher.', 'Deine Babytiere ziehen dort ein, und <b>du bestimmst</b>, wer wo wohnt.'] },
+    { title: 'Loslegen in 60 Sekunden.', art: () => `<div class="intro-art list starter">
+        <div class="mini-cat"><span>${introAnimal('pinguin', 'keins', '')}</span><b>Uni</b><small>2 offen</small></div>
+        ${miniRow('Hausarbeit gliedern', 'is-imp')}${miniRow('Literatur suchen', '')}
+        <div class="mini-add">+ Aufgabe hinzufügen</div></div>`,
+      points: ['<b>1.</b> Unter <b>Listen</b> legst du Kategorien an, zum Beispiel <mark>Uni</mark> oder <mark>Umzug</mark>. Jede bekommt eine Farbe und ein Tier.', '<b>2.</b> Unter <b>＋ Aufgaben eintragen</b> wird jede Zeile eine Aufgabe.', '<b>3.</b> Kreis antippen = erledigt. 💛 heißt wichtig, ✂️ teilt eine Aufgabe in kleine Schritte.'] },
+    { title: 'Jeden Tag eine Überraschung.', art: () => `<div class="intro-art gifts">
+        <div class="gift-strip">${[2, 2, 3, 3, 4, 4].map((n, i) => `<span class="${i < 3 ? 'done' : ''}">${TX.curIcon}<b>+${n}</b></span>`).join('')}<span class="chest-cell">${ICON_CHEST}</span></div>
+        <div class="gift-chest">${Wd.chest(true)}</div></div>`,
+      points: ['Jeden Tag gibt es <mark>Kiesel geschenkt</mark>, einfach fürs Vorbeischauen.', 'Am 7. Tag öffnest du eine <b>Schatztruhe</b>: Wunsch-Gutschein oder goldenes Sternbild.', 'Pause gemacht? Kein Problem, <b>nichts verfällt</b>.'] },
+    { title: 'Dein erstes Ei wartet!', art: () => `<div class="intro-art loop">
+        <div class="loop-tile"><span>📝</span><b>Eintragen</b></div><div class="loop-arrow">→</div>
+        <div class="loop-tile"><span>✓</span><b>Abhaken</b></div>
+        <div class="loop-arrow">↑</div><div></div><div class="loop-arrow">↓</div>
+        <div class="loop-tile"><span class="loop-svg">${Wd.preview('springbrunnen')}</span><b>Wiese wächst</b></div><div class="loop-arrow">←</div>
+        <div class="loop-tile egg"><span class="loop-svg wobble">${A.egg('#00a5a0')}</span><b>Tier schlüpft</b></div></div>`,
+      points: ['Trag gleich deine <mark>erste Aufgabe</mark> ein, gern auch eine ganz kleine.', 'Drei Haken, und dein erstes Babytier ist da. 🐾', 'Farben, Schriftgröße und Ruhemodus findest du unter <b>Einstellen</b>.'] },
   ];
   function showIntro(page = 0) {
     ui.introPage = Math.max(0, Math.min(INTRO.length - 1, page));
@@ -282,12 +330,12 @@
       return;
     }
     const cells = [...Array(7)].map((_, i) => `<div class="gift-cell ${i < n ? 'done' : ''} ${i === n ? 'today' : ''}">
-      <span>${i === 6 ? ICON_CHEST : '🪨'}</span><b>${i === 6 ? 'Truhe' : '+' + GIFT_AMOUNTS[i]}</b><small>Tag ${i + 1}</small></div>`).join('');
+      <span>${i === 6 ? ICON_CHEST : TX.curIcon}</span><b>${i === 6 ? 'Truhe' : '+' + GIFT_AMOUNTS[i]}</b><small>Tag ${i + 1}</small></div>`).join('');
     el.innerHTML = `<div class="ov-inner gift">
       <h2 class="center">${isChest ? 'Heute gibt es die Schatztruhe! ✨' : 'Dein Tagesgeschenk 🎁'}</h2>
       <p class="center muted">Schön, dass du da bist. 💛</p>
       <div class="gift-row">${cells}</div>
-      <div class="gift-big">${isChest ? `<div class="chest-box">${Wd.chest(false)}</div>` : `<span class="pebble-pop">🪨 +${GIFT_AMOUNTS[n]}</span>`}</div>
+      <div class="gift-big">${isChest ? `<div class="chest-box">${Wd.chest(false)}</div>` : `<span class="pebble-pop">${TX.curIcon} +${GIFT_AMOUNTS[n]}</span>`}</div>
       <p class="hint center">Komm an 7 Tagen vorbei – egal ob hintereinander oder mit Pausen. Dann öffnest du eine Schatztruhe.</p>
       <button class="big-btn primary" data-action="gift-claim">${isChest ? 'Schatztruhe öffnen' : 'Einsammeln'}</button>
     </div>`;
@@ -346,7 +394,7 @@
     if (Math.random() < .12) {
       const f = Wd.randomFind(curMap().unlocked);
       curMap().finds.push({ id: uid(), type: f.type, region: f.region, x: f.x, y: f.y });
-      ui.unlock = `Fundstück! ${f.name.charAt(0).toUpperCase() + f.name.slice(1)} liegt jetzt auf deiner Wiese 🔍`;
+      ui.unlock = `Fundstück! ${f.name.charAt(0).toUpperCase() + f.name.slice(1)} liegt jetzt auf deiner ${TX.meadow} 🔍`;
     }
     state.progress[catId] = (state.progress[catId] || 0) + 1;
     if (state.progress[catId] >= state.settings.perBaby) {
@@ -401,23 +449,30 @@
     }
     save(); refresh();
     if (hatched) showNextHatch();
-    else if (s.done) toast(cheer(autoDone ? 'Alle Schritte geschafft – Aufgabe erledigt! 🎉' : 'Mini-Schritt geschafft 🐾'),() => { restore(snap); });
+    else if (s.done) toast(cheer(autoDone ? 'Alle Schritte geschafft – Aufgabe erledigt! 🎉' : `Mini-Schritt geschafft ${TX.paw}`),() => { restore(snap); });
   }
 
   // ---------- Rendering ----------
   function applySettings() {
     const s = state.settings, root = document.documentElement;
     root.dataset.theme = s.theme;
+    root.dataset.edition = EDITION_ID;
     root.dataset.size = s.size;
     document.body.classList.toggle('calm', !!s.calm);
     const th = THEMES.find(t => t.id === s.theme) || THEMES[0];
     document.querySelector('meta[name="theme-color"]').setAttribute('content', th.meta);
-    document.title = s.appName || 'Plan';
+    document.title = s.appName || 'AnimalFarmingToDoList';
   }
 
+  // Langer App-Name: nur an sinnvollen Stellen umbrechen (AnimalFarming | ToDoList), nie mitten in „ToDo“
+  function breakName(name) {
+    if (name === 'AnimalFarmingToDoList') return 'AnimalFarming<wbr>ToDoList';
+    if (name === APP_NAME && ED.nameHtml) return ED.nameHtml;
+    return esc(name).replace(/([a-zäöüß])([A-ZÄÖÜ])/g, '$1<wbr>$2');
+  }
   function renderTop() {
     const date = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
-    $('#top').innerHTML = `<span class="brand-name">${esc(state.settings.appName || 'Plan')}</span><span class="brand-date">${esc(date)}</span>`;
+    $('#top').innerHTML = `<span class="brand-name">${breakName(state.settings.appName || 'AnimalFarmingToDoList')}</span><span class="brand-date">${esc(date)}</span>`;
     let ch = document.querySelector('.checker');
     if (!ch) { ch = document.createElement('div'); ch.className = 'checker'; $('#top').after(ch); }
   }
@@ -543,9 +598,9 @@
     state.animals.forEach(a => counts[a.kind] = (counts[a.kind] || 0) + 1);
     const animals = [...state.animals].reverse();
     return `
-      <h1 class="view-title">Tierwiese ⛰️</h1>
+      <h1 class="view-title">${TX.world} ${TX.worldIcon}</h1>
       <div class="world-bar">
-        <span class="pebbles" aria-label="${state.pebbles || 0} Kiesel">🪨 <b>${state.pebbles || 0}</b></span>
+        <span class="pebbles" aria-label="${state.pebbles || 0} ${TX.curN}">${TX.curIcon} <b>${state.pebbles || 0}</b></span>
         <button class="pebbles" data-action="gift-info" aria-label="Tage bis zur Schatztruhe">🎁 <b>${state.daily.days % 7}/7</b></button>
         ${state.vouchers > 0 ? `<span class="pebbles" aria-label="${state.vouchers} Wunsch-Gutscheine">${ICON_TICKET} <b>${state.vouchers}</b></span>` : ''}
         <button class="pill" data-action="shop">🛍️ Laden</button>
@@ -554,8 +609,8 @@
       ${ui.moving ? (() => {
         const ma = state.animals.find(x => x.id === ui.moving);
         return `<div class="place-banner move">
-          <div><b>Tippe auf einen 🐾-Platz für ${esc(ma?.name || '')}.</b><br>
-          <small>Steht dort schon ein Tier, tauschen die beiden ihre Plätze. Wischen zeigt weitere Gebiete.</small></div>
+          <div><b>Tippe auf einen ${TX.spotIcon}-Platz für ${esc(ma?.name || '')}.</b><br>
+          <small>Steht dort schon ein ${TX.creature}, tauschen die beiden ihre Plätze. Wischen zeigt weitere Gebiete.</small></div>
           <button class="link" data-action="move-cancel">Abbrechen</button></div>`;
       })() : ''}
       ${ui.placing ? `<div class="place-banner">Tippe auf einen ${Wd.byId[ui.placing]?.sky ? '✨ Himmelsplatz' : 'freien Platz'} für <b>${esc(Wd.byId[ui.placing]?.name || '')}</b>
@@ -568,24 +623,24 @@
         const locked = !curMap().unlocked.includes(g.id);
         return `<button class="rchip ${locked ? 'locked' : ''}" data-action="w-go" data-r="${g.id}">${locked ? '🔒 ' : ''}${esc(g.name)}</button>`;
       }).join('')}</div>
-      <p class="hint" style="margin:6px 4px 12px">← Wischen zum Erkunden · Tiere antippen · ${openCount()}/${Wd.REGIONS.length} Gebiete offen</p>
+      <p class="hint" style="margin:6px 4px 12px">← Wischen zum Erkunden · ${TX.creatures} antippen · ${openCount()}/${Wd.REGIONS.length} Gebiete offen</p>
       ${(() => {
         const over = state.animals.length - Wd.animalCapacity(openCount());
-        return over > 0 ? `<p class="hint" style="margin:-6px 4px 12px">🏡 ${over} Babytier${over > 1 ? 'e kuscheln' : ' kuschelt'} gerade im Tierhaus. Mit jedem neuen Gebiet gibt es ${Wd.SPOTS_PER_REGION} Plätze mehr auf der Wiese.</p>` : '';
+        return over > 0 ? `<p class="hint" style="margin:-6px 4px 12px">🏡 ${over} ${over > 1 ? TX.babies + ' kuscheln' : TX.baby + ' kuschelt'} gerade im ${TX.home}. Mit jedem neuen Gebiet gibt es ${Wd.SPOTS_PER_REGION} Plätze mehr auf der ${TX.meadow}.</p>` : '';
       })()}
-      <p class="muted" style="margin:0 4px 14px">${state.animals.length ? `${state.animals.length} Babytiere wohnen schon hier.` : 'Noch ist die Wiese leer – hak etwas ab, dann kommt das erste Babytier!'}</p>
+      <p class="muted" style="margin:0 4px 14px">${state.animals.length ? `${state.animals.length} ${state.animals.length === 1 ? TX.baby + ' wohnt' : TX.babies + ' wohnen'} schon hier.` : `Noch ist die ${TX.meadow} leer – hak etwas ab, dann kommt das erste ${TX.baby}!`}</p>
       <div class="card">
         ${state.categories.map(c => `<div class="prog-row" style="--cat:${c.color}">${mini(c.animal)}
           <div><b>${esc(c.name)}</b> <span class="muted">→ ${esc(kindOf(c).baby)}</span>
           <div class="paws">${paws(c.id)}<span>${esc(nextBabyText(c).replace(/ bis zum.*/, ''))}</span></div></div></div>`).join('')}
       </div>
-      ${animals.length ? `<div class="sec-head"><h2>Deine Babytiere</h2></div>
+      ${animals.length ? `<div class="sec-head"><h2>Deine ${TX.babies}</h2></div>
         <div class="meadow">${animals.map(a => `<button class="critter" data-action="open-animal" data-id="${a.id}">
           ${A.draw(a.kind, a.look)}<span>${esc(a.name)}</span><small>${esc(A.KINDS[a.kind]?.baby || '')}</small></button>`).join('')}</div>` : ''}
       <div class="sec-head"><h2>Sammelalbum</h2><span class="muted">${kinds.filter(k => counts[k]).length}/${kinds.length}</span></div>
       <div class="card"><div class="album">${kinds.map(k => `<div class="album-item ${counts[k] ? '' : 'missing'}">
         ${mini(k, latestOfKind(k)?.look)}<b>${esc(A.KINDS[k].baby)}</b><small>${counts[k] ? counts[k] + '×' : 'noch nicht da'}</small></div>`).join('')}</div>
-        <p class="hint" style="margin-top:12px">Andere Tiere bekommst du, indem du in <b>Einstellen → Kategorien</b> einer Liste ein anderes Tier gibst.</p>
+        <p class="hint" style="margin-top:12px">Andere ${TX.creatures} bekommst du, indem du in <b>Einstellen → Kategorien</b> einer Liste ein anderes ${TX.creature} gibst.</p>
       </div>`;
   }
 
@@ -606,21 +661,21 @@
           <button class="switch ${s.calm ? 'on' : ''}" data-action="calm" role="switch" aria-checked="${!!s.calm}" aria-label="Ruhemodus"></button></div>
         <div class="set-row"><div><b>Textgröße</b></div>
           <div class="seg">${[['s', 'A'], ['m', 'A'], ['l', 'A']].map(([k, l], i) => `<button class="${s.size === k ? 'on' : ''}" data-action="size" data-id="${k}" style="font-size:${.8 + i * .2}rem" aria-label="Text ${k === 's' ? 'klein' : k === 'm' ? 'mittel' : 'groß'}">${l}</button>`).join('')}</div></div>
-        <div class="set-row"><div><b>Babytier nach …</b><p>So oft abhaken, bis ein neues Babytier kommt.</p></div>
+        <div class="set-row"><div><b>${TX.baby} nach …</b><p>So oft abhaken, bis ein neues ${TX.baby} kommt.</p></div>
           <div class="stepper"><button data-action="per" data-d="-1" aria-label="weniger">−</button><b>${s.perBaby}</b><button data-action="per" data-d="1" aria-label="mehr">+</button></div></div>
       </div>
       <div class="card">
         <h3 style="margin-bottom:4px">Kategorien</h3>
-        <p class="hint">Antippen, um Name, Farbe und Tier zu ändern.</p>
+        <p class="hint">Antippen, um Name, Farbe und ${TX.creature} zu ändern.</p>
         ${state.categories.map(c => `<button class="cat-line" data-action="edit-cat" data-id="${c.id}" style="--cat:${c.color}">${mini(c.animal)}<b>${esc(c.name)}</b><span class="muted">${esc(kindOf(c).baby)}</span><span class="dot"></span></button>`).join('')}
         <button class="ghost-btn" data-action="new-cat">＋ Neue Kategorie</button>
       </div>
       <div class="card">
         <h3 style="margin-bottom:4px">Daten</h3>
         <p class="hint">Alles bleibt nur auf diesem Gerät gespeichert – ohne Account, ohne Cloud. Mach ab und zu ein Backup. 💾</p>
-        <button class="big-btn soft" data-action="export">💾 Backup speichern (Aufgaben + ${state.animals.length} Tiere)</button>
+        <button class="big-btn soft" data-action="export">💾 Backup speichern (Aufgaben + ${state.animals.length} ${TX.creatures})</button>
         <button class="big-btn soft" data-action="import">📥 Backup oder Liste laden</button>
-        <p class="hint"><b>Neues Handy?</b> Hier „Backup speichern“ → Datei in iCloud Drive sichern oder per AirDrop schicken → auf dem neuen Handy die App öffnen und „Backup laden“. Alle Tiere ziehen mit um. 🐾</p>
+        <p class="hint"><b>Neues Handy?</b> Hier „Backup speichern“ → Datei in iCloud Drive sichern oder per AirDrop schicken → auf dem neuen Handy die App öffnen und „Backup laden“. Alle ${TX.creatures} ziehen mit um. ${TX.paw}</p>
         <button class="big-btn danger-soft" data-action="clear-done">🧹 Erledigte Aufgaben aufräumen</button>
       </div>
       ${ui.debug ? `<div class="card debug-card">
@@ -629,7 +684,7 @@
         <button class="big-btn soft" data-action="intro-reset">🔁 Einführung beim nächsten Start wieder zeigen</button>
         <p class="hint">Nur zum Testen. Vor dem Löschen wird automatisch ein Backup gespeichert.</p>
         ${ui.debugBackedUp
-          ? `<p><b>✓ Backup gespeichert.</b> Jetzt wirklich alles löschen? Aufgaben, Tiere, Kiesel, Wiese und Einstellungen sind dann weg.</p>
+          ? `<p><b>✓ Backup gespeichert.</b> Jetzt wirklich alles löschen? Aufgaben, ${TX.creatures}, ${TX.curN}, ${TX.meadow} und Einstellungen sind dann weg.</p>
              <button class="big-btn danger" data-action="debug-wipe">Ja, jetzt alles löschen</button>
              <button class="big-btn" data-action="debug-cancel">Abbrechen</button>`
           : `<button class="big-btn danger-soft" data-action="debug-backup">🗑️ Daten löschen (mit Backup)</button>`}
@@ -711,7 +766,7 @@
           <button class="pill ${t.today ? 'on' : ''}" data-action="t-today" data-id="${t.id}">☀️ Für heute</button>
         </div>
         <h3>Kleine Schritte</h3>
-        <p class="hint" style="margin-top:-4px">Zu groß? Teil es in Mini-Schritte. Jeder Schritt zählt fürs Babytier. 🐾</p>
+        <p class="hint" style="margin-top:-4px">Zu groß? Teil es in Mini-Schritte. Jeder Schritt zählt fürs ${TX.baby}. ${TX.paw}</p>
         <div style="--cat:${catById(t.catId)?.color}">
         ${t.subtasks.map(s => `<div class="sub ${s.done ? 'is-done' : ''}">
           <button class="check sm" data-action="sub-toggle" data-id="${t.id}" data-sub="${s.id}" aria-label="Schritt abhaken">${CHECK}</button>
@@ -772,9 +827,9 @@
         <input class="field" type="text" value="${esc(c.name)}" data-input="cat-name" data-id="${c.id}" maxlength="30" aria-label="Name der Kategorie">
         <h3>Farbe</h3>
         <div class="swatches">${COLORS.map(col => `<button class="swatch ${c.color === col ? 'on' : ''}" style="--c:${col}" data-action="cat-color" data-id="${c.id}" data-color="${col}" aria-label="Farbe ${col}"></button>`).join('')}</div>
-        <h3>Welches Babytier kommt hier?</h3>
+        <h3>Welches ${TX.baby} kommt hier?</h3>
         <div class="animal-grid">${Object.entries(A.KINDS).map(([k, v]) => `<button class="animal-pick ${c.animal === k ? 'on' : ''}" data-action="cat-animal" data-id="${c.id}" data-kind="${k}">${mini(k)}${esc(v.baby)}</button>`).join('')}</div>
-        <p class="hint" style="margin-top:10px">Schon gesammelte Tiere bleiben natürlich auf der Wiese.</p>
+        <p class="hint" style="margin-top:10px">Schon gesammelte ${TX.creatures} bleiben natürlich auf der ${TX.meadow}.</p>
         ${state.categories.length > 1 ? `<div class="sheet-actions"><button class="big-btn danger-soft" data-action="cat-del" data-id="${c.id}">
           ${confirming ? `Wirklich löschen? ${count ? `(${count} Aufgaben werden mitgelöscht)` : ''}` : 'Kategorie löschen'}</button></div>` : ''}`;
     },
@@ -806,12 +861,12 @@
       const price = Wd.regionPrice(openCount());
       const items = Wd.GADGETS.filter(g => g.group === ui.shopGroup);
       return `
-        <h2>Wiesen-Laden 🛍️</h2>
-        <p class="pebble-big">🪨 <b>${state.pebbles || 0}</b> Kiesel <span class="muted">· jeder Haken = 1 Kiesel</span>
+        <h2>${TX.shop} 🛍️</h2>
+        <p class="pebble-big">${TX.curIcon} <b>${state.pebbles || 0}</b> ${TX.curN} <span class="muted">· jeder Haken = 1 ${TX.cur}</span>
           ${state.vouchers > 0 ? `<br>${ICON_TICKET} <b>${state.vouchers}</b> Wunsch-Gutschein${state.vouchers > 1 ? 'e' : ''} <span class="muted">· bei jedem Kauf einlösbar</span>` : ''}</p>
         ${p ? `<div class="unlock-card">
             <div><b>🗺️ Neues Gebiet: ${esc(p.name)}</b><br><span class="muted">${openCount()}/${Wd.REGIONS.length} Gebiete offen · 11 neue Plätze</span></div>
-            <button class="big-btn ${state.pebbles >= price ? 'primary' : ''}" data-action="w-unlock">🪨 ${price}</button>
+            <button class="big-btn ${state.pebbles >= price ? 'primary' : ''}" data-action="w-unlock">${TX.curIcon} ${price}</button>
           </div>` : '<p class="muted">Du hast alle 40 Gebiete entdeckt! 🌍</p>'}
         <div class="shop-tabs">${Object.entries(Wd.GROUPS).map(([k, v]) => `<button class="chip ${ui.shopGroup === k ? 'on' : ''}" style="padding:6px 12px" data-action="shop-group" data-g="${k}">${v}</button>`).join('')}</div>
         <div class="shop-grid">${items.map(g => {
@@ -823,7 +878,7 @@
             <small class="muted">${land ? esc(g.info || '') : g.premium ? (free ? `${free} in der Kiste` : own ? 'steht am Himmel' : 'golden & exklusiv') : own ? `${own}× gekauft${free ? ` · ${free} in der Kiste` : ''}` : g.sky ? 'für den Himmel' : '&nbsp;'}</small>
             ${g.premium ? `<span class="owned">${own ? '🌟 aus deiner Truhe' : ICON_CHEST + ' nur aus der Truhe'}</span>`
               : land && own ? '<span class="owned">✓ auf der Karte</span>'
-              : `<button class="buy ${can ? '' : 'off'}" data-action="buy" data-id="${g.id}">🪨 ${g.price}</button>`}
+              : `<button class="buy ${can ? '' : 'off'}" data-action="buy" data-id="${g.id}">${TX.curIcon} ${g.price}</button>`}
             ${!land && free ? `<button class="link" data-action="place" data-id="${g.id}">Platzieren</button>` : ''}
           </div>`;
         }).join('')}</div>`;
@@ -846,7 +901,7 @@
         if (!g) return null;
         price = g.price; title = g.name;
         prev = `<div class="buy-prev">${Wd.preview(g.id)}</div>`;
-        info = g.group === 'land' ? `Erscheint automatisch: ${g.info || ''}` : g.sky ? 'Kommt an einen Himmelsplatz ✨' : 'Kommt auf einen freien Platz auf deiner Wiese';
+        info = g.group === 'land' ? `Erscheint automatisch: ${g.info || ''}` : g.sky ? 'Kommt an einen Himmelsplatz ✨' : `Kommt auf einen freien Platz auf deiner ${TX.meadow}`;
         okLabel = 'kaufen';
       }
       const left = have - price, ok = left >= 0;
@@ -855,12 +910,12 @@
         ${prev}
         <p class="center muted" style="margin:6px 0 12px">${esc(info)}</p>
         <div class="price-box">
-          <div><span>Kostet</span><b>🪨 ${price}</b></div>
-          <div><span>Du hast</span><b>🪨 ${have}</b></div>
-          <div><span>Danach</span><b class="${ok ? '' : 'neg'}">${ok ? '🪨 ' + left : '–'}</b></div>
+          <div><span>Kostet</span><b>${TX.curIcon} ${price}</b></div>
+          <div><span>Du hast</span><b>${TX.curIcon} ${have}</b></div>
+          <div><span>Danach</span><b class="${ok ? '' : 'neg'}">${ok ? TX.curIcon + ' ' + left : '–'}</b></div>
         </div>
-        ${ok ? `<button class="big-btn primary" data-action="buy-ok">Ja, für ${price} 🪨 ${okLabel}</button>`
-          : `<p class="center"><b>Dir fehlen noch ${-left} Kiesel</b> – das sind ${-left} Haken. Du schaffst das! 🐾</p>`}
+        ${ok ? `<button class="big-btn primary" data-action="buy-ok">Ja, für ${price} ${TX.curIcon} ${okLabel}</button>`
+          : `<p class="center"><b>Dir fehlen noch ${-left} ${-left === 1 ? TX.cur : TX.curN}</b> – das sind ${-left} Haken. Du schaffst das! ${TX.paw}</p>`}
         ${state.vouchers > 0 ? `<button class="big-btn gold" data-action="buy-voucher">${ICON_TICKET} Mit Gutschein gratis holen (${state.vouchers} übrig)</button>` : ''}
         <button class="big-btn" data-action="buy-cancel">${ok ? 'Abbrechen' : 'Zurück'}</button>`;
     },
@@ -882,12 +937,12 @@
     confirmImport() {
       const b = pendingImport || {};
       return `<h2>Backup laden</h2>
-        <p>Im Backup: <b>${(b.tasks || []).length} Aufgaben</b> und <b>${(b.animals || []).length} Babytiere</b>.</p>
+        <p>Im Backup: <b>${(b.tasks || []).length} Aufgaben</b> und <b>${(b.animals || []).length} ${TX.babies}</b>.</p>
         ${(b.schema || 1) > SCHEMA ? '<p class="hint"><b>Hinweis:</b> Das Backup stammt aus einer neueren App-Version. Es geht nichts verloren, aber manche neuen Sachen siehst du erst nach einem App-Update.</p>' : ''}
         <button class="big-btn primary" data-action="import-replace">Alles übernehmen</button>
-        <p class="hint" style="margin-top:-4px">Ersetzt, was gerade hier ist (${state.tasks.length} Aufgaben, ${state.animals.length} Tiere). Perfekt fürs neue Handy.</p>
-        <button class="big-btn soft" data-action="import-animals">🐾 Nur die Tiere dazuholen</button>
-        <p class="hint" style="margin-top:-4px">Deine Aufgaben bleiben, die Tiere aus dem Backup ziehen zusätzlich ein.</p>
+        <p class="hint" style="margin-top:-4px">Ersetzt, was gerade hier ist (${state.tasks.length} Aufgaben, ${state.animals.length} ${TX.creatures}). Perfekt fürs neue Handy.</p>
+        <button class="big-btn soft" data-action="import-animals">${TX.paw} Nur die ${TX.creatures} dazuholen</button>
+        <p class="hint" style="margin-top:-4px">Deine Aufgaben bleiben, die ${TX.creatures} aus dem Backup ziehen zusätzlich ein.</p>
         <button class="big-btn" data-action="close-sheet">Abbrechen</button>`;
     },
   };
@@ -1022,13 +1077,13 @@
         <div class="shell shell-top">${egg}</div>
         <div class="burst"><span>✨</span><span>⭐</span><span>✨</span><span>💛</span><span>⭐</span></div>
       </div>
-      <div class="hatch-text"><h2>Überraschung!</h2>
+      <div class="hatch-text"><h2>${TX.hatchHead}</h2>
         <p>Ein <b>${esc(A.KINDS[a.kind]?.baby)}</b> ist da! 💛<br><span class="muted">${esc(A.ACCS[a.look.acc]?.crochet ? 'Es trägt sogar etwas Gehäkeltes 🧶' : 'Es freut sich riesig über dich.')}</span></p>
         <label for="hatch-name"><b>Wie soll es heißen?</b></label>
         <div class="name-row"><input id="hatch-name" type="text" value="${esc(a.name)}" maxlength="24"><button data-action="hatch-dice" aria-label="Anderer Name">🎲</button></div>
         <p class="where-q"><b>Wo soll es wohnen?</b></p>
         <button class="big-btn primary choice" data-action="hatch-pick">📍 Ich suche einen Platz aus
-          <small>Danach tippst du auf der Karte auf einen freien Pfoten-Platz.</small></button>
+          <small>Danach tippst du auf der Karte auf einen freien ${TX.spot}.</small></button>
         <button class="big-btn soft choice" data-action="hatch-ok">🎲 Die App sucht einen Platz aus
           <small>Du kannst den Platz später jederzeit ändern.</small></button>
       </div></div>`;
@@ -1092,7 +1147,7 @@
     for (let i = 0; i < 7; i++) {
       const s = document.createElement('span');
       s.className = 'spark';
-      s.textContent = pick(['💛', '✨', '🍀', '⭐', '🐾', '🍫', '💧', '🌲']);
+      s.textContent = pick(ED.sparks || ['💛', '✨', '🍀', '⭐', '🐾', '🍫', '💧', '🌲']);
       s.style.left = (x - 11 + (Math.random() * 40 - 20)) + 'px';
       s.style.top = (y - 11) + 'px';
       s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
@@ -1104,14 +1159,14 @@
 
   // ---------- Import / Export ----------
   // Gibt true zurück, wenn das Backup gespeichert/geteilt wurde (false = abgebrochen)
-  async function exportData(prefix = 'plan-backup') {
-    const data = JSON.stringify({ type: 'pfoetchenplan-backup', exportedAt: new Date().toISOString(), state }, null, 1);
+  async function exportData(prefix = ED.backupPrefix || 'animalfarming-backup') {
+    const data = JSON.stringify({ type: 'pfoetchenplan-backup', edition: EDITION_ID, exportedAt: new Date().toISOString(), state }, null, 1);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `${prefix}-${stamp}.json`;
     const file = new File([data], name, { type: 'application/json' });
     try {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Plan-Backup' });
+        await navigator.share({ files: [file], title: 'AnimalFarmingToDoList-Backup' });
         return true;
       }
     } catch (e) { if (e.name === 'AbortError') return false; }
@@ -1127,19 +1182,33 @@
     let data;
     try { data = JSON.parse(text); } catch (e) { toast('Die Datei konnte ich nicht lesen 😕'); return; }
     if (data.type === 'pfoetchenplan-backup' && data.state) {
+      // Backup aus der anderen Edition (Tiere ↔ Feen) passt nicht zusammen → lieber nicht laden
+      const from = data.edition || data.state.edition || 'tiere';
+      if (from !== EDITION_ID) { toast(`Dieses Backup gehört zur anderen App-Version (${from === 'tiere' ? 'AnimalFarming' : 'Feenwald'}).`); return; }
       pendingImport = data.state;
       openSheet('confirmImport');
       return;
     }
+    // Listen-Import: fügt NUR hinzu – löscht oder überschreibt nie etwas.
     if (data.type === 'pfoetchenplan-liste' && Array.isArray(data.lists)) {
-      let n = 0;
+      let n = 0, skipped = 0, newCats = 0;
+      const norm = x => String(x || '').trim().toLowerCase();
       data.lists.forEach(l => {
-        let c = state.categories.find(x => x.name.toLowerCase() === String(l.name).toLowerCase());
+        if (!l || !String(l.name || '').trim()) return;
+        let c = state.categories.find(x => norm(x.name) === norm(l.name));
         if (!c) {
-          c = { id: uid(), name: l.name, color: l.color || pick(COLORS), animal: A.KINDS[l.animal] ? l.animal : 'pinguin' };
+          // neue Kategorie: noch freies Tier und freie Farbe wählen (sofern die Datei keine vorgibt)
+          const usedA = state.categories.map(x => x.animal), usedC = state.categories.map(x => x.color);
+          const freeA = Object.keys(A.KINDS).filter(k => !usedA.includes(k)), freeC = COLORS.filter(x => !usedC.includes(x));
+          c = { id: uid(), name: String(l.name).trim(), color: l.color || (freeC[0] || pick(COLORS)),
+            animal: A.KINDS[l.animal] ? l.animal : (freeA[0] || 'pinguin') };
           state.categories.push(c);
+          newCats++;
         }
         (l.tasks || []).forEach(t => {
+          if (!t || !String(t.title || '').trim()) return;
+          // gleiche Aufgabe in derselben Kategorie gibt es schon → nicht doppelt anlegen
+          if (state.tasks.some(x => x.catId === c.id && norm(x.title) === norm(t.title))) { skipped++; return; }
           const task = {
             id: uid(), catId: c.id, title: t.title, note: t.note || '', important: !!t.important, today: false,
             done: false, rewarded: false, createdAt: Date.now(),
@@ -1152,7 +1221,7 @@
       });
       save(); refresh();
       ui.unlock = null;
-      toast(`${n} Aufgaben übernommen 📋`);
+      toast(`${n} Aufgaben neu${newCats ? `, ${newCats} neue Kategorie${newCats > 1 ? 'n' : ''}` : ''}${skipped ? ` · ${skipped} waren schon da` : ''} 📋`);
       showNextHatch();
       return;
     }
@@ -1245,7 +1314,7 @@
       state.pebbles = (state.pebbles || 0) + amt;
       d.days = n + 1; d.last = giftDay();
       save(); closeGift();
-      toast(`+${amt} Kiesel 🪨 – noch ${6 - n} ${6 - n === 1 ? 'Tag' : 'Tage'} bis zur Schatztruhe`);
+      toast(`+${amt} ${amt === 1 ? TX.cur : TX.curN} ${TX.curIcon} – noch ${6 - n} ${6 - n === 1 ? 'Tag' : 'Tage'} bis zur ${TX.chest}`);
     },
     'gift-pick': el => {
       const d = state.daily;
@@ -1286,7 +1355,7 @@
         curMap().slots[id] = ui.placing;
         ui.placing = null;
         save(); render();
-        toast(`${g.name} steht jetzt auf deiner Wiese ✨`);
+        toast(`${g.name} steht jetzt auf deiner ${TX.meadow} ✨`);
         return;
       }
       openSheet('slot', id);
@@ -1320,7 +1389,7 @@
       render();
       const g = document.querySelector(`.w-anim[data-id="${a.id}"]`), wrap = $('#world-wrap');
       if (!wrap) return;
-      if (!g) { toast(`${a.name} kuschelt gerade im Tierhaus 🏡 – mit einem neuen Gebiet ist wieder Platz.`); return; }
+      if (!g) { toast(`${a.name} kuschelt gerade im ${TX.home} 🏡 – mit einem neuen Gebiet ist wieder Platz.`); return; }
       scrollWorldTo(g.closest('.w-region').dataset.r);
       requestAnimationFrame(() => {
         const ar = g.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
@@ -1366,7 +1435,7 @@
       state.animals.push(...neu);
       state.animals.sort((a, b) => (a.bornAt || 0) - (b.bornAt || 0));
       pendingImport = null; save(); closeSheet();
-      toast(neu.length ? `${neu.length} Tiere sind umgezogen 🐾` : 'Diese Tiere wohnen schon alle hier 🙂');
+      toast(neu.length ? `${neu.length} ${TX.creatures} sind umgezogen ${TX.paw}` : `Diese ${TX.creatures} wohnen schon alle hier 🙂`);
     },
     // --- Einführung ---
     'intro-next': () => showIntro(ui.introPage + 1),
@@ -1393,7 +1462,7 @@
       endMoving();
       const g = document.querySelector(`.w-anim[data-id="${id}"]`);
       if (g) { g.classList.add('spot'); setTimeout(() => g.classList.remove('spot'), 2500); }
-      toast(`${a?.name || 'Dein Tier'} wohnt jetzt hier 🏡`);
+      toast(`${a?.name || 'Dein ' + TX.creature} wohnt jetzt hier 🏡`);
     },
     // Versteckt: 5× schnell auf „Mit 💛 gemacht“ tippen
     'secret-tap': () => {
@@ -1402,7 +1471,7 @@
       if (ui.taps.length >= 5 && !ui.debug) { ui.debug = true; ui.taps = []; render(); toast('Debug-Bereich freigeschaltet 🛠️'); }
     },
     'debug-backup': async () => {
-      const ok = await exportData('plan-backup-vor-loeschen');
+      const ok = await exportData((ED.backupPrefix || 'animalfarming-backup') + '-vor-loeschen');
       if (!ok) { toast('Backup abgebrochen – es wurde nichts gelöscht.'); return; }
       ui.debugBackedUp = true; render();
     },
@@ -1530,6 +1599,6 @@
   }, 300);
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register(ED.swPath || 'sw.js').catch(() => {});
   }
 })();

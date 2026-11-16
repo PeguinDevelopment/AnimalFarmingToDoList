@@ -1,73 +1,62 @@
-# Deployment: Plan auf Apple- und Android-Geräte bringen
+# Installation: AnimalFarmingToDoList auf Apple- und Android-Geräten
 
-Plan ist eine Web-App (PWA). Damit sie sich installieren lässt und offline läuft, muss sie **einmal über HTTPS erreichbar** sein.
-Danach wird sie auf dem Gerät wie eine normale App installiert. Ein App Store, ein Developer-Account oder ein Build-Schritt sind dafür nicht nötig.
+AnimalFarmingToDoList ist eine Web-App (PWA) und liegt auf GitHub Pages:
 
-## 1. Online stellen
+**<https://peguindevelopment.github.io/AnimalFarmingToDoList/>**
 
-Hochgeladen werden alle Dateien im Projektordner **außer** `import/` und `.git/`.
+Die **Feen-Edition FeenwaldToDoList** (rosa Pastell, Fabelwesen, Feenwald) liegt direkt daneben:
 
-### Variante A: GitHub Pages
+**<https://peguindevelopment.github.io/AnimalFarmingToDoList/feen/>**
 
-1. Das Repository auf GitHub pushen. Der Ordner `import/` wird durch `.gitignore` nicht hochgeladen.
-2. Auf GitHub unter **Settings → Pages** als Quelle **„Deploy from a branch“** wählen, dann Branch `main` und Ordner `/ (root)`.
-3. Nach ein bis zwei Minuten ist die App unter `https://<benutzername>.github.io/<repository>/` erreichbar.
+Von dort wird sie auf dem Gerät wie eine normale App installiert. Ein App Store ist dafür nicht nötig. Nach der Installation hat sie ein eigenes Icon, startet im Vollbild und läuft auch offline.
 
-### Variante B: Netlify (ohne Git)
+Die Installation funktioniert für beide Editionen genau gleich, nur mit der jeweiligen Adresse. Beide Apps können gleichzeitig auf einem Gerät installiert sein: Die Feen-Edition hat das Einhorn-Icon und eigene, getrennte Daten.
 
-1. Auf <https://app.netlify.com/drop> einen kostenlosen Account anlegen.
-2. Den Projektordner per Drag & Drop hochladen. Den Ordner `import/` vorher herausnehmen.
-3. Netlify vergibt eine Adresse wie `https://irgendwas.netlify.app`. Den Namen kann man in den Site-Einstellungen ändern.
-
-### Variante C: eigener Webserver
-
-Jeder Webserver, der statische Dateien über **HTTPS** ausliefert, funktioniert. Die App benutzt nur relative Pfade und läuft deshalb auch in einem Unterordner.
-
-### Lokal testen (ohne Installation)
-
-```bash
-python -m http.server 8000
-```
-
-- Am Rechner: `http://localhost:8000`
-- Auf dem Handy im selben WLAN: `http://<IP-des-Rechners>:8000`
-
-Über `http://` ohne HTTPS lässt sich die App zwar ansehen, aber **nicht installieren**, und es gibt keinen Offline-Modus. Zum echten Testen deshalb Variante A oder B verwenden.
-
-## 2. Auf Apple-Geräten installieren
+## 1. Apple
 
 ### iPhone und iPad
 
-1. Die HTTPS-Adresse in **Safari** öffnen.
-2. Unten bzw. oben auf **Teilen** (□↑) tippen.
+1. In **Safari** öffnen: **<https://peguindevelopment.github.io/AnimalFarmingToDoList/>**
+2. Auf **Teilen** (□↑) tippen. Auf dem iPhone ist der Knopf unten, auf dem iPad oben.
 3. **„Zum Home-Bildschirm“** wählen. Den Namen kann man dabei ändern.
-4. Die App erscheint mit eigenem Icon auf dem Home-Bildschirm, startet im Vollbild und läuft auch offline.
+4. Die App erscheint mit dem Pinguin-Icon auf dem Home-Bildschirm.
 
-Unbedingt **installieren**, statt die App nur in Safari zu benutzen: Safari kann die Daten normaler Webseiten löschen, wenn sie einige Tage nicht besucht wurden. Bei installierten Apps passiert das nicht.
+Feen-Edition: dieselben Schritte mit **<https://peguindevelopment.github.io/AnimalFarmingToDoList/feen/>**. Sie erscheint mit dem Einhorn-Icon.
+
+Es muss **Safari** sein: Chrome und andere Browser können auf dem iPhone keine Web-Apps zum Home-Bildschirm hinzufügen.
+
+Die App bitte **installieren** und nicht nur in Safari benutzen. Safari kann die Daten normaler Webseiten löschen, wenn sie einige Tage nicht besucht wurden. Bei installierten Apps passiert das nicht.
 
 ### Mac
 
-- Die App funktioniert in jedem Browser.
-- In Safari kann man sie über **Ablage → „Zum Dock hinzufügen“** als eigene App ins Dock legen (ab macOS Sonoma).
+1. In Safari öffnen: **<https://peguindevelopment.github.io/AnimalFarmingToDoList/>**
+2. **Ablage → „Zum Dock hinzufügen“** wählen (ab macOS Sonoma). Dann liegt die App als eigenes Programm im Dock.
 
-## 3. Auf Android installieren
+Die App funktioniert auch ohne Installation in jedem Browser.
 
-1. Die HTTPS-Adresse in **Chrome** öffnen.
+## 2. Android
+
+1. In **Chrome** öffnen: **<https://peguindevelopment.github.io/AnimalFarmingToDoList/>**
 2. Oben rechts auf das Menü **⋮** tippen.
 3. **„App installieren“** bzw. **„Zum Startbildschirm hinzufügen“** wählen.
-4. Die App erscheint im App-Drawer und auf dem Startbildschirm, startet im Vollbild und läuft offline.
+4. Die App erscheint mit dem Pinguin-Icon im App-Drawer und auf dem Startbildschirm.
+
+Feen-Edition: dieselben Schritte mit **<https://peguindevelopment.github.io/AnimalFarmingToDoList/feen/>**. Sie erscheint mit dem Einhorn-Icon.
+
+Wichtig ist die Adresse mit **`github.io`**. Unter `github.com` liegt nur der Quellcode, und Chrome würde dort GitHub selbst installieren statt der App.
+Ob die richtige Seite offen ist, erkennt man daran, dass oben „AnimalFarmingToDoList“ bzw. „FeenwaldToDoList“ steht.
 
 Andere Browser wie Samsung Internet, Edge oder Firefox bieten die Installation ähnlich über ihr Menü an.
 
-## 4. Updates veröffentlichen
+## 3. Updates veröffentlichen
 
 1. Änderungen am Code vornehmen.
-2. In `sw.js` die Versionsnummer erhöhen, z. B. `const VERSION = 'plan-v6';` → `'plan-v7'`.
-3. Neu hochladen bzw. pushen.
+2. In `sw.js` die Versionsnummer erhöhen, z. B. `const VERSION = 'plan-v7';` → `'plan-v8'`.
+3. Auf `main` pushen. GitHub Pages veröffentlicht die neue Version nach ein bis zwei Minuten.
 
 Installierte Apps holen sich die neue Version beim nächsten Öffnen mit Internetverbindung. Manchmal muss die App dafür einmal komplett geschlossen und neu geöffnet werden. Die gespeicherten Daten bleiben bei Updates erhalten.
 
-## 5. Daten und Gerätewechsel
+## 4. Daten und Gerätewechsel
 
 Die Daten liegen **nur auf dem jeweiligen Gerät**. iPhone, Android-Handy und Rechner haben jeweils ihren eigenen Stand, und es gibt keine automatische Synchronisierung.
 
@@ -78,12 +67,28 @@ Die Daten liegen **nur auf dem jeweiligen Gerät**. iPhone, Android-Handy und Re
 
 Regelmäßige Backups sind empfehlenswert, weil die Daten sonst nur an einer Stelle existieren.
 
-## 6. Häufige Probleme
+## 5. Häufige Probleme
 
 | Problem | Lösung |
 |---|---|
 | Kein „Zum Home-Bildschirm“ auf dem iPhone | Die Seite muss in **Safari** geöffnet sein. Chrome und andere Browser können das auf dem iPhone nicht. |
+| Chrome installiert GitHub statt der App | Die falsche Adresse war offen (`github.com`). Die installierte App entfernen und die Adresse mit `github.io` öffnen. |
 | Kein „App installieren“ auf Android | Die Seite muss über **HTTPS** laufen. Über `http://` oder eine IP-Adresse geht es nicht. |
 | Nach einem Update ist noch die alte Version zu sehen | Prüfen, ob `VERSION` in `sw.js` erhöht wurde. Dann die App ganz schließen und neu öffnen. |
 | Daten sind plötzlich weg | Wurde die App nur im Browser statt installiert benutzt? Dann das letzte Backup laden. |
+| „Dieses Backup gehört zur anderen App-Version“ | Backups der Tier- und der Feen-Edition sind getrennt. Die Datei in der App laden, aus der sie stammt. |
 | Backup-Datei lässt sich nicht auswählen | Auf dem iPhone die Datei zuerst in der App „Dateien“ ablegen, z. B. in iCloud Drive, und dann von dort auswählen. |
+
+## 6. Lokal testen
+
+Im Projektordner einen einfachen Webserver starten:
+
+```bash
+python -m http.server 8000
+```
+
+- Am Rechner: `http://localhost:8000`, Feen-Edition: `http://localhost:8000/feen/`
+- Auf dem Handy im selben WLAN: `http://<IP-des-Rechners>:8000`
+
+Über `http://` ohne HTTPS lässt sich die App ansehen und ausprobieren, aber **nicht installieren**, und es gibt keinen Offline-Modus.
+Lokale Testdaten sind getrennt von den Daten der installierten App.

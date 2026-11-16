@@ -40,6 +40,7 @@ Es gibt keinen Account und keinen Server, alle Daten bleiben auf dem Gerät.
 - Keine Fristen, keine Streaks, nichts geht verloren
 
 **Bedienung**
+- Beim ersten Öffnen erklärt eine kurze Einführung in 7 Seiten die wichtigsten Funktionen
 - 8 Farbthemen, darunter ein Nachtmodus
 - 3 Textgrößen
 - Ruhemodus ohne Animationen; die Einstellung „Bewegung reduzieren“ des Systems wird automatisch beachtet
@@ -72,7 +73,10 @@ python -m http.server 8000
 
 Danach `http://localhost:8000` öffnen. Ein Doppelklick auf `index.html` funktioniert auch, dann allerdings ohne Offline-Modus.
 
-In den Einstellungen gibt es einen versteckten Debug-Bereich: Tippt man fünfmal schnell auf „Mit 💛 gemacht“, erscheint er. Dort lassen sich alle Daten löschen, vorher wird automatisch ein Backup gespeichert.
+In den Einstellungen gibt es einen versteckten Debug-Bereich: Tippt man fünfmal schnell auf „Mit 💛 gemacht“, erscheint er. Dort kann man
+- die Einführung sofort zeigen,
+- sie beim nächsten Start erneut anzeigen lassen,
+- alle Daten löschen, vorher wird automatisch ein Backup gespeichert.
 
 ## Daten, Backup und Import
 

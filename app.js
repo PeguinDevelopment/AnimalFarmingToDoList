@@ -68,7 +68,7 @@
       world: { active: m.id, maps: [m] },  // Karten (später archivierbar), eine ist aktiv
       daily: { last: null, days: 0, chests: 0 }, // Tagesgeschenk: gesammelte Tage bis zur Truhe (keine Serie nötig)
       vouchers: 0,         // Wunsch-Gutscheine aus der Schatztruhe
-      settings: { appName: 'Plan', theme: 'meer', calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, tipClosed: false },
+      settings: { appName: 'Plan', theme: 'meer', calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, tipClosed: false, introSeen: false },
     };
   }
   // Schrittweise Umstellung alter Speicherstände/Backups auf das aktuelle Format
@@ -193,6 +193,63 @@
     toast(`${g.name} ${voucher ? 'mit Gutschein geholt' : 'gekauft'}! Tippe auf einen ${g.sky ? '✨ Himmelsplatz' : 'freien Platz'}.`);
   }
 
+  // ---------- Einführung (beim ersten Öffnen; im Karo-Heft-Stil) ----------
+  const miniRow = (title, cls, sub) => `<div class="task ${cls}" style="--cat:#084a85">
+    <span class="check" aria-hidden="true">${CHECK}</span>
+    <span class="task-main"><span class="task-title"><span class="hl">${title}</span></span>${sub || ''}</span></div>`;
+  const INTRO = [
+    { title: 'Willkommen bei Plan', art: () => `<div class="intro-art big">${A.draw('pinguin', { fur: 0, acc: 'muetze', color: '#00a5a0' })}</div>`,
+      points: ['Deine To-do-Liste: <mark>ruhig, übersichtlich</mark> und mit Babytieren.', 'Auf den nächsten Seiten siehst du kurz, was die App kann.', 'Du kannst jederzeit auf <b>Überspringen</b> tippen.'] },
+    { title: 'Aufgaben eintragen', art: () => `<div class="intro-art list">
+        ${miniRow('Literatur lesen', 'is-imp')}${miniRow('Mail schreiben', 'is-done')}
+        ${miniRow('Kisten packen', '', '<span class="task-sub"><span class="mini-bar"><i style="width:50%"></i></span>2/4 Schritte</span>')}</div>`,
+      points: ['Listen wie <b>Uni</b> oder <b>Umzug</b>, jede mit eigener Farbe.', '<mark>Wichtig</mark> wird gelb markiert, <mark class="g">erledigt</mark> grün.', 'Große Aufgaben teilst du in <b>kleine Schritte</b>. Jeder Schritt zählt.'] },
+    { title: 'Für heute', art: () => `<div class="intro-art list">
+        <p class="intro-label">☀️ Für heute</p>${miniRow('Fragebogen ausfüllen', 'is-imp')}${miniRow('Wäsche waschen', '')}
+        <div class="intro-btn">🎯 Mit einer Sache anfangen</div></div>`,
+      points: ['Such dir <mark>1 bis 3 Sachen</mark> für heute aus. Mehr musst du nicht.', '<b>Eine Sache</b> zeigt dir nur eine einzige Aufgabe.', '<b>5 Minuten anfangen</b> hilft, wenn der Start schwerfällt.'] },
+    { title: 'Babytiere', art: () => `<div class="intro-art row"><div class="intro-egg">${A.egg('#00a5a0')}</div><span class="intro-arrow">→</span><div class="intro-egg">${A.draw('steinbock', { fur: 0, acc: 'schal', color: '#1e88e5' })}</div></div>`,
+      points: ['Jeder Haken zählt. Nach <mark>3 Haken</mark> schlüpft ein Babytier.', 'Du gibst ihm einen Namen und suchst ihm einen Platz aus.', 'Tiere gehen <b>nie</b> verloren.'] },
+    { title: 'Deine Tierwiese', art: () => `<div class="intro-art map">${Wd.regionPreview('wald', [])}</div>`,
+      points: ['Jeder Haken bringt dir <mark>1 🪨 Kiesel</mark>.', 'Damit schaltest du neue Gebiete frei und holst dir Bäume, Brunnen und Sternbilder.', 'Vor jedem Kauf siehst du eine Vorschau und den Preis.'] },
+    { title: 'Jeden Tag ein Geschenk', art: () => `<div class="intro-art row"><span class="intro-pebbles">🪨 +2</span><span class="intro-arrow">…</span><div class="intro-chest">${Wd.chest(false)}</div></div>`,
+      points: ['Beim ersten Öffnen am Tag bekommst du <mark>Kiesel geschenkt</mark>.', 'Nach 7 Tagen gibt es eine <b>Schatztruhe</b>.', 'Die Tage müssen nicht hintereinander sein. Pausen sind okay.'] },
+    { title: 'So, wie es dir guttut', art: () => `<div class="intro-art row swatches-row">${THEMES.slice(0, 6).map(t => `<i style="--a:${t.a};--b:${t.b}"></i>`).join('')}</div>`,
+      points: ['In den <b>Einstellungen</b> wählst du Farben, Textgröße und den Ruhemodus.', 'Kein Druck: keine Fristen, keine Serien, die abreißen.', 'Mach ab und zu ein <mark>Backup</mark>. 💾'] },
+  ];
+  function showIntro(page = 0) {
+    ui.introPage = Math.max(0, Math.min(INTRO.length - 1, page));
+    const p = INTRO[ui.introPage], last = ui.introPage === INTRO.length - 1, el = $('#intro');
+    el.hidden = false;
+    el.innerHTML = `<div class="intro-wrap">
+      <div class="intro-top"><span class="muted">${ui.introPage + 1} von ${INTRO.length}</span>
+        ${last ? '' : '<button class="link" data-action="intro-done">Überspringen</button>'}</div>
+      <article class="intro-page" aria-live="polite">
+        <div class="intro-head"><h1>${p.title}</h1><div class="checker"></div></div>
+        ${p.art()}
+        <ul class="intro-points">${p.points.map(x => `<li>${x}</li>`).join('')}</ul>
+      </article>
+      <div class="intro-dots" aria-hidden="true">${INTRO.map((_, i) => `<span class="${i === ui.introPage ? 'on' : ''}"></span>`).join('')}</div>
+      <div class="intro-nav">
+        ${ui.introPage ? '<button class="big-btn" data-action="intro-prev">← Zurück</button>' : '<span></span>'}
+        <button class="big-btn primary" data-action="${last ? 'intro-done' : 'intro-next'}">${last ? 'Los geht\'s! 🐾' : 'Weiter →'}</button>
+      </div></div>`;
+  }
+  function closeIntro() {
+    state.settings.introSeen = true; save();
+    const el = $('#intro'); el.hidden = true; el.innerHTML = '';
+    render();
+    setTimeout(() => { if (pendingHatches().length) showNextHatch(); else checkDaily(); }, 250);
+  }
+  // Wischen in der Einführung
+  let introX = null;
+  document.addEventListener('touchstart', ev => { if (ev.target.closest('#intro')) introX = ev.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', ev => {
+    if (introX == null || $('#intro').hidden) return;
+    const dx = ev.changedTouches[0].clientX - introX; introX = null;
+    if (Math.abs(dx) > 60) showIntro(ui.introPage + (dx < 0 ? 1 : -1));
+  });
+
   // ---------- Tagesgeschenk & Schatztruhe ----------
   // Ein „Geschenk-Tag“ beginnt um 6 Uhr – nach Mitternacht zählt noch der alte Tag.
   const GIFT_AMOUNTS = [2, 2, 3, 3, 4, 4];             // Tag 1–6, Tag 7 = Truhe
@@ -202,6 +259,7 @@
   const giftDay = () => dayKey(Date.now() - 6 * 3600e3);
   function checkDaily() {
     if (state.daily.last === giftDay()) return;
+    if (!$('#intro').hidden || !state.settings.introSeen) return;
     if (!$('#hatch').hidden || pendingHatches().length || !$('#gift').hidden) return;
     showGift();
   }
@@ -567,6 +625,8 @@
       </div>
       ${ui.debug ? `<div class="card debug-card">
         <h3 style="margin-bottom:4px">🛠️ Debug</h3>
+        <button class="big-btn soft" data-action="intro-open">📖 Einführung jetzt zeigen</button>
+        <button class="big-btn soft" data-action="intro-reset">🔁 Einführung beim nächsten Start wieder zeigen</button>
         <p class="hint">Nur zum Testen. Vor dem Löschen wird automatisch ein Backup gespeichert.</p>
         ${ui.debugBackedUp
           ? `<p><b>✓ Backup gespeichert.</b> Jetzt wirklich alles löschen? Aufgaben, Tiere, Kiesel, Wiese und Einstellungen sind dann weg.</p>
@@ -1308,6 +1368,12 @@
       pendingImport = null; save(); closeSheet();
       toast(neu.length ? `${neu.length} Tiere sind umgezogen 🐾` : 'Diese Tiere wohnen schon alle hier 🙂');
     },
+    // --- Einführung ---
+    'intro-next': () => showIntro(ui.introPage + 1),
+    'intro-prev': () => showIntro(ui.introPage - 1),
+    'intro-done': () => closeIntro(),
+    'intro-open': () => showIntro(0),
+    'intro-reset': () => { state.settings.introSeen = false; save(); toast('Beim nächsten Öffnen der App kommt die Einführung wieder.'); },
     // --- Tiere versetzen ---
     'hatch-pick': () => closeHatch('pick'),
     'move-animal': el => startMoving(el.dataset.id, false),
@@ -1424,6 +1490,12 @@
 
   // Enter im Titel = fertig (kein Zeilenumbruch)
   document.addEventListener('keydown', ev => {
+    if (!$('#intro').hidden) {
+      if (ev.key === 'ArrowRight') showIntro(ui.introPage + 1);
+      if (ev.key === 'ArrowLeft') showIntro(ui.introPage - 1);
+      if (ev.key === 'Escape') closeIntro();
+      return;
+    }
     if (ev.key === 'Enter' && ev.target.dataset?.input === 'title') { ev.preventDefault(); ev.target.blur(); }
     if (ev.key === 'Enter' && ev.target.id === 'hatch-name') { ev.preventDefault(); closeHatch(); }
     if (ev.key === 'Escape') {
@@ -1451,7 +1523,11 @@
   // ---------- Start ----------
   render();
   // Beim Start: zuerst noch nicht begrüßte Babytiere zeigen, dann das Tagesgeschenk
-  setTimeout(() => { if (pendingHatches().length) showNextHatch(); else checkDaily(); }, 300);
+  setTimeout(() => {
+    if (!state.settings.introSeen) showIntro(0);       // allererstes Öffnen: Einführung
+    else if (pendingHatches().length) showNextHatch();
+    else checkDaily();
+  }, 300);
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});

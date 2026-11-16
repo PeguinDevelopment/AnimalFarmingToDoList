@@ -402,6 +402,50 @@ section { margin-bottom: 8px; }
 .center { text-align: center; }
 .center p { margin: 6px 0; }
 
+/* Einführung im Karo-Heft-Stil */
+#intro { position: fixed; inset: 0; z-index: 70; overflow-y: auto; background-color: var(--bg);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 22px 22px;
+  padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 16px); animation: fade .25s; }
+.intro-wrap { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; min-height: 100%; }
+.intro-top { display: flex; justify-content: space-between; align-items: center; min-height: 44px; font-size: .9rem; }
+.intro-page {
+  position: relative; flex: 1; border-radius: 20px; padding: 18px 18px 14px 40px; box-shadow: var(--shadow); border: 1px solid var(--line);
+  background-color: var(--card);
+  background-image: linear-gradient(color-mix(in srgb, var(--accent) 14%, transparent) 1px, transparent 1px),
+                    linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px; animation: up .25s ease-out;
+}
+/* Lochrand wie im Collegeblock */
+.intro-page::before { content: ""; position: absolute; left: 10px; top: 18px; bottom: 18px; width: 14px;
+  background: radial-gradient(circle at 7px 7px, var(--bg) 5px, color-mix(in srgb, var(--ink) 18%, transparent) 5.5px, transparent 6.5px) 0 0 / 14px 46px repeat-y; }
+.intro-head h1 { font-size: 1.75rem; font-weight: 800; margin: 2px 0 6px; }
+.intro-head .checker { margin: 0 0 14px; }
+.intro-art { display: grid; place-items: center; margin: 4px 0 14px; }
+.intro-art.big svg { width: 150px; height: 150px; }
+.intro-art.list { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 4px 8px; }
+.intro-art.list .task { pointer-events: none; }
+.intro-art.list .check { width: 40px; height: 40px; }
+.intro-label { font-weight: 800; margin: 8px 6px 2px; }
+.intro-btn { background: var(--accent); color: var(--accent-ink); border-radius: 14px; text-align: center; font-weight: 800; padding: 10px; margin: 6px 0 4px; }
+.intro-art.row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.intro-egg { width: 110px; height: 110px; } .intro-egg svg { width: 100%; height: 100%; }
+.intro-arrow { font-size: 1.8rem; font-weight: 800; color: var(--muted); }
+.intro-art.map { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); }
+.intro-art.map svg { width: 100%; height: auto; display: block; aspect-ratio: 360 / 262; }
+.intro-chest { width: 130px; } .intro-chest svg { width: 100%; height: auto; display: block; }
+.intro-pebbles { font-size: 2rem; font-weight: 800; }
+.swatches-row i { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.intro-points { list-style: none; padding: 0; margin: 0; }
+.intro-points li { position: relative; padding: 6px 0 6px 22px; font-size: 1.04rem; line-height: 1.4; }
+.intro-points li::before { content: ""; position: absolute; left: 4px; top: .95em; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.intro-points mark { background: linear-gradient(100deg, transparent 1%, var(--hl-y) 3%, var(--hl-y) 96%, transparent 99%); color: inherit; padding: 0 .2em; border-radius: .3em; }
+.intro-points mark.g { background: linear-gradient(100deg, transparent 1%, var(--hl-g) 3%, var(--hl-g) 96%, transparent 99%); }
+.intro-dots { display: flex; justify-content: center; gap: 8px; margin: 14px 0 10px; }
+.intro-dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.intro-dots span.on { background: var(--accent); width: 24px; border-radius: 5px; }
+.intro-nav { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+.intro-nav .big-btn { margin: 0; }
+
 /* Tagesgeschenk & Schatztruhe */
 #gift { position: fixed; inset: 0; z-index: 62; background: var(--bg); overflow-y: auto;
   padding: calc(env(safe-area-inset-top) + 24px) 18px calc(env(safe-area-inset-bottom) + 20px); animation: fade .25s; }

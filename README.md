@@ -15,7 +15,7 @@ Derselbe Code liefert zwei eigenständige Apps:
 | | AnimalFarmingToDoList | FeenwaldToDoList |
 |---|---|---|
 | Adresse | `/` | `/feen/` |
-| Stil | kräftiges Blau, Grün, Türkis und Herbstfarben auf Karopapier | Rosa-Pastell mit Glitzer, Märchenbuch-Seiten statt Karo |
+| Stil | kräftiges Blau, Grün, Türkis und Herbstfarben auf Karopapier | Pastell (Lavendel, Mint, Himmelblau, Pfirsich, Rosé) mit Glitzer, Märchenbuch-Seiten statt Karo |
 | Sammeln | 12 Babytiere | 11 Fabelwesen: Einhornfohlen, Drachenbaby, Feenkind, Greifenküken, Phönixküken, Pegasusfohlen, Fuchsgeistchen, Mondhäschen, Flügelkätzchen, Pilzwichtelchen, Büchereulchen |
 | Welt | Tierwiese mit 40 Gebieten | Feenwald mit 30 Gebieten in 10 Landschaften, z. B. Märchenwald, Rosengarten, Kristallhöhle, Bibliothek, Wolkenschloss |
 | Währung | 🪨 Kiesel | 💎 Kristalle |

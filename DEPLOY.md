@@ -4,7 +4,7 @@ AnimalFarmingToDoList ist eine Web-App (PWA) und liegt auf GitHub Pages:
 
 **<https://peguindevelopment.github.io/AnimalFarmingToDoList/>**
 
-Die **Feen-Edition FeenwaldToDoList** (rosa Pastell, Fabelwesen, Feenwald) liegt direkt daneben:
+Die **Feen-Edition FeenwaldToDoList** (Pastell, Fabelwesen, Feenwald) liegt direkt daneben:
 
 **<https://peguindevelopment.github.io/AnimalFarmingToDoList/feen/>**
 

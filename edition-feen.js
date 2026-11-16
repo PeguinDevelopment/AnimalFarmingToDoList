@@ -321,33 +321,35 @@ window.EDITION = (function () {
   function world(H) {
     const { RW, OL, DWOOD, WATER, flower, canopy, trunk, books, shelfBooks, prng, dots, decid, starfig } = H;
     const sp = (x, y, s = 1, c = '#fff') => `<path d="M${x} ${y - 4 * s} L${x + 1.2 * s} ${y - 1.2 * s} L${x + 4 * s} ${y} L${x + 1.2 * s} ${y + 1.2 * s} L${x} ${y + 4 * s} L${x - 1.2 * s} ${y + 1.2 * s} L${x - 4 * s} ${y} L${x - 1.2 * s} ${y - 1.2 * s} Z" fill="${c}"/>`;
-    const PASTELL = [ROSA, FLIEDER, '#f8c8d8', '#d8c4f0', '#ffd6e4'];
+    // ausgewogene Pastellpalette: nur ein Rosa, dazu Mint, Salbei, Lavendel, Butter, Himmel, Pfirsich
+    const PASTELL = ['#bfe5cf', '#d4c8f0', '#f6c6d6', '#a9d4b4', '#f6e3a6', '#bcdcf2', '#f9d2b8', '#c8e6c0'];
+    const CAPS = ['#e9a8a8', '#bba8e0', '#9cc8e8', '#f2d48a', '#9fd4bc'];
     // ---- Bausteine der Landschaft ----
-    const tree = (x, y, s, col, seed) => `<g transform="translate(${x} ${y}) scale(${s})">${trunk(22, 6, '#a88a98')}${canopy(0, -34, 16, 14, col, seed, 8)}</g>`;
+    const tree = (x, y, s, col, seed) => `<g transform="translate(${x} ${y}) scale(${s})">${trunk(22, 6, '#b09a88')}${canopy(0, -34, 16, 14, col, seed, 8)}</g>`;
     const mushroom = (x, y, s, cap) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-3" y="-10" width="6" height="10" rx="2" fill="#fff4ea"/>
       <path d="M-11 -9 Q0 -24 11 -9 Z" fill="${cap}"/><circle cx="-4" cy="-14" r="1.6" fill="#fff"/><circle cx="4" cy="-12" r="1.3" fill="#fff"/></g>`;
     const crystal = (x, y, s, col) => `<g transform="translate(${x} ${y}) scale(${s})">
       <path d="M-10 0 L-12 -14 L-7 -22 L-3 -12 L-1 0 Z" fill="${col}" opacity=".9"/><path d="M-4 0 L-3 -26 L3 -36 L8 -26 L6 0 Z" fill="${col}"/>
       <path d="M3 -36 L3 0 L6 0 L8 -26 Z" fill="#fff" opacity=".35"/><path d="M5 0 L9 -16 L14 -12 L12 0 Z" fill="${col}" opacity=".85"/></g>`;
-    const roseBush = (x, y, s, seed, n = 5) => `<g transform="translate(${x} ${y}) scale(${s})">${canopy(0, -10, 16, 10, '#5a9a78', seed, 7)}${dots(seed + 1, n, ROSE, 2.6, 0, -12, 13, 7)}${dots(seed + 2, Math.ceil(n / 2), '#fff0f6', 2, 0, -12, 13, 7)}</g>`;
+    const roseBush = (x, y, s, seed, n = 5) => `<g transform="translate(${x} ${y}) scale(${s})">${canopy(0, -10, 16, 10, '#5a9a78', seed, 7)}${dots(seed + 1, n, ROSE, 2.6, 0, -12, 13, 7)}${dots(seed + 2, Math.ceil(n / 2), '#ffd8b8', 2, 0, -12, 13, 7)}</g>`;
     const cloud = (x, y, s, o = .95) => `<g transform="translate(${x} ${y}) scale(${s})" opacity="${o}"><ellipse cx="0" cy="4" rx="26" ry="8" fill="#fff"/><circle cx="-10" cy="-1" r="10" fill="#fff"/><circle cx="6" cy="-4" r="12" fill="#fff"/><circle cx="18" cy="2" r="8" fill="#fff"/></g>`;
-    const castle = (x, y, s, wall = '#fbeef6', roof = LILA) => `<g transform="translate(${x} ${y}) scale(${s})">
+    const castle = (x, y, s, wall = '#f4f2fb', roof = '#a99ad8') => `<g transform="translate(${x} ${y}) scale(${s})">
       <rect x="-26" y="-30" width="52" height="30" fill="${wall}"/><rect x="-34" y="-46" width="14" height="46" fill="${wall}"/><rect x="20" y="-46" width="14" height="46" fill="${wall}"/><rect x="-7" y="-56" width="14" height="30" fill="${wall}"/>
       <path d="M-36 -46 L-27 -64 L-18 -46 Z M18 -46 L27 -64 L36 -46 Z M-9 -56 L0 -74 L9 -56 Z" fill="${roof}"/>
       <path d="M-5 0 v-12 a5 5 0 0 1 10 0 v12 Z" fill="#c8a0c0"/><rect x="-29" y="-38" width="4" height="6" rx="2" fill="#ffe8a8"/><rect x="25" y="-38" width="4" height="6" rx="2" fill="#ffe8a8"/><rect x="-2" y="-48" width="4" height="6" rx="2" fill="#ffe8a8"/></g>`;
     // Pastell-Bach (statt kräftig blau)
     const creekP = (d, w) => `<path d="${d}" stroke="#bfe0f4" stroke-width="${w}" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff" stroke-width="1.6" fill="none" stroke-dasharray="5 10" opacity=".9"/>`;
     const fireflies = (ctx, n, y0 = 150, y1 = 240) => { let s = ''; for (let i = 0; i < n; i++) { const x = ctx.X + ctx.r() * RW, y = y0 + ctx.r() * (y1 - y0); s += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="4" fill="#fff6a8" opacity=".25"/><circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="1.4" fill="#fffbd0"/>`; } return s; };
-    const pastelTrees = (ctx, y = 184) => { let s = ''; for (let x = ctx.X + 18; x < ctx.X + RW - 10; x += 34 + ctx.r() * 16) s += ctx.winter ? `<g transform="translate(${x.toFixed(0)} ${y})">${trunk(22, 5, '#a88a98')}</g>${sp(x, y - 30, 1.2, '#fff')}` : tree(x.toFixed(0), y + ctx.r() * 4, .6 + ctx.r() * .3, PASTELL[Math.floor(ctx.r() * PASTELL.length)], Math.floor(ctx.r() * 999)); return s; };
+    const pastelTrees = (ctx, y = 184) => { let s = ''; for (let x = ctx.X + 18; x < ctx.X + RW - 10; x += 34 + ctx.r() * 16) s += ctx.winter ? `<g transform="translate(${x.toFixed(0)} ${y})">${trunk(22, 5, '#b09a88')}</g>${sp(x, y - 30, 1.2, '#fff')}` : tree(x.toFixed(0), y + ctx.r() * 4, .6 + ctx.r() * .3, PASTELL[Math.floor(ctx.r() * PASTELL.length)], Math.floor(ctx.r() * 999)); return s; };
 
     const biomes = {
-      maerchenwald: { mid: pastelTrees, front: ctx => [40, 150, 300].map(dx => mushroom(ctx.X + dx, 230 + ctx.r() * 14, .9, [ROSE, LILA, '#7fb8e0'][Math.floor(ctx.r() * 3)])).join('') +
+      maerchenwald: { mid: pastelTrees, front: ctx => [40, 150, 300].map(dx => mushroom(ctx.X + dx, 230 + ctx.r() * 14, .9, CAPS[Math.floor(ctx.r() * CAPS.length)])).join('') +
           (ctx.has('funkelbach') ? creekP(`M${ctx.X + 110} 176 Q${ctx.X + 60} 200 ${ctx.X + 140} 222 T${ctx.X + 90} 262`, 9) : ''),
         glow: ctx => ctx.night || ctx.has('gluehwuermchen') ? fireflies(ctx, ctx.night ? 14 : 6) : '' },
       rosengarten: { mid: ctx => { let s = ''; for (let x = ctx.X + 20; x < ctx.X + RW; x += 40) s += roseBush(x, 196, .9, Math.floor(x), ctx.has('rosenmeer') ? 9 : 5); return s + `<path d="M${ctx.X + 150} 214 V180 Q${ctx.X + 180} 150 ${ctx.X + 210} 180 V214" stroke="#fff" stroke-width="5" fill="none"/>` + dots(Math.floor(ctx.X), 10, ROSE, 2.4, ctx.X + 180, 172, 28, 14); },
         front: ctx => roseBush(ctx.X + 60, 246, 1, 7, ctx.has('rosenmeer') ? 10 : 6) + roseBush(ctx.X + 300, 248, 1.1, 9, ctx.has('rosenmeer') ? 10 : 6) },
-      kristallhoehle: { back: ctx => `<ellipse cx="${ctx.X + 180}" cy="170" rx="44" ry="34" fill="#5a4a7a"/>` + crystal(ctx.X + 150, 176, 1, '#d8b8f8') + crystal(ctx.X + 210, 178, .8, '#f8c8e0'),
-        mid: ctx => [30, 110, 260, 330].map((dx, i) => crystal(ctx.X + dx, 196 + (i % 2) * 6, .7 + (i % 2) * .3, [FLIEDER, ROSA, '#a8d8f0', '#e8d0ff'][i])).join(''),
+      kristallhoehle: { back: ctx => `<ellipse cx="${ctx.X + 180}" cy="170" rx="44" ry="34" fill="#5a4a7a"/>` + crystal(ctx.X + 150, 176, 1, '#d8b8f8') + crystal(ctx.X + 210, 178, .8, '#b8e4f0'),
+        mid: ctx => [30, 110, 260, 330].map((dx, i) => crystal(ctx.X + dx, 196 + (i % 2) * 6, .7 + (i % 2) * .3, [FLIEDER, MINZE, '#a8d8f0', '#f6c6d6'][i])).join(''),
         glow: ctx => ctx.night ? [30, 110, 150, 210, 260, 330].map(dx => `<circle cx="${ctx.X + dx}" cy="184" r="${ctx.has('kristallglanz') ? 16 : 10}" fill="#f0d8ff" opacity=".14"/>`).join('') : (ctx.has('kristallglanz') ? [110, 150, 210, 260].map(dx => `<path d="M${ctx.X + dx} 166 l1.4 3.6 l3.6 1.4 l-3.6 1.4 l-1.4 3.6 l-1.4 -3.6 l-3.6 -1.4 l3.6 -1.4 Z" fill="#fff"/>`).join('') : '') },
       feenteich: { mid: ctx => `<ellipse cx="${ctx.X + 180}" cy="192" rx="140" ry="15" fill="${ctx.winter ? '#e0ecf8' : '#bfe4f4'}"/>` +
           [100, 170, 240].map((dx, i) => `<ellipse cx="${ctx.X + dx}" cy="${190 + i}" rx="9" ry="3" fill="${BLATT}"/><circle cx="${ctx.X + dx + 3}" cy="${188 + i}" r="2.6" fill="${ROSA}"/>`).join('') +
@@ -355,9 +357,9 @@ window.EDITION = (function () {
           (ctx.has('regenbogen') && !ctx.night ? `<path d="M${ctx.X + 40} 190 A140 120 0 0 1 ${ctx.X + 320} 190" fill="none" stroke-width="22" stroke="url(#feen-rainbow)" opacity=".55"/>` : '') + tree(ctx.X + 30, 186, .8, '#c8e8c0', 5),
         front: ctx => `<path d="M${ctx.X + 320} 250 v-22 M${ctx.X + 326} 250 v-28 M${ctx.X + 332} 250 v-18" stroke="${DBLATT}" stroke-width="2"/>`,
         glow: ctx => ctx.night ? fireflies(ctx, 10, 160, 210) : '' },
-      bibliothek: { back: ctx => `<g transform="translate(${ctx.X + 230} 182)"><rect x="-18" y="-96" width="36" height="96" fill="#f6e8f2"/><path d="M-22 -96 L0 -124 L22 -96 Z" fill="${LILA}"/>
+      bibliothek: { back: ctx => `<g transform="translate(${ctx.X + 230} 182)"><rect x="-18" y="-96" width="36" height="96" fill="#f6f0e4"/><path d="M-22 -96 L0 -124 L22 -96 Z" fill="#9fc0dc"/>
           ${[-80, -58, -36].map(y => `<rect x="-8" y="${y}" width="16" height="14" rx="7" fill="#ffe8a8"/>`).join('')}<path d="M-5 0 v-14 a5 5 0 0 1 10 0 v14 Z" fill="#c8a0c0"/></g>`,
-        mid: ctx => tree(ctx.X + 40, 186, .7, '#f8c8d8', 11) + tree(ctx.X + 110, 188, .6, '#d8c4f0', 12),
+        mid: ctx => tree(ctx.X + 40, 186, .7, '#bfe5cf', 11) + tree(ctx.X + 110, 188, .6, '#f6e3a6', 12),
         front: ctx => `<g transform="translate(${ctx.X + 80} 246)">${books(0, 0, 5)}</g><g transform="translate(${ctx.X + 290} 250)">${books(0, 0, 3)}</g>` },
       wolkenschloss: { hill: '#e8e4f6', ground: '#f4eef8',
         sky: ctx => cloud(ctx.X + 60, 60, 1) + cloud(ctx.X + 300, 40, .8),
@@ -367,13 +369,13 @@ window.EDITION = (function () {
         mid: pastelTrees, front: ctx => { let s = ''; for (let i = 0; i < 18; i++) s += flower(Math.round(ctx.X + ctx.r() * RW), Math.round(220 + ctx.r() * 36), '#fff', 2.8); return s; },
         glow: ctx => ctx.night ? [60, 140, 220, 300].map(dx => `<circle cx="${ctx.X + dx}" cy="238" r="10" fill="#fff8d8" opacity=".08"/>`).join('') : '' },
       pilzdorf: { mid: ctx => [70, 200, 300].map((dx, i) => `<g transform="translate(${ctx.X + dx} 196) scale(${1 - i * .15})"><rect x="-12" y="-24" width="24" height="24" rx="4" fill="#fff4ea"/>
-          <path d="M-26 -22 Q0 -58 26 -22 Z" fill="${[ROSE, LILA, '#7fb8e0'][i]}"/><circle cx="-10" cy="-34" r="3" fill="#fff"/><circle cx="8" cy="-40" r="3.4" fill="#fff"/>
+          <path d="M-26 -22 Q0 -58 26 -22 Z" fill="${CAPS[i]}"/><circle cx="-10" cy="-34" r="3" fill="#fff"/><circle cx="8" cy="-40" r="3.4" fill="#fff"/>
           <path d="M-4 0 v-10 a4 4 0 0 1 8 0 v10 Z" fill="#c8a098"/><circle cx="7" cy="-14" r="3" fill="#ffe8a8"/></g>`).join(''),
-        front: ctx => [40, 140, 260, 330].map(dx => mushroom(ctx.X + dx, 238 + ctx.r() * 12, .7, PASTELL[Math.floor(ctx.r() * 5)])).join(''),
+        front: ctx => [40, 140, 260, 330].map(dx => mushroom(ctx.X + dx, 238 + ctx.r() * 12, .7, CAPS[Math.floor(ctx.r() * CAPS.length)])).join(''),
         glow: ctx => ctx.night ? [70, 200, 300].map(dx => `<circle cx="${ctx.X + dx + 7}" cy="182" r="9" fill="#fff4b0" opacity=".3"/>`).join('') : '' },
       sternenwiese: { sky: ctx => [40, 120, 210, 300].map(dx => sp(ctx.X + dx, 30 + ctx.r() * 60, .9, ctx.night ? '#fff' : '#fff8fc')).join(''),
-        front: ctx => { let s = ''; const n = ctx.has('funkelbach') ? 34 : 24; for (let i = 0; i < n; i++) s += flower(Math.round(ctx.X + ctx.r() * RW), Math.round(216 + ctx.r() * 40), PASTELL[i % 5], 2.4); return s + (ctx.has('funkelbach') ? creekP(`M${ctx.X + 150} 176 Q${ctx.X + 290} 192 ${ctx.X + 210} 216 T${ctx.X + 330} 262`, 8) : ''); } },
-      zauberberg: { back: ctx => [100, 220].map(dx => crystal(ctx.X + dx, 120, 1.2, dx === 100 ? FLIEDER : ROSA)).join(''), mid: pastelTrees },
+        front: ctx => { let s = ''; const n = ctx.has('funkelbach') ? 34 : 24; for (let i = 0; i < n; i++) s += flower(Math.round(ctx.X + ctx.r() * RW), Math.round(216 + ctx.r() * 40), PASTELL[i % PASTELL.length], 2.4); return s + (ctx.has('funkelbach') ? creekP(`M${ctx.X + 150} 176 Q${ctx.X + 290} 192 ${ctx.X + 210} 216 T${ctx.X + 330} 262`, 8) : ''); } },
+      zauberberg: { back: ctx => [100, 220].map(dx => crystal(ctx.X + dx, 120, 1.2, dx === 100 ? FLIEDER : HIMMEL)).join(''), mid: pastelTrees },
     };
 
     // ---- Gebiete (IDs nie ändern; Neues hinten anhängen) ----
@@ -455,7 +457,7 @@ window.EDITION = (function () {
       g('buecherregal', 'Bücherregal', 'buecher', 12, () => `<rect x="-16" y="-44" width="32" height="44" rx="2" fill="#c8a0c0"/><rect x="-12" y="-40" width="24" height="36" fill="#fbeef6"/>` + shelfBooks(-12, -40, 24, 12) + shelfBooks(-12, -28, 24, 12) + shelfBooks(-12, -16, 24, 12) + `<path d="M-12 -28 h24 M-12 -16 h24" stroke="#c8a0c0" stroke-width="1.6"/>`),
       g('lesesessel', 'Lesesessel', 'buecher', 10, () => `<rect x="-18" y="-28" width="8" height="22" rx="4" fill="${ROSE}"/><rect x="-16" y="-18" width="26" height="12" rx="4" fill="${ROSA}"/><rect x="8" y="-20" width="6" height="14" rx="3" fill="${ROSE}"/>
         <rect x="-14" y="-6" width="3" height="6" fill="#c8a0a0"/><rect x="7" y="-6" width="3" height="6" fill="#c8a0a0"/><rect x="19" y="-36" width="1.8" height="36" fill="#a890a8"/><path d="M14 -36 h12 l-3 -8 h-6 Z" fill="${GOLD}"/>`),
-      g('schwebebuecher', 'Schwebende Bücher', 'buecher', 9, () => [[-12, -30, -15], [8, -44, 10], [-2, -58, -6]].map(([x, y, r], i) => `<g transform="translate(${x} ${y}) rotate(${r})"><path d="M-9 -4 L0 -2 L9 -4 L9 4 L0 6 L-9 4 Z" fill="${[ROSE, LILA, '#7fb8e0'][i]}"/><path d="M-7 -3 L0 -1 V5 L-7 3 Z M7 -3 L0 -1 V5 L7 3 Z" fill="#fffaf0"/></g>`).join('') + sp(16, -22, .6, GOLD) + sp(-18, -48, .5, GOLD)),
+      g('schwebebuecher', 'Schwebende Bücher', 'buecher', 9, () => [[-12, -30, -15], [8, -44, 10], [-2, -58, -6]].map(([x, y, r], i) => `<g transform="translate(${x} ${y}) rotate(${r})"><path d="M-9 -4 L0 -2 L9 -4 L9 4 L0 6 L-9 4 Z" fill="${CAPS[i]}"/><path d="M-7 -3 L0 -1 V5 L-7 3 Z M7 -3 L0 -1 V5 L7 3 Z" fill="#fffaf0"/></g>`).join('') + sp(16, -22, .6, GOLD) + sp(-18, -48, .5, GOLD)),
       g('leseschaukel', 'Leseschaukel', 'buecher', 11, () => trunk(10, 6, '#8a6a70') + `<path d="M-24 -56 H24" stroke="#8a6a70" stroke-width="4"/><path d="M-12 -56 V-14 M12 -56 V-14" stroke="#c8b0c0" stroke-width="1.4"/><rect x="-14" y="-15" width="28" height="4" rx="1.5" fill="${ROSA}"/>` + books(0, -15, 2) + canopy(0, -64, 26, 10, '#a8d8b0', 461, 8)),
       // Feenhäuser
       g('pilzhaus', 'Pilzhaus', 'feenhaus', 14, () => `<rect x="-12" y="-24" width="24" height="24" rx="4" fill="#fff4ea"/><path d="M-26 -22 Q0 -58 26 -22 Z" fill="${ROSE}"/><circle cx="-10" cy="-34" r="3" fill="#fff"/><circle cx="8" cy="-40" r="3.4" fill="#fff"/>
@@ -506,17 +508,17 @@ window.EDITION = (function () {
         '<radialGradient id="feen-portal"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#f4c8e8"/><stop offset="1" stop-color="#b48ad8"/></radialGradient>',
       biomeHeights: { maerchenwald: [105, 150], rosengarten: [115, 150], kristallhoehle: [70, 120], feenteich: [110, 150], bibliothek: [100, 145],
         wolkenschloss: [60, 110], mondlichtung: [110, 150], pilzdorf: [110, 150], sternenwiese: [120, 155], zauberberg: [25, 80] },
-      sky: { tag: ['#b9a3e8', '#f3b6d6', '#ffe6f0'], morgen: ['#c9b6f0', '#ffd1e1', '#fff0d9'], abend: ['#6d5ba8', '#e88bb5', '#ffc9a8'], nacht: ['#1d1438', '#3b2a6b', '#6a4a9a'] },
+      sky: { tag: ['#a9c4ec', '#cfe0f4', '#fbf4e6'], morgen: ['#bcc8ee', '#f2dbe4', '#fff0d8'], abend: ['#7a72b4', '#d6a6c4', '#ffd2a8'], nacht: ['#1d1438', '#3b2a6b', '#6a4a9a'] },
       land: {
         fruehling: { hill: '#b8e0b8', ground: '#cfeac4', leaf: ['#f8c8d8', '#d8c4f0'] },
         sommer: { hill: '#a8d8a8', ground: '#c2e6b4', leaf: ['#9ad09a', '#b8e0a8'] },
-        herbst: { hill: '#dcc4dc', ground: '#f2dce6', leaf: ['#f0a8b8', '#f2c890', '#d8a0c8', '#e8b8a0'] },
-        winter: { hill: '#f0eaf8', ground: '#faf6fc', leaf: [] },
+        herbst: { hill: '#cdd6a6', ground: '#ebe8c6', leaf: ['#f2c890', '#f0b49c', '#e8d48a', '#d8b8e0'] },
+        winter: { hill: '#e8eef8', ground: '#f6f8fc', leaf: [] },
       },
       colors: {
-        far: '#dcd0f0', farNight: '#4a3a7a', mount: '#c3b3e3', mountNight: '#3a2f66', sun: '#fff0c0', moon: '#fff8e8',
-        path: '#f6e8f2', pathWinter: '#efe6f6', sprinkle: ['#fff', ROSA], night: '#1d1438', skyPreview: '#3b2a6b',
-        lockFill: '#fdf2f8', lockStroke: ROSE, lockText: '#b0507a', currency: '💎', spotIcon: '✨', aurora1: '#f4a7c0', aurora2: '#b48ad8',
+        far: '#d4dcef', farNight: '#4a3a7a', mount: '#b6c2e2', mountNight: '#3a2f66', sun: '#fff0c0', moon: '#fff8e8',
+        path: '#f6f0e2', pathWinter: '#eef0f8', sprinkle: ['#fff', '#fff0b8'], night: '#1d1438', skyPreview: '#3b2a6b',
+        lockFill: '#f5f3fb', lockStroke: '#a99ad8', lockText: '#5f50a0', currency: '💎', spotIcon: '✨', aurora1: '#a8e0c8', aurora2: '#b9a8e8',
       },
     };
   }
@@ -527,7 +529,7 @@ window.EDITION = (function () {
     const { introAnimal, miniRow, coverSvg, welcomeScene, Wd, A } = I;
     return [
       { title: 'Willkommen im Feenwald!', art: () => welcomeScene({
-          region: 'maerchenwald', owned: ['gluehwuermchen'], hero: ['einhorn', 'blumenkranz', ROSA], eggColor: ROSA, hello: 'Hallo! ✨', hearts: ['💗', '✨', '💗'],
+          region: 'maerchenwald', owned: ['gluehwuermchen'], hero: ['einhorn', 'blumenkranz', ROSA], eggColor: ROSA, hello: 'Hallo! ✨', hearts: ['💜', '✨', '💚'],
           back: [['drache', 'krone', LILA, 62], ['eule', 'buch', ROSE, 132], ['pegasus', 'keins', '', 228], ['kitsune', 'schleife', FLIEDER, 298]],
           front: [['fee', 'keins', '', 38], ['mondhase', 'kristall', HIMMEL, 106], ['phoenix', 'krone', GOLD, 254], ['feenkatze', 'perlenkette', ROSA, 322]],
         }),
@@ -568,6 +570,7 @@ window.EDITION = (function () {
       paw: '✨', hello: 'Hallo! ✨', hatchHead: 'Zauberhaft!', chest: 'Schatztruhe', egg: 'Zauber-Ei',
     },
     themes: [
+      { id: 'feenwald', name: 'Feenwald', a: '#ece8f8', b: '#7f6bc0', meta: '#f8f7fd' },
       { id: 'rosenquarz', name: 'Rosenquarz', a: '#fde4ee', b: '#d9638f', meta: '#fff5f9' },
       { id: 'flieder', name: 'Flieder', a: '#efe4fb', b: '#8e6cc8', meta: '#faf6ff' },
       { id: 'perlmutt', name: 'Perlmutt', a: '#e4f2f8', b: '#c0709f', meta: '#fbf8fc' },
@@ -575,16 +578,16 @@ window.EDITION = (function () {
       { id: 'minzzauber', name: 'Minzzauber', a: '#ddf3ea', b: '#4a9a84', meta: '#f5fcf9' },
       { id: 'mondschein', name: 'Mondschein', a: '#2a2045', b: '#e8a8d0', meta: '#1a1430' },
     ],
-    colors: ['#e88aa8', '#b48ad8', '#7fb8e0', '#7cc8b0', '#f0a878', '#d8a040', '#c87898', '#9a8ae0', '#e07a9a', '#8ab8a0'],
+    colors: ['#9b86d0', '#7cc8b0', '#7fb8e0', '#f0a878', '#e8a0b4', '#d8b860', '#a0c088', '#c8a0d8', '#88b8c8', '#e89890'],
     cheers: ['Zauberhaft! ✨', 'Ein Funke mehr 💫', 'Wie im Märchen 🌸', 'Geschafft, die Feen applaudieren 🧚', 'Ein Kapitel weiter 📖',
       'Du strahlst heller als jeder Kristall 💎', 'Rosen für dich 🌹', 'Jeder Haken ist ein kleiner Zauber 🪄', 'Wunderbar gemacht 💗', 'Das war magisch ✨'],
     taglines: ['Jeder kleine Schritt ist ein bisschen Magie.', 'Heute muss nicht alles verzaubert werden.', 'Ein Kapitel nach dem anderen. 📖',
       'Pausen sind wie Feenstaub: Sie geben neue Kraft.', 'Deine Zauberwesen freuen sich über jeden Haken.', 'Auch Rosen blühen nicht alle auf einmal. 🌹',
       'Du machst das wunderbar. Wirklich.', 'Kleine Wunder zählen genauso.'],
-    sparks: ['✨', '💗', '🌸', '💫', '🌹', '🦋', '💎', '⭐'],
+    sparks: ['✨', '💜', '🌸', '💫', '🍀', '🦋', '💎', '⭐'],
     categories: [
-      { id: 'allgemein', name: 'Allgemein', color: '#e88aa8', animal: 'einhorn' },
-      { id: 'zuhause', name: 'Zuhause', color: '#b48ad8', animal: 'drache' },
+      { id: 'allgemein', name: 'Allgemein', color: '#9b86d0', animal: 'einhorn' },
+      { id: 'zuhause', name: 'Zuhause', color: '#7cc8b0', animal: 'drache' },
     ],
     starter: { id: 'start-einhorn', kind: 'einhorn', look: { fur: 0, acc: 'blumenkranz', color: ROSA, stone: 0 }, name: 'Glitzer', catName: 'Allgemein', spot: 'maerchenwald:af4' },
     animals, world, intro,

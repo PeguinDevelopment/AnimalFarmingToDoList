@@ -1,81 +1,127 @@
 # Plan 🐾
 
-Eine ruhige, übersichtliche To-do-App mit Babytieren zum Sammeln. Sie läuft als Web-App auf dem iPhone, ohne App Store.
+Eine ruhige, übersichtliche To-do-App mit Babytieren zum Sammeln.
+Wer Aufgaben abhakt, lässt Babytiere schlüpfen und gestaltet nach und nach eine eigene Landschaft.
 
-## Was die App kann
+Plan ist eine **Progressive Web App (PWA)**: Sie läuft im Browser, lässt sich auf iPhone, iPad, Android und dem Desktop wie eine normale App installieren und funktioniert danach auch offline.
+Es gibt keinen Account und keinen Server, alle Daten bleiben auf dem Gerät.
 
-- **Listen** mit eigenen Kategorien. Jede Kategorie hat eine Farbe und ein eigenes Babytier.
-- **💛 Wichtig** wird gelb markiert und **✓ Erledigt** grün, wie mit Textmarker auf dem Zettel.
-- **Kleine Schritte:** Jede Aufgabe lässt sich in Mini-Schritte zerlegen. Jeder Schritt zählt.
-- **☀️ Für heute:** 1–3 Sachen aussuchen statt die ganze Liste anzustarren.
-- **🎯 Nur eine Sache:** zeigt eine einzige Aufgabe groß an. Man kann sie „kleiner machen“ oder „was anderes“ wählen.
-- **⏳ 5-Minuten-Starthilfe:** ein sanfter Timer nach dem Motto „nur kurz anfangen“.
-- **Babytiere:** Nach 3 Haken (einstellbar) schlüpft ein Tier, oft mit Häkelmütze, Häkelschal oder Häkelblume.
-  Es gibt Pinguin-Küken, Fohlen, Steinböckchen, Hundewelpe, Kätzchen, Häschen, Fuchsbaby, Eisbärbaby, Highland-Kälbchen, Entenküken, Tigerbaby und Otterbaby (sammelt Steine).
-  Name, Fell und Outfit lassen sich jederzeit ändern.
-- **Tierwiese:** eine Landschaft zum Wischen mit 40 Gebieten zum Freischalten (Wald, Berge, Gletscher, Fjord, Vulkaninsel …) und 440 Plätzen.
-  Jeder Haken gibt 1 🪨 Kiesel. Im Wiesen-Laden gibt es über 80 Sachen: Sternbilder für den Himmel, Bäume, Brunnen, Flüsse, Nordlicht, Bücherei, Schokohäuschen und mehr.
-  Sie richtet sich nach Tageszeit und Jahreszeit, und ab und zu taucht ein Fundstück auf.
-- **Kein Druck:** keine roten Fristen, keine Streaks, Tiere gehen nie verloren.
-- **Ruhemodus** (ohne Animationen), **3 Textgrößen** und **8 kräftige Farbthemen** (Meer, Himmel, Gipfel, Türkis, Wald, Herbst, Sonne, Nacht).
-- **Rückgängig** nach jedem Abhaken und Löschen.
+> Wie man die App veröffentlicht und auf Geräten installiert, steht in **[DEPLOY.md](DEPLOY.md)**.
 
-Alle Daten bleiben **nur auf dem iPhone**. Es gibt keinen Account und keine Cloud. Die ganze App ist kleiner als 200 KB.
+## Funktionen
 
-## Auf ihr iPhone bringen
+**Aufgaben**
+- Listen mit eigenen Kategorien, jede mit Farbe und eigenem Babytier
+- **Wichtig** wird gelb hinterlegt, **erledigt** grün, wie mit einem Textmarker
+- **Mini-Schritte:** Aufgaben lassen sich in kleine Schritte zerlegen, und jeder Schritt zählt
+- **Für heute:** 1–3 Aufgaben auswählen statt die ganze Liste vor sich zu haben
+- **Eine Sache:** zeigt nur eine Aufgabe, mit „Kleiner machen“ und „Was anderes“
+- **5-Minuten-Starthilfe:** ein sanfter Timer zum Anfangen
+- „Rückgängig“ nach jedem Abhaken und Löschen
+- Pro Liste sind höchstens 6 offene Aufgaben sichtbar, der Rest ist eingeklappt
 
-Die App muss einmal irgendwo online liegen, und zwar kostenlos. Danach funktioniert sie auch offline.
+**Babytiere**
+- 12 Tierarten mit mehreren Fellfarben, z. B. Pinguin-Küken, Steinböckchen, Highland-Kälbchen und Otterbaby
+- Nach einer einstellbaren Zahl von Haken schlüpft ein Tier aus einem Ei
+- Zubehör wie Häkelmütze, Häkelschal, Buch oder Schokolade; Name, Fell und Outfit sind frei änderbar
+- Jedes Tier hat einen festen Platz auf der Wiese und kann versetzt werden; Tiere überlappen sich nie
 
-**Variante A: Netlify (am einfachsten)**
-1. Auf https://app.netlify.com/drop einen kostenlosen Account anlegen.
-2. Den Ordner `Todo` per Drag & Drop hochladen. **Vorher den Ordner `import/` herausnehmen**, denn er enthält ihre private Liste.
-3. Du bekommst eine Adresse wie `https://irgendwas.netlify.app`. Den Namen kannst du in den Site-Einstellungen ändern.
+**Tierwiese**
+- Eine Landschaft zum Wischen mit **40 Gebieten** in 17 Landschaftstypen, z. B. Wald, Gletscher, Fjord, Moor oder Vulkaninsel
+- Jeder Haken bringt 1 🪨 Kiesel. Damit werden Gebiete freigeschaltet und Dinge im **Wiesen-Laden** gekauft. Vor jedem Kauf zeigt ein Fenster eine Vorschau und den Preis.
+- Über 120 Dinge im Laden, z. B. 45 Baum- und Straucharten, Brunnen, Flüsse, Sternbilder, Nordlicht und Bücherei
+- 440 Deko-Plätze (am Boden und am Himmel) und 720 Tierplätze
+- Tag und Nacht sowie die Jahreszeiten folgen der echten Uhrzeit und dem Datum
+- Ab und zu liegt ein Fundstück auf der Wiese
 
-**Variante B: GitHub Pages**
-1. Das Repository auf GitHub pushen. `import/` steht in `.gitignore` und wird deshalb nicht hochgeladen.
-2. Unter *Settings → Pages* den Branch `main` auswählen.
+**Belohnungen ohne Druck**
+- **Tagesgeschenk:** Kiesel beim ersten Öffnen am Tag, ein neuer Tag beginnt um 6 Uhr
+- **Schatztruhe** nach 7 gesammelten Tagen. Die Tage müssen nicht aufeinander folgen. In der Truhe wählt man einen Wunsch-Gutschein oder ein exklusives Premium-Sternbild.
+- Keine Fristen, keine Streaks, nichts geht verloren
 
-**Auf dem iPhone:**
-1. Die Adresse in **Safari** öffnen. Es muss Safari sein, nicht Chrome.
-2. Auf **Teilen** (□↑) und dann **„Zum Home-Bildschirm“** tippen. Den Namen kann man dabei frei wählen.
-3. Fertig: Die App hat jetzt ein eigenes Icon und läuft im Vollbild.
+**Bedienung**
+- 8 Farbthemen, darunter ein Nachtmodus
+- 3 Textgrößen
+- Ruhemodus ohne Animationen; die Einstellung „Bewegung reduzieren“ des Systems wird automatisch beachtet
+- Große Tippflächen und eine vorhersehbare Navigation
 
-## Ihre Liste vom Zettel übernehmen
+## Technik
 
-`import/zettel.json` enthält ihre abgetippte Liste: Gelb ist als „wichtig“ markiert, Grün als „erledigt“.
-1. Die Datei per AirDrop aufs iPhone schicken oder in iCloud Drive legen.
-2. In der App: **Einstellen → „Backup oder Liste laden“ →** Datei auswählen.
-3. Die erledigten Aufgaben bringen gleich ein paar Begrüßungs-Babytiere mit 🐣
+- Reines HTML, CSS und JavaScript, **ohne Abhängigkeiten und ohne Build-Schritt**
+- Alle Grafiken werden als SVG im Code gezeichnet, es gibt keine Bilddateien außer den App-Icons
+- Daten liegen im `localStorage` des Browsers; ein Service Worker sorgt für den Offline-Betrieb
+- Gesamtgröße etwa 300 KB
 
-Ein paar Wörter waren auf dem Foto schwer lesbar. Bei diesen Aufgaben steht in der Notiz „bitte prüfen“.
+| Datei | Inhalt |
+|---|---|
+| `index.html` | Grundgerüst der Seite |
+| `app.js` | App-Logik: Aufgaben, Belohnungen, Ansichten, Speicherstand und Migrationen |
+| `animals.js` | Babytiere, Zubehör und Namen |
+| `world.js` | Tierwiese: Gebiete, Landschaft, Gadgets, Sternbilder und Fundstücke |
+| `styles.css` | Gestaltung und Farbthemen |
+| `sw.js` | Service Worker für den Offline-Betrieb |
+| `manifest.webmanifest`, `icons/` | Angaben und Icons für die Installation |
 
-## Neues Handy / Backup
+## Lokal starten
 
-**Einstellen → „Backup speichern“** erstellt eine kleine Datei mit Aufgaben, **allen Tieren** (mit Namen und Outfit), dem Fortschritt und den Einstellungen.
-Auf dem neuen Handy öffnet man die App und wählt **„Backup laden“**. Dort gibt es zwei Möglichkeiten: „Alles übernehmen“ oder „Nur die Tiere dazuholen“.
+Im Projektordner einen einfachen Webserver starten, zum Beispiel:
 
-## Updates einspielen
+```bash
+python -m http.server 8000
+```
 
-Nach Änderungen am Code in `sw.js` die Versionsnummer erhöhen (`plan-v1` → `plan-v2`) und neu hochladen.
-Die App holt sich die neue Version beim nächsten Öffnen mit Internet. Ihre Daten bleiben dabei erhalten.
+Danach `http://localhost:8000` öffnen. Ein Doppelklick auf `index.html` funktioniert auch, dann allerdings ohne Offline-Modus.
+
+In den Einstellungen gibt es einen versteckten Debug-Bereich: Tippt man fünfmal schnell auf „Mit 💛 gemacht“, erscheint er. Dort lassen sich alle Daten löschen, vorher wird automatisch ein Backup gespeichert.
+
+## Daten, Backup und Import
+
+- **Backup speichern** (Einstellungen) erstellt eine JSON-Datei mit allen Aufgaben, Tieren, Kieseln, der Wiese und den Einstellungen.
+- **Backup laden** bietet zwei Möglichkeiten: „Alles übernehmen“, z. B. für ein neues Gerät, oder „Nur die Tiere dazuholen“.
+- Über denselben Knopf lassen sich auch **Aufgabenlisten importieren**. Das Format sieht so aus:
+
+```json
+{
+  "type": "pfoetchenplan-liste",
+  "lists": [
+    {
+      "name": "Uni",
+      "tasks": [
+        { "title": "Hausarbeit gliedern", "important": true },
+        { "title": "Literatur suchen", "done": true },
+        { "title": "Umzug", "subtasks": ["Kisten holen", "Ummelden"] }
+      ]
+    }
+  ]
+}
+```
+
+Fehlt eine Liste in der App, wird sie angelegt. Bereits erledigte Aufgaben zählen dabei gleich für die Babytiere.
+Persönliche Listen gehören in den Ordner `import/`, der per `.gitignore` aus dem Repository herausgehalten wird.
 
 ## Erweitern, ohne etwas kaputt zu machen
 
-Alle gespeicherten Daten hängen an **festen IDs** (Tiere, Gadgets, Gebiete, Plätze) und nie an Positionen in Listen.
-Deshalb gelten diese Regeln:
+Alle gespeicherten Daten hängen an **festen IDs** (Tiere, Gadgets, Gebiete, Plätze) und nie an Positionen in Listen. Deshalb gilt:
 
-1. **IDs nie ändern oder wiederverwenden.** Namen und Aussehen darfst du jederzeit ändern, die `id` nicht.
+1. **IDs nie ändern oder wiederverwenden.** Namen und Aussehen dürfen sich ändern, die `id` nicht.
 2. **Neues immer anhängen:**
-   - Tier: `animals.js` → `KINDS`
-   - Gadget: `world.js` → Liste `G` (mit `group`, `price`, `d`; Himmels-Gadgets mit `sky: true`)
-   - Gebiet: `world.js` → `REGIONS`. Es erscheint dann als nächstes Gebiet zum Freischalten.
-   - Gebietstyp (Aussehen): `world.js` → `BIOME` und `region()`
-   - Fundstück: `world.js` → `FINDS`
-3. **Datenformat geändert?** In `app.js` `SCHEMA` um 1 erhöhen und in `MIGRATIONS` einen Schritt ergänzen.
-   Alte Backups werden beim Laden Schritt für Schritt umgestellt.
-4. **Nichts wird stillschweigend gelöscht:** Unbekannte IDs, z. B. aus einem Backup einer neueren Version, bleiben gespeichert und werden nur nicht angezeigt.
-5. Nach jeder Änderung die Versionsnummer in `sw.js` erhöhen.
 
-**Karten:** Die Wiese ist als „Karte“ gespeichert (`state.world.maps`). Darin stehen die freigeschalteten Gebiete, die Plätze und die Fundstücke.
-Eine volle Karte kann später archiviert werden (`archived: true`) und eine neue begonnen werden.
-Die gekauften Gadgets (`state.inv`), die Kiesel und die Tiere gehören der Person, nicht der Karte, und ziehen deshalb mit um.
+   | Neues … | Datei | Stelle |
+   |---|---|---|
+   | Tier | `animals.js` | `KINDS` |
+   | Gadget | `world.js` | Liste `G` (mit `group`, `price`, `d`; Himmels-Gadgets mit `sky: true`) |
+   | Premium-Sternbild | `world.js` | `PREMIUM` |
+   | Gebiet | `world.js` | `REGIONS`; es erscheint als nächstes Gebiet zum Freischalten |
+   | Landschaftstyp | `world.js` | `BIOME` und `region()` |
+   | Fundstück | `world.js` | `FINDS` |
+
+3. **Datenformat geändert?** In `app.js` `SCHEMA` um 1 erhöhen und in `MIGRATIONS` einen Schritt ergänzen. Alte Speicherstände und Backups werden dann beim Laden Schritt für Schritt umgestellt.
+4. **Nichts wird stillschweigend gelöscht.** Unbekannte IDs, z. B. aus einem Backup einer neueren Version, bleiben gespeichert und werden nur nicht angezeigt.
+5. **Nach jeder Änderung** die Versionsnummer `VERSION` in `sw.js` erhöhen, damit installierte Apps die neue Fassung laden.
+
+**Karten:** Die Wiese ist als „Karte“ gespeichert (`state.world.maps`). Eine Karte enthält die freigeschalteten Gebiete, die Deko-Plätze, die Tierplätze und die Fundstücke.
+Eine volle Karte lässt sich später archivieren (`archived: true`) und durch eine neue ersetzen.
+Gekaufte Gadgets (`state.inv`), Kiesel und Tiere gehören dabei nicht der Karte, sondern der Person, und ziehen deshalb mit um.
+
+**Belohnungen:** Jede Aufgabe und jeder Mini-Schritt bringt nur beim **ersten** Abhaken einen Punkt.
+Neue Tiere tragen `welcomed: false`, bis ihr Schlüpf-Fenster bestätigt wurde. Dadurch geht auch nach einem Neuladen kein Schlüpfen verloren.

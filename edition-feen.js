@@ -260,6 +260,31 @@ window.EDITION = (function () {
           <path d="M46 56 L54 56 L50 62 Z" fill="${GOLD}" ${OL} stroke-linejoin="round"/>
           ${blush(58, 18)}`,
       },
+      // Pinguin mit Einhorn-Horn und bunter Federmähne (neu: hinten angehängt, ID nie ändern)
+      pinguinhorn: {
+        label: 'Pinguinhorn', baby: 'Pinguinhörnchen',
+        furs: [
+          { name: 'eisblau', main: '#a9c4e8', mane: [ROSA, FLIEDER, MINZE], horn: GOLD, feet: '#f6c08a' },
+          { name: 'lavendel', main: '#c4b4e6', mane: [HIMMEL, ROSA, '#fff0b8'], horn: GOLD, feet: '#f6c08a' },
+          { name: 'nebelgrau', main: '#b4bccc', mane: [MINZE, HIMMEL, FLIEDER], horn: '#f6e3a8', feet: '#f4b896' },
+          { name: 'mitternacht', main: '#7a86b8', mane: [FLIEDER, ROSA, HIMMEL], horn: '#e6ecf6', feet: '#f6c08a' },
+        ],
+        anchors: { hat: [26, 1], neck: [69, 22, 78], bow: [68, 32], flower: [32, 34] },
+        draw: f => `
+          <ellipse cx="36" cy="94" rx="7" ry="3.6" fill="${f.feet}"/>
+          <ellipse cx="64" cy="94" rx="7" ry="3.6" fill="${f.feet}"/>
+          <ellipse cx="21" cy="68" rx="6" ry="13" transform="rotate(22 21 68)" fill="${f.main}" ${OL}/>
+          <ellipse cx="79" cy="68" rx="6" ry="13" transform="rotate(-22 79 68)" fill="${f.main}" ${OL}/>
+          <ellipse cx="50" cy="60" rx="30" ry="34" fill="${f.main}" ${OL}/>
+          <path d="M50 42 C40 34 24 40 26 54 C28 68 42 72 50 72 C58 72 72 68 74 54 C76 40 60 34 50 42 Z" fill="#fff"/>
+          <ellipse cx="50" cy="82" rx="17" ry="11" fill="#fff"/>
+          <circle cx="40" cy="30" r="5" fill="${f.mane[0]}"/><circle cx="60" cy="30" r="4.6" fill="${f.mane[1]}"/><circle cx="34" cy="36" r="3.8" fill="${f.mane[2]}"/>
+          <path d="M45.5 30 L50 7 L54.5 30 Z" fill="${f.horn}" ${OL} stroke-linejoin="round"/>
+          <path d="M47 25 l6 -2 M48 18.5 l4 -1.4 M49 12.5 l2.4 -0.8" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>
+          ${eyes(52, 10)}${lashes(52, 10)}${blush(60, 17)}
+          <path d="M45.5 57 Q50 55.5 54.5 57 Q50 62.5 45.5 57 Z" fill="${f.feet}"/>
+          ${sparkle(82, 22, .8, GOLD)}${sparkle(16, 40, .5, '#fff')}`,
+      },
     };
 
     // ---- Zubehör (Anker wie in animals.js: hat, neck, bow, flower, hold) ----

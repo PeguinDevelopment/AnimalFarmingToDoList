@@ -54,6 +54,29 @@ Andere Browser wie Samsung Internet, Edge oder Firefox bieten die Installation �
 2. In `sw.js` die Versionsnummer erhöhen, z. B. `const VERSION = 'plan-v7';` → `'plan-v8'`.
 3. Auf `main` pushen. GitHub Pages veröffentlicht die neue Version nach ein bis zwei Minuten.
 
+### Release mit Release-Log (automatisch)
+
+Ein Release entsteht automatisch, sobald ein Tag gepusht wird. Das erledigt die GitHub Action `.github/workflows/release.yml`.
+
+| Edition | Tag | Release-Log |
+|---|---|---|
+| AnimalFarmingToDoList | `tiere-v<Nummer>` | `release-notes/tiere-v<Nummer>.md` |
+| FeenwaldToDoList | `feen-v<Nummer>` | `release-notes/feen-v<Nummer>.md` |
+
+1. Das Release-Log als `release-notes/<tag>.md` schreiben. Die erste Zeile (`# Überschrift`) wird weggelassen, weil GitHub den Titel selbst setzt.
+2. Committen, taggen und pushen, zum Beispiel:
+   ```bash
+   git add -A
+   git commit -m "Feen-Edition v17"
+   git tag -a feen-v17 -m "FeenwaldToDoList v17"
+   git push origin main --follow-tags
+   ```
+3. Nach etwa einer Minute steht unter **Releases** das neue Release mit Text und dem eigenständigen ZIP der Edition, zum Beispiel `FeenwaldToDoList-v17.zip`.
+
+Fehlt die Datei in `release-notes/`, schreibt GitHub das Release-Log automatisch aus den Commit-Nachrichten.
+Ein Release für einen schon vorhandenen Tag lässt sich unter **Actions → Release → Run workflow** mit dem Tag-Namen nachholen.
+Das Paket lässt sich auch lokal bauen: `node tools/build-release.js feen dist`.
+
 Installierte Apps holen sich die neue Version beim nächsten Öffnen mit Internetverbindung. Manchmal muss die App dafür einmal komplett geschlossen und neu geöffnet werden. Die gespeicherten Daten bleiben bei Updates erhalten.
 
 ## 4. Daten und Gerätewechsel

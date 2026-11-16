@@ -1,0 +1,79 @@
+# Legt automatisch ein GitHub-Release an, sobald ein Tag wie "tiere-v15" oder "feen-v16" gepusht wird.
+# - Text: release-notes/<tag>.md (falls vorhanden), sonst automatisch aus den Commit-Nachrichten
+# - Anhang: eigenständiges ZIP der jeweiligen Edition
+name: Release
+
+on:
+  push:
+    tags: ['tiere-v*', 'feen-v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Vorhandener Tag, z. B. feen-v16'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tag bestimmen
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          EDITION="${TAG%%-v*}"
+          VERSION="v${TAG##*-v}"
+          case "$EDITION" in
+            tiere) NAME="AnimalFarmingToDoList"; LATEST="true" ;;
+            feen)  NAME="FeenwaldToDoList";      LATEST="false" ;;
+            *) echo "Unbekannte Edition in Tag $TAG"; exit 1 ;;
+          esac
+          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
+          echo "edition=$EDITION" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME"       >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST"   >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.meta.outputs.tag }}
+          fetch-depth: 0
+
+      # Bau-Skript und Release-Texte immer in der neuesten Fassung nehmen
+      # (damit auch ältere Tags nachträglich ein Release bekommen können)
+      - name: Werkzeuge aktualisieren
+        run: git checkout ${{ github.sha }} -- tools release-notes
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Paket bauen
+        run: |
+          node tools/build-release.js "${{ steps.meta.outputs.edition }}" dist
+          cd dist && zip -qr "${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}.zip" "${{ steps.meta.outputs.name }}"
+
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          ZIP="dist/${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}.zip"
+          TITLE="${{ steps.meta.outputs.name }} ${{ steps.meta.outputs.version }}"
+          HAS_NOTES=false
+          if [ -f "release-notes/$TAG.md" ]; then
+            # erste Zeile (# Überschrift) weglassen, der Titel steht schon über dem Release
+            sed '1{/^# /d}' "release-notes/$TAG.md" > notes.md
+            HAS_NOTES=true
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Release gibt es schon (z. B. erneuter Lauf): ZIP ersetzen, Text aktualisieren
+            gh release upload "$TAG" "$ZIP" --clobber
+            if $HAS_NOTES; then gh release edit "$TAG" --title "$TITLE" --notes-file notes.md; fi
+          elif $HAS_NOTES; then
+            gh release create "$TAG" "$ZIP" --title "$TITLE" --latest="${{ steps.meta.outputs.latest }}" --notes-file notes.md
+          else
+            gh release create "$TAG" "$ZIP" --title "$TITLE" --latest="${{ steps.meta.outputs.latest }}" --generate-notes
+          fi

@@ -16,7 +16,7 @@ Derselbe Code liefert zwei eigenständige Apps:
 |---|---|---|
 | Adresse | `/` | `/feen/` |
 | Stil | kräftiges Blau, Grün, Türkis und Herbstfarben auf Karopapier | Pastell (Lavendel, Mint, Himmelblau, Pfirsich, Rosé) mit Glitzer, Märchenbuch-Seiten statt Karo |
-| Sammeln | 12 Babytiere | 11 Fabelwesen: Einhornfohlen, Drachenbaby, Feenkind, Greifenküken, Phönixküken, Pegasusfohlen, Fuchsgeistchen, Mondhäschen, Flügelkätzchen, Pilzwichtelchen, Büchereulchen |
+| Sammeln | 12 Babytiere | 12 Fabelwesen: Einhornfohlen, Drachenbaby, Feenkind, Greifenküken, Phönixküken, Pegasusfohlen, Fuchsgeistchen, Mondhäschen, Flügelkätzchen, Pilzwichtelchen, Büchereulchen, Pinguinhörnchen |
 | Welt | Tierwiese mit 40 Gebieten | Feenwald mit 30 Gebieten in 10 Landschaften, z. B. Märchenwald, Rosengarten, Kristallhöhle, Bibliothek, Wolkenschloss |
 | Währung | 🪨 Kiesel | 💎 Kristalle |
 
@@ -79,6 +79,7 @@ Beide Editionen lassen sich nebeneinander installieren. Sie haben getrennte Spei
 | `edition-feen.js` | Feen-Edition: Fabelwesen, Feenwald, Texte, Farbthemen, Einführung |
 | `feen.css` | Gestaltung der Feen-Edition (wird nach `styles.css` geladen) |
 | `feen/` | Startseite, Manifest und Icons der Feen-Edition |
+| `release-notes/`, `tools/`, `.github/` | Release-Logs, Bau-Skript für die Pakete und die GitHub Action für automatische Releases (siehe DEPLOY.md) |
 
 ### Wie eine Edition funktioniert
 

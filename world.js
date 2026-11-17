@@ -997,7 +997,7 @@
     const animalsIn = {}, occupied = {};
     animalSpots(openRegs, o.animals || [], map.animalSpots || {}).forEach(({ a, sp, i }) => {
       occupied[sp.id] = a.id;
-      (animalsIn[sp.reg] ||= []).push(`<g class="w-anim" data-action="w-animal" data-id="${a.id}" style="animation-delay:${((i * 1.7) % 9).toFixed(1)}s">${a.svg.replace('<svg', `<svg x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}"`)}</g>`);
+      (animalsIn[sp.reg] ||= []).push(`<g class="w-anim" data-action="w-animal" data-id="${a.id}" style="animation-delay:${((i * 1.7) % 9).toFixed(1)}s"><rect x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}" fill="transparent"/>${a.svg.replace('<svg', `<svg x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}"`)}</g>`);
     });
 
     const defs = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${defsInner()}</svg>`;

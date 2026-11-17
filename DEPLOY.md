@@ -94,7 +94,9 @@ Regelmäßige Backups sind empfehlenswert, weil die Daten sonst nur an einer Ste
 
 | Problem | Lösung |
 |---|---|
-| Kein „Zum Home-Bildschirm“ auf dem iPhone | Die Seite muss in **Safari** geöffnet sein. Chrome und andere Browser können das auf dem iPhone nicht. |
+| Kein „Zum Home-Bildschirm“ auf dem iPhone | Meist ist die Seite gar nicht in Safari offen, sondern im eingebauten Browser einer anderen App (WhatsApp, Instagram, Mail, GitHub-App …). Dann unten rechts auf das Kompass-Symbol bzw. **⋯ → „In Safari öffnen“** tippen und es dort noch einmal versuchen. |
+| „Zum Home-Bildschirm“ fehlt auch in Safari | Im Teilen-Menü ganz **nach unten wischen**, die Option steht unter der Reihe der Apps. Bei neueren iOS-Versionen steckt „Teilen“ hinter **⋯** neben der Adressleiste. Fehlt sie immer noch: ganz unten **„Aktionen bearbeiten …“** antippen und „Zum Home-Bildschirm“ hinzufügen. |
+| Option fehlt im privaten Modus oder auf einem Firmen-iPhone | Den privaten Tab verlassen und die Seite in einem normalen Tab öffnen. Bei verwalteten Geräten (Firma, Schule) oder Bildschirmzeit-Beschränkungen kann die Funktion gesperrt sein. |
 | Chrome installiert GitHub statt der App | Die falsche Adresse war offen (`github.com`). Die installierte App entfernen und die Adresse mit `github.io` öffnen. |
 | Kein „App installieren“ auf Android | Die Seite muss über **HTTPS** laufen. Über `http://` oder eine IP-Adresse geht es nicht. |
 | Nach einem Update ist noch die alte Version zu sehen | Prüfen, ob `VERSION` in `sw.js` erhöht wurde. Dann die App ganz schließen und neu öffnen. |

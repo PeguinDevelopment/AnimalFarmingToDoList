@@ -16,7 +16,6 @@ html[data-edition="feen"][data-theme="rosenquarz"] {
   --glitter: rgba(200, 106, 146, .2);
 }
 html[data-edition="feen"][data-theme="flieder"] { --bg: #faf6ff; --bg2: #f1e8fc; --accent: #8e6cc8; --soft: #efe4fb; --line: #e6dcf6; --glitter: rgba(142, 108, 200, .22); }
-html[data-edition="feen"][data-theme="perlmutt"] { --bg: #fbf8fc; --bg2: #eef6fa; --accent: #6f9cc0; --soft: #e8f0f6; --line: #e2e8f0; --glitter: rgba(120, 180, 210, .25); }
 html[data-edition="feen"][data-theme="pfirsichbluete"] { --bg: #fff7f2; --bg2: #ffeee6; --accent: #d0706a; --soft: #ffe6d8; --line: #f6e2d8; --glitter: rgba(208, 112, 106, .2); }
 html[data-edition="feen"][data-theme="minzzauber"] { --bg: #f5fcf9; --bg2: #f3eefa; --accent: #4a9a84; --soft: #ddf3ea; --line: #dcefe6; --glitter: rgba(74, 154, 132, .2); }
 html[data-edition="feen"][data-theme="mondschein"] {

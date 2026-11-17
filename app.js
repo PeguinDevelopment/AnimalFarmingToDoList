@@ -399,7 +399,7 @@
     state.progress[catId] = (state.progress[catId] || 0) + 1;
     if (state.progress[catId] >= state.settings.perBaby) {
       state.progress[catId] = 0;
-      const a = { id: uid(), kind: cat.animal, look: A.randomLook(cat.animal), name: A.randomName(), catName: cat.name, bornAt: Date.now() };
+      const a = { id: uid(), kind: cat.animal, look: A.randomLook(cat.animal), name: A.randomName(cat.animal), catName: cat.name, bornAt: Date.now() };
       state.animals.push(a);
       a.welcomed = false;    // → Schlüpf-Fenster ist fällig
       return a;
@@ -654,7 +654,7 @@
       </div>
       <div class="card">
         <h3 style="margin-bottom:10px">Farbthema</h3>
-        <div class="themes">${THEMES.map(t => `<button class="theme-btn ${s.theme === t.id ? 'on' : ''}" data-action="theme" data-id="${t.id}" style="--a:${t.a};--b:${t.b}"><i></i>${t.name}</button>`).join('')}</div>
+        <div class="themes" style="--tcols:${THEMES.length % 3 === 0 ? 3 : 4}">${THEMES.map(t => `<button class="theme-btn ${s.theme === t.id ? 'on' : ''}" data-action="theme" data-id="${t.id}" style="--a:${t.a};--b:${t.b}"><i></i>${t.name}</button>`).join('')}</div>
       </div>
       <div class="card">
         <div class="set-row"><div><b>Ruhemodus</b><p>Keine Animationen, kein Konfetti, kein wackelndes Ei.</p></div>
@@ -1293,7 +1293,7 @@
       renderOverlay();
     },
     'timer-close': () => closeTimer(),
-    'hatch-dice': () => { $('#hatch-name').value = A.randomName(); },
+    'hatch-dice': () => { const a = state.animals.find(x => x.id === $('#hatch')?.dataset.id); $('#hatch-name').value = A.randomName(a?.kind); },
     'hatch-ok': () => closeHatch(),
     undo: () => { if (ui.undo) { ui.undo(); ui.undo = null; $('#toast').classList.remove('show'); } },
     'open-animal': el => openSheet('animal', el.dataset.id),
@@ -1368,7 +1368,7 @@
     'w-animal': el => {
       const a = state.animals.find(x => x.id === el.dataset.id);
       if (!a) return;
-      el.classList.remove('hop-now'); void el.getBBox(); el.classList.add('hop-now');
+      el.classList.remove('hop-now'); void getComputedStyle(el).animationName; el.classList.add('hop-now');
       toast(`${a.name} · ${A.KINDS[a.kind]?.baby || ''} 💛`);
     },
     'w-find': el => {

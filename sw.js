@@ -1,5 +1,5 @@
 // Offline-Cache. Bei Änderungen an der App die Versionsnummer erhöhen, damit das iPhone die neue Version lädt.
-const VERSION = 'plan-v17';
+const VERSION = 'plan-v18';
 const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'animals.js', 'world.js', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   // Feen-Edition (gleicher Code, eigene Startseite unter feen/)

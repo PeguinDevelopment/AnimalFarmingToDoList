@@ -571,5 +571,5 @@
     if (e.egg) eggFn = e.egg;
   }
 
-  window.Animals = { KINDS, ACCS, ACC_COLORS, STONES, draw, randomLook, egg: (...a) => eggFn(...a), NAMES, randomName: () => pick(NAMES) };
+  window.Animals = { KINDS, ACCS, ACC_COLORS, STONES, draw, randomLook, egg: (...a) => eggFn(...a), NAMES, randomName: kind => pick(KINDS[kind]?.names?.length ? KINDS[kind].names : NAMES) };
 })();

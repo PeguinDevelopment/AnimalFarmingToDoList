@@ -431,16 +431,16 @@ window.EDITION = (function () {
     for (const b of Object.values(biomes)) { const own = b.glow; b.glow = ctx => (own ? own(ctx) : '') + landFx(ctx); }
 
 
-    // ---- Gebiete (IDs nie ändern; Neues hinten anhängen) ----
+    // ---- Gebiete (IDs nie ändern; Neues hinten anhängen). 4. Wert = besonderes Gebiet: erst ab so vielen offenen Gebieten wählbar ----
     const regions = [
       ['maerchenwald', 'Märchenwald', 'maerchenwald'], ['rosengarten', 'Rosengarten', 'rosengarten'], ['kristallhoehle', 'Kristallhöhle', 'kristallhoehle'], ['feenteich', 'Feenteich', 'feenteich'],
       ['pilzdorf', 'Pilzdorf', 'pilzdorf'], ['bibliotheksturm', 'Bibliotheksturm', 'bibliothek'], ['sternenwiese', 'Sternenwiese', 'sternenwiese'], ['mondlichtung', 'Mondlichtung', 'mondlichtung'],
-      ['wolkenschloss', 'Wolkenschloss', 'wolkenschloss'], ['zauberberg', 'Zauberberg', 'zauberberg'], ['glitzerbach', 'Glitzerbach', 'feenteich'], ['lavendelfeld', 'Lavendelfeld', 'sternenwiese'],
-      ['elfenhain', 'Elfenhain', 'maerchenwald'], ['drachenfels', 'Drachenfels', 'zauberberg'], ['perlmuttbucht', 'Perlmuttbucht', 'feenteich'], ['dornroeschenhecke', 'Dornröschenhecke', 'rosengarten'],
+      ['wolkenschloss', 'Wolkenschloss', 'wolkenschloss', 8], ['zauberberg', 'Zauberberg', 'zauberberg', 8], ['glitzerbach', 'Glitzerbach', 'feenteich'], ['lavendelfeld', 'Lavendelfeld', 'sternenwiese'],
+      ['elfenhain', 'Elfenhain', 'maerchenwald'], ['drachenfels', 'Drachenfels', 'zauberberg', 12], ['perlmuttbucht', 'Perlmuttbucht', 'feenteich'], ['dornroeschenhecke', 'Dornröschenhecke', 'rosengarten'],
       ['amethystgrotte', 'Amethystgrotte', 'kristallhoehle'], ['lesehain', 'Lesehain', 'bibliothek'], ['gluehwuermchenwald', 'Glühwürmchenwald', 'maerchenwald'], ['schmetterlingstal', 'Schmetterlingstal', 'sternenwiese'],
-      ['sternenturm', 'Sternenturm', 'bibliothek'], ['nebelmoor', 'Nebelmoor', 'mondlichtung'], ['pilzkoenigreich', 'Pilzkönigreich', 'pilzdorf'], ['wolkenmeer', 'Wolkenmeer', 'wolkenschloss'],
-      ['mondsteinhoehle', 'Mondsteinhöhle', 'kristallhoehle'], ['rosenschloss', 'Rosenschloss', 'rosengarten'], ['einhornwiese', 'Einhornwiese', 'sternenwiese'], ['regenbogenfaelle', 'Regenbogenfälle', 'feenteich'],
-      ['silberwald', 'Silberwald', 'maerchenwald'], ['feenkoenigreich', 'Feenkönigreich', 'wolkenschloss'],
+      ['sternenturm', 'Sternenturm', 'bibliothek', 12], ['nebelmoor', 'Nebelmoor', 'mondlichtung'], ['pilzkoenigreich', 'Pilzkönigreich', 'pilzdorf'], ['wolkenmeer', 'Wolkenmeer', 'wolkenschloss', 18],
+      ['mondsteinhoehle', 'Mondsteinhöhle', 'kristallhoehle', 15], ['rosenschloss', 'Rosenschloss', 'rosengarten', 15], ['einhornwiese', 'Einhornwiese', 'sternenwiese', 20], ['regenbogenfaelle', 'Regenbogenfälle', 'feenteich', 15],
+      ['silberwald', 'Silberwald', 'maerchenwald'], ['feenkoenigreich', 'Feenkönigreich', 'wolkenschloss', 25],
     ];
 
     // ---- Laden ----

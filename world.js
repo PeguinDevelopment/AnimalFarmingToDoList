@@ -16,18 +16,34 @@
     ['wald', 'Wald', 'wald'], ['berge', 'Berge', 'berge'], ['gletscher', 'Gletscher', 'gletscher'], ['see', 'See', 'see'],
     ['flusstal', 'Flusstal', 'fluss'], ['blumenwiese', 'Blumenwiese', 'blumen'], ['herbstdorf', 'Herbstdorf', 'dorf'], ['kueste', 'Küste', 'kueste'],
     ['birkenhain', 'Birkenhain', 'birken'], ['alm', 'Alm', 'alm'], ['schlucht', 'Wasserfallschlucht', 'schlucht'], ['fjord', 'Fjord', 'fjord'],
-    ['moor', 'Moor', 'moor'], ['polarmeer', 'Polarmeer', 'polar'], ['vulkaninsel', 'Vulkaninsel', 'vulkan'], ['seenplatte', 'Seenplatte', 'see'],
-    ['tannenschnee', 'Tannenschnee', 'schneewald'], ['hochplateau', 'Hochplateau', 'alm'], ['canyon', 'Canyon', 'canyon'], ['leuchtturmbucht', 'Leuchtturmbucht', 'kueste'],
-    ['kastanienallee', 'Kastanienallee', 'dorf'], ['mondtal', 'Mondtal', 'fluss'], ['sternenberg', 'Sternenberg', 'berge'], ['apfelgarten', 'Apfelgarten', 'blumen'],
-    ['buecherdorf', 'Bücherdorf', 'dorf'], ['schokoladental', 'Schokoladental', 'fluss'], ['wollhuegel', 'Wollhügel', 'alm'], ['otterbach', 'Otterbach', 'fluss'],
-    ['kiesbank', 'Kiesbank', 'see'], ['edelweissgipfel', 'Edelweißgipfel', 'gletscher'], ['nebelwald', 'Nebelwald', 'moor'], ['inselkette', 'Inselkette', 'insel'],
-    ['gezeitenkueste', 'Gezeitenküste', 'kueste'], ['polarlichtebene', 'Polarlichtebene', 'polar'], ['tundra', 'Tundra', 'schneewald'], ['wolkenberg', 'Wolkenberg', 'berge'],
-    ['quelltal', 'Quelltal', 'schlucht'], ['silberfluss', 'Silberfluss', 'fluss'], ['gaemsenpass', 'Gämsenpass', 'gletscher'], ['gipfelderwelt', 'Gipfel der Welt', 'gletscher'],
-  ].map(([id, name, biome], i) => ({ id, name, biome, i }));
+    ['moor', 'Moor', 'moor'], ['polarmeer', 'Polarmeer', 'polar', 8], ['vulkaninsel', 'Vulkaninsel', 'vulkan', 10], ['seenplatte', 'Seenplatte', 'see'],
+    ['tannenschnee', 'Tannenschnee', 'schneewald'], ['hochplateau', 'Hochplateau', 'alm'], ['canyon', 'Canyon', 'canyon', 10], ['leuchtturmbucht', 'Leuchtturmbucht', 'kueste'],
+    ['kastanienallee', 'Kastanienallee', 'dorf'], ['mondtal', 'Mondtal', 'fluss'], ['sternenberg', 'Sternenberg', 'berge', 12], ['apfelgarten', 'Apfelgarten', 'blumen'],
+    ['buecherdorf', 'Bücherdorf', 'dorf'], ['schokoladental', 'Schokoladental', 'fluss', 12], ['wollhuegel', 'Wollhügel', 'alm'], ['otterbach', 'Otterbach', 'fluss'],
+    ['kiesbank', 'Kiesbank', 'see'], ['edelweissgipfel', 'Edelweißgipfel', 'gletscher', 15], ['nebelwald', 'Nebelwald', 'moor'], ['inselkette', 'Inselkette', 'insel'],
+    ['gezeitenkueste', 'Gezeitenküste', 'kueste'], ['polarlichtebene', 'Polarlichtebene', 'polar', 15], ['tundra', 'Tundra', 'schneewald'], ['wolkenberg', 'Wolkenberg', 'berge', 18],
+    ['quelltal', 'Quelltal', 'schlucht'], ['silberfluss', 'Silberfluss', 'fluss'], ['gaemsenpass', 'Gämsenpass', 'gletscher', 20], ['gipfelderwelt', 'Gipfel der Welt', 'gletscher', 25],
+  ].map(([id, name, biome, need], i) => ({ id, name, biome, i, need }));
   const regionById = Object.fromEntries(REGIONS.map(r => [r.id, r]));
   const START_REGIONS = REGIONS.slice(0, 4).map(r => r.id);
   const regionPrice = openCount => 10 + Math.max(0, openCount - START_REGIONS.length) * 3;
-  const nextRegion = unlocked => REGIONS.find(r => !unlocked.includes(r.id)) || null;
+  /* Gebiete frei auswählen: Jedes Gebiet kann man sich aussuchen. Besondere Gebiete haben einen 4. Wert in der Liste
+     (so viele Gebiete müssen schon offen sein) – bis dahin sind sie mit Schloss sichtbar, samt Vorschau.
+     Die Karte zeigt Gebiete IMMER in der Reihenfolge dieser Liste – ihre Ränder passen in jeder Kombination aneinander. */
+  const knownOpen = unlocked => (unlocked || []).filter(id => regionById[id]);
+  const regionNeed = reg => Math.max(START_REGIONS.length, +reg.need || 0);
+  const canUnlock = (unlocked, id) => {
+    const reg = regionById[id], open = knownOpen(unlocked);
+    return !!reg && !open.includes(id) && open.length >= regionNeed(reg);
+  };
+  // Was die Karte zeigt: offene Gebiete und die gesperrten direkten Nachbarn (dort kann man weiterbauen)
+  const shownRegions = unlocked => {
+    const open = knownOpen(unlocked).length ? knownOpen(unlocked) : START_REGIONS;
+    return REGIONS.filter((r, i) => open.includes(r.id) || [REGIONS[i - 1], REGIONS[i + 1]].some(n => n && open.includes(n.id)));
+  };
+  const choosableRegions = unlocked => REGIONS.filter(r => canUnlock(unlocked, r.id));
+  const lockedRegions = unlocked => REGIONS.filter(r => !knownOpen(unlocked).includes(r.id));
+  const nextRegion = unlocked => choosableRegions(unlocked)[0] || null;
 
   // Plätze: pro Gebiet 4 hinten, 4 vorne, 3 am Himmel. IDs hängen am Gebiet (z. B. "wald:b0") – nie an der Reihenfolge.
   const SLOTS = [], slotById = {};
@@ -899,10 +915,10 @@
 
     if (locked) {
       s += `<rect x="${X}" y="0" width="${RW}" height="${H}" fill="${COL.lockFill}" opacity=".72"/>
-        <g class="w-lock" data-action="w-unlock" data-r="${reg.i}">
+        <g class="w-lock" data-action="w-unlock" data-r="${reg.id}">
           <rect x="${X + 70}" y="96" width="220" height="70" rx="16" fill="#fff" stroke="${COL.lockStroke}" stroke-width="2"/>
           <text x="${X + 180}" y="124" font-size="15" font-family="sans-serif" font-weight="800" text-anchor="middle" fill="#14233a">🔒 ${reg.name}</text>
-          <text x="${X + 180}" y="148" font-size="12" font-family="sans-serif" font-weight="700" text-anchor="middle" fill="${COL.lockText}">Für ${locked} ${COL.currency} freischalten</text>
+          <text x="${X + 180}" y="148" font-size="12" font-family="sans-serif" font-weight="700" text-anchor="middle" fill="${COL.lockText}">${typeof locked === 'object' ? `Ab ${locked.need} offenen Gebieten` : `Für ${locked} ${COL.currency} freischalten`}</text>
         </g>`;
     }
     return s;
@@ -915,10 +931,27 @@
   const SPOTS_PER_REGION = SPOT_DX.length * 2;
   const hashId = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
   // Tierplätze haben feste IDs („wald:af3“ = Wald, vordere Reihe, Platz 3) – getrennt von den Deko-Plätzen
+  /* Wesen stehen unregelmäßig und mit Tiefe statt auf zwei geraden Linien – und überlappen sich trotzdem NIE:
+     Jede Spalte (40 px breit) wird an einer zufälligen Höhe in ein hinteres und ein vorderes Feld geteilt.
+     Jedes Wesen steht ganz in seinem eigenen Feld, weiter hinten kleiner (Perspektive), leicht seitlich versetzt.
+     Alles hängt fest an der Platz-ID → bei jedem Öffnen gleich, und die Platz-IDs selbst bleiben unverändert. */
+  const DEPTH = { top: 172, bottom: 261, split: [204, 222], back: [21, 27], front: [27, 33] }; // split + front-Größe ≤ bottom
   function spotList(openRegs) {
-    const spots = [];
-    openRegs.forEach(reg => SPOT_DX.forEach((dx, k) => [['f', ROW_FRONT], ['b', ROW_BACK]].forEach(([rn, row]) =>
-      spots.push({ id: `${reg.id}:a${rn}${k}`, reg: reg.id, x: reg.i * RW + dx + (rn === 'b' ? (k % 2 ? 6 : -6) : 0), y: row.y, size: row.size }))));
+    const spots = [], lerp = (a, b, t) => a + (b - a) * t;
+    openRegs.forEach(reg => SPOT_DX.forEach((dx, k) => {
+      const col = prng(hashId(`${reg.id}:${k}`) % 233280 + 1);
+      const split = Math.round(lerp(DEPTH.split[0], DEPTH.split[1], col()));
+      const cx0 = reg.i * RW + dx;
+      [['f', split, DEPTH.bottom, DEPTH.front], ['b', DEPTH.top, split, DEPTH.back]].forEach(([rn, top, bot, [sMin, sMax]]) => {
+        const id = `${reg.id}:a${rn}${k}`, r = prng(hashId(id) % 233280 + 1);
+        const footMin = top + sMax, t = r();
+        const y = Math.round(lerp(footMin, bot, t));                 // Fußpunkt
+        const size = Math.round(lerp(sMin, sMax, (y - footMin) / Math.max(1, bot - footMin)));
+        const room = Math.max(0, (40 - size) / 2);                   // seitlicher Spielraum im eigenen Feld
+        const x = Math.round(cx0 + (r() - .5) * 2 * room);
+        spots.push({ id, reg: reg.id, x, y, size });
+      });
+    }));
     return spots;
   }
   // 1. Tiere mit selbst gewähltem Platz stehen dort. 2. Der Rest bekommt automatisch einen freien Platz
@@ -956,18 +989,35 @@
   // Farbverläufe (Himmel, Gletscher, Nordlicht) – einmal pro Seite bzw. in jeder Vorschau
   const defsInner = () => `<defs>
     ${Object.entries(SKY).map(([k, v]) => `<linearGradient id="wsky-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${v[0]}"/><stop offset=".55" stop-color="${v[1]}"/><stop offset="1" stop-color="${v[2]}"/></linearGradient>`).join('')}
+    <linearGradient id="w-seam-l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${COL.seam || '#ffffff'}" stop-opacity=".55"/><stop offset="1" stop-color="${COL.seam || '#ffffff'}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="w-seam-r" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${COL.seam || '#ffffff'}" stop-opacity="0"/><stop offset="1" stop-color="${COL.seam || '#ffffff'}" stop-opacity=".55"/></linearGradient>
     <linearGradient id="glacier" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6fbff"/><stop offset=".6" stop-color="#d8ecf8"/><stop offset="1" stop-color="#a9d3ee"/></linearGradient>
     <linearGradient id="aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${COL.aurora1 || '#3cf0c8'}" stop-opacity="0"/><stop offset=".5" stop-color="${COL.aurora1 || '#3cf0c8'}" stop-opacity=".55"/><stop offset="1" stop-color="${COL.aurora2 || '#1e88e5'}" stop-opacity="0"/></linearGradient>
     ${(EW && EW.defs) || ''}
   </defs>`;
 
   // Vorschau eines Gebiets (für das Kauf-Fenster)
-  function regionPreview(id, ownedIds) {
+  function regionPreview(id, ownedIds, tod) {
     const reg = regionById[id];
     if (!reg) return '';
     const now = new Date();
-    const c = { tod: timeOfDay(now.getHours()), sea: season(now.getMonth()) };
+    const c = { tod: tod || timeOfDay(now.getHours()), sea: season(now.getMonth()) };
     return `<svg viewBox="${reg.i * RW} 0 ${RW} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${defsInner()}${region(reg, c, new Set(ownedIds || []), false)}</svg>`;
+  }
+  /* Vorschau für Landschafts-Dinge (z. B. Zauberlandschaft): sucht automatisch ein Gebiet und eine Tageszeit,
+     in der man das Ding wirklich sieht – zuerst in den eigenen Gebieten, jetzt; sonst nachts oder in anderen Gebieten.
+     Funktioniert für jedes neue Landschafts-Ding ohne weitere Angaben. Gibt { svg, region, tod } oder null zurück. */
+  function landPreview(gid, unlocked, ownedIds) {
+    if (!byId[gid]) return null;
+    const now = new Date(), sea = season(now.getMonth());
+    const base = new Set((ownedIds || []).filter(x => x !== gid)), withIt = new Set([...base, gid]);
+    const mine = REGIONS.filter(r => knownOpen(unlocked).includes(r.id));
+    const regs = [...mine, ...REGIONS.filter(r => !mine.includes(r))];
+    for (const tod of [timeOfDay(now.getHours()), 'nacht', 'tag']) {
+      const c = { tod, sea };
+      for (const reg of regs) if (region(reg, c, withIt, false) !== region(reg, c, base, false)) return { svg: regionPreview(reg.id, [...withIt], tod), region: reg.id, tod };
+    }
+    return null;
   }
 
   function gadgetAt(slot, gid, c) {
@@ -989,13 +1039,13 @@
     const known = (map.unlocked || []).filter(id => regionById[id]);
     const unlocked = known.length ? known : START_REGIONS;
     const openRegs = REGIONS.filter(r => unlocked.includes(r.id));
-    const next = nextRegion(unlocked);
-    const shown = next ? [...openRegs, next] : openRegs;   // + 1 Vorschau-Gebiet im Nebel
+    // offene Gebiete + ihre direkten Nachbarn im Nebel – immer in der festen Reihenfolge
+    const shown = shownRegions(unlocked);
     const placingSky = o.placing ? !!(byId[o.placing] || {}).sky : null;
 
     // Tiere auf feste, sich nie überschneidende Plätze setzen
     const animalsIn = {}, occupied = {};
-    animalSpots(openRegs, o.animals || [], map.animalSpots || {}).forEach(({ a, sp, i }) => {
+    animalSpots(openRegs, o.animals || [], map.animalSpots || {}).sort((p, q) => p.sp.y - q.sp.y).forEach(({ a, sp, i }) => {
       occupied[sp.id] = a.id;
       (animalsIn[sp.reg] ||= []).push(`<g class="w-anim" data-action="w-animal" data-id="${a.id}" style="animation-delay:${((i * 1.7) % 9).toFixed(1)}s"><rect x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}" fill="transparent"/>${a.svg.replace('<svg', `<svg x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}"`)}</g>`);
     });
@@ -1004,7 +1054,7 @@
 
     const dispH = 300, dispW = Math.round(RW * dispH / H);
     let html = '';
-    for (const reg of shown) {
+    shown.forEach((reg, n) => {
       const locked = !unlocked.includes(reg.id);
       const sl = SLOTS.filter(x => x.region === reg.id);
       let s = region(reg, c, owned, false);
@@ -1034,10 +1084,14 @@
               : `<path d="M${x.x - 6 * x.s} ${cy} h${12 * x.s} M${x.x} ${cy - 6 * x.s} v${12 * x.s}" stroke="#14233a" stroke-width="2.4" stroke-linecap="round"/>`}</g>`;
         });
       } else {
-        s = region(reg, c, owned, regionPrice(unlocked.length));
+        s = region(reg, c, owned, canUnlock(unlocked, reg.id) ? regionPrice(unlocked.length) : { need: regionNeed(reg) });
       }
+      // Weicher Übergang, wo zwei Gebiete nebeneinander liegen, die in der Liste nicht direkt aufeinander folgen
+      const X = reg.i * RW, prev = shown[n - 1], nxt = shown[n + 1];
+      if (prev && prev.i !== reg.i - 1 && prev.biome !== reg.biome) s += `<rect x="${X}" y="120" width="28" height="${H - 120}" fill="url(#w-seam-l)" pointer-events="none"/>`;
+      if (nxt && nxt.i !== reg.i + 1 && nxt.biome !== reg.biome) s += `<rect x="${X + RW - 28}" y="120" width="28" height="${H - 120}" fill="url(#w-seam-r)" pointer-events="none"/>`;
       html += `<svg class="w-region" data-r="${reg.id}" viewBox="${reg.i * RW} 0 ${RW} ${H}" width="${dispW}" height="${dispH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${reg.name}">${s}</svg>`;
-    }
+    });
     return defs + `<div class="world-row">${html}</div>`;
   }
 
@@ -1076,7 +1130,7 @@
       dots, decid, conifer, shrub, crown, creek, seaBand, starfig, leaf };
     EW = ED.world(Hw);
     if (EW.regions) {
-      REGIONS.splice(0, REGIONS.length, ...EW.regions.map(([id, name, biome], i) => ({ id, name, biome, i })));
+      REGIONS.splice(0, REGIONS.length, ...EW.regions.map(([id, name, biome, need], i) => ({ id, name, biome, i, need })));
       Object.keys(regionById).forEach(k => delete regionById[k]);
       REGIONS.forEach(r => { regionById[r.id] = r; });
       START_REGIONS.splice(0, START_REGIONS.length, ...REGIONS.slice(0, 4).map(r => r.id));
@@ -1101,6 +1155,7 @@
 
   window.World = {
     RW, H, GADGETS: G, GROUPS, SLOTS, slotById, REGIONS, regionById, START_REGIONS, regionPrice, nextRegion, FINDS, byId, findById,
+    canUnlock, choosableRegions, lockedRegions, regionNeed, landPreview, shownRegions,
     world, preview, previewFind, regionPreview, randomFind, timeOfDay, season, chest, animalCapacity, SPOTS_PER_REGION,
     placeAnimals, freeAnimalSpot,
   };

@@ -29,6 +29,9 @@ Beide Editionen lassen sich nebeneinander installieren. Sie haben getrennte Spei
 - **Wichtig** wird gelb hinterlegt, **erledigt** grün, wie mit einem Textmarker
 - **Mini-Schritte:** Aufgaben lassen sich in kleine Schritte zerlegen, und jeder Schritt zählt
 - **Für heute:** 1–3 Aufgaben auswählen statt die ganze Liste vor sich zu haben
+- **Planen:** Aufgaben bekommen ein Datum und stehen an diesem Tag von selbst unter „Für heute“; auf Heute zeigt „Demnächst geplant“ die nächsten 7 Tage
+- **Emotional anstrengend:** solche Aufgaben geben beim Abhaken 3 statt 1 Kiesel/Kristall, zählen doppelt fürs nächste Tier und werden extra gefeiert
+- Jede Kategorie hat in **Listen** ein ⚙️ für ihre Einstellungen; die Reihenfolge lässt sich mit ▲ ▼ ändern
 - **Eine Sache:** zeigt nur eine Aufgabe, mit „Kleiner machen“ und „Was anderes“
 - **5-Minuten-Starthilfe:** ein sanfter Timer zum Anfangen
 - „Rückgängig“ nach jedem Abhaken und Löschen
@@ -38,11 +41,14 @@ Beide Editionen lassen sich nebeneinander installieren. Sie haben getrennte Spei
 - 12 Tierarten mit mehreren Fellfarben, z. B. Pinguin-Küken, Steinböckchen, Highland-Kälbchen und Otterbaby
 - Nach einer einstellbaren Zahl von Haken schlüpft ein Tier aus einem Ei
 - Zubehör wie Häkelmütze, Häkelschal, Buch oder Schokolade; Name, Fell und Outfit sind frei änderbar
-- Jedes Tier hat einen festen Platz auf der Wiese und kann versetzt werden; Tiere überlappen sich nie
+- Jedes Tier hat einen festen Platz auf der Wiese und kann versetzt werden; Tiere stehen unregelmäßig und mit Tiefe, überlappen sich aber nie
 
 **Tierwiese**
 - Eine Landschaft zum Wischen mit **40 Gebieten** in 17 Landschaftstypen, z. B. Wald, Gletscher, Fjord, Moor oder Vulkaninsel
 - Jeder Haken bringt 1 🪨 Kiesel. Damit werden Gebiete freigeschaltet und Dinge im **Wiesen-Laden** gekauft. Vor jedem Kauf zeigt ein Fenster eine Vorschau und den Preis.
+- **Gebiete frei wählen:** jedes Gebiet lässt sich aussuchen; besondere Gebiete (z. B. Gipfel der Welt, Wolkenschloss) sind mit 🔒 schon sichtbar und werden ab einer bestimmten Zahl offener Gebiete frei (4. Wert in der Gebietsliste)
+- **Landschaft** (z. B. Nordlicht, Zauberlandschaft) zeigt vor dem Kauf eine echte Vorschau und lässt sich danach aus- und wieder einblenden
+- **Vollbild:** ⛶ oben rechts auf der Karte zeigt sie im Querformat
 - Über 120 Dinge im Laden, z. B. 45 Baum- und Straucharten, Brunnen, Flüsse, Sternbilder, Nordlicht und Bücherei
 - 440 Deko-Plätze (am Boden und am Himmel) und 720 Tierplätze
 - Tag und Nacht sowie die Jahreszeiten folgen der echten Uhrzeit und dem Datum

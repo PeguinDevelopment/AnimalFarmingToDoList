@@ -22,6 +22,18 @@
   const clone = o => JSON.parse(JSON.stringify(o));
   const dayKey = (t = Date.now()) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  // Geplante Aufgaben: Datum als „JJJJ-MM-TT“ (Ortszeit) – gut lesbar im Backup und sortierbar
+  const isoDay = (t = Date.now()) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const validDue = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const addDays = (iso, n) => isoDay(new Date(iso + 'T12:00').getTime() + n * 864e5);
+  const isDue = t => !t.done && !!validDue(t.due) && t.due <= isoDay();
+  function dueLabel(due) {
+    const today = isoDay();
+    if (due === today) return 'heute';
+    if (due === addDays(today, 1)) return 'morgen';
+    const txt = new Date(due + 'T12:00').toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' });
+    return due < today ? `war für ${txt} geplant` : txt;
+  }
   const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   const MAX_VISIBLE = 6; // so viele offene Aufgaben pro Liste, der Rest ist eingeklappt
@@ -45,6 +57,16 @@
     'Jeder Berg wird Schritt für Schritt bestiegen. ⛰️', 'Auch kleine Bäche werden zu Flüssen. 💧',
     'Ein Kapitel nach dem anderen. 📖', 'Kurz durchatmen wie im Wald. 🌲'];
 
+  /* Belohnung je Aufgabenart. Eine Edition kann sie über ED.rewards anpassen; neue Arten einfach ergänzen.
+     cur = Währung pro Haken, paws = Schritte bis zum nächsten Wesen. */
+  const REWARDS = Object.assign({
+    normal: { cur: 1, paws: 1 },
+    heavy: { cur: 3, paws: 2, icon: '🫂', label: 'Emotional anstrengend',
+      cheers: ED.heavyCheers || ['Das hat Mut gekostet, und du hast es geschafft. 💜', 'Das war schwer. Und du hast es trotzdem gemacht. 🫂',
+        'Richtig stark. Sei heute besonders lieb zu dir. 💜', 'Mutig! Das zählt doppelt. ✨'] },
+  }, ED.rewards || {});
+  const rewardOf = t => (t && t.heavy ? 'heavy' : 'normal');
+
   /* ---------- Zustand ----------
      Regeln, damit Backups & Erweiterungen nie etwas kaputt machen:
      1. Alles hängt an festen IDs (Tiere, Gadgets, Gebiete, Plätze) – nie an Positionen in Listen.
@@ -58,6 +80,7 @@
     slots: {},                        // Platz-ID → Gadget-ID
     finds: [],                        // Fundstücke {id, type, region, x, y}
     animalSpots: {},                  // Tier-ID → selbst gewählter Tierplatz (z. B. "wald:af3")
+    landOff: [],                      // gekaufte Landschafts-Dinge, die auf dieser Karte ausgeblendet sind
   });
   // Start-Bewohner und Start-Kategorien je Edition
   const STARTER = ED.starter || { id: 'start-pinguin', kind: 'pinguin', look: { fur: 0, acc: 'muetze', color: '#2e9e44', stone: 0 }, name: 'Krümel', catName: 'Allgemein', spot: 'wald:af4' };
@@ -83,7 +106,8 @@
       world: { active: m.id, maps: [m] },  // Karten (später archivierbar), eine ist aktiv
       daily: { last: null, days: 0, chests: 0 }, // Tagesgeschenk: gesammelte Tage bis zur Truhe (keine Serie nötig)
       vouchers: 0,         // Wunsch-Gutscheine aus der Schatztruhe
-      settings: { appName: APP_NAME, theme: THEMES[0].id, calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, tipClosed: false, introSeen: false },
+      brave: 0,            // geschaffte „emotional anstrengende“ Aufgaben
+      settings: { appName: APP_NAME, theme: THEMES[0].id, calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, planOpen: true, tipClosed: false, introSeen: false },
     };
   }
   // Schrittweise Umstellung alter Speicherstände/Backups auf das aktuelle Format
@@ -109,7 +133,7 @@
     s.schema = Math.max(s.schema || 1, SCHEMA);
     const d = defaultState();
     const world = s.world && Array.isArray(s.world.maps) && s.world.maps.length ? s.world : d.world;
-    world.maps = world.maps.map(m => ({ ...newMap(), ...m, slots: m.slots || {}, finds: m.finds || [], animalSpots: m.animalSpots || {}, unlocked: m.unlocked?.length ? m.unlocked : [...Wd.START_REGIONS] }));
+    world.maps = world.maps.map(m => ({ ...newMap(), ...m, slots: m.slots || {}, finds: m.finds || [], animalSpots: m.animalSpots || {}, landOff: Array.isArray(m.landOff) ? m.landOff : [], unlocked: m.unlocked?.length ? m.unlocked : [...Wd.START_REGIONS] }));
     if (!world.maps.some(m => m.id === world.active)) world.active = world.maps[0].id;
     return {
       ...d, ...s, world,
@@ -143,7 +167,7 @@
   function sanitizeRewards(s) {
     const n = v => (Number.isFinite(+v) && +v > 0 ? Math.floor(+v) : 0);
     Object.keys(s.progress || {}).forEach(k => { s.progress[k] = n(s.progress[k]); });
-    s.pebbles = n(s.pebbles); s.checks = n(s.checks); s.vouchers = n(s.vouchers);
+    s.pebbles = n(s.pebbles); s.checks = n(s.checks); s.vouchers = n(s.vouchers); s.brave = n(s.brave);
     s.tasks.forEach(t => {
       if (t.done && !t.rewarded && t.doneAt == null) t.rewarded = true;          // alte Daten: erledigt = schon belohnt
       (t.subtasks || []).forEach(x => { if (x.done && x.rewarded == null) x.rewarded = true; });
@@ -166,26 +190,26 @@
   const mini = (kind, look) => A.draw(kind, look || { fur: 0, acc: 'keins' });
 
   // ---------- Wiese: Inventar ----------
-  const ownedLand = () => Object.keys(state.inv).filter(id => Wd.byId[id]?.group === 'land' && state.inv[id] > 0);
   const curMap = () => state.world.maps.find(m => m.id === state.world.active) || state.world.maps[0];
+  const ownsLand = id => Wd.byId[id]?.group === 'land' && state.inv[id] > 0;
+  const landHidden = id => (curMap().landOff || []).includes(id);
+  // gekaufte Landschaft, die auf der aktiven Karte zu sehen ist (ausgeblendete bleiben gekauft)
+  const ownedLand = () => Object.keys(state.inv).filter(id => ownsLand(id) && !landHidden(id));
   // Gadgets auf allen Karten (auch archivierten) zählen als „verbaut“
   const placedCount = gid => state.world.maps.reduce((n, m) => n + Object.values(m.slots).filter(x => x === gid).length, 0);
   const available = gid => (state.inv[gid] || 0) - placedCount(gid);
   const openCount = () => curMap().unlocked.filter(id => Wd.regionById[id]).length;
-  const shownRegions = () => {
-    const open = Wd.REGIONS.filter(r => curMap().unlocked.includes(r.id));
-    const next = Wd.nextRegion(curMap().unlocked);
-    return next ? [...open, next] : open;
-  };
+  // offene Gebiete + gesperrte Nachbarn – genau wie auf der Karte
+  const shownRegions = () => Wd.shownRegions(curMap().unlocked);
   // Bezahlen: mit Kieseln oder mit einem Wunsch-Gutschein
   function pay(price, voucher) {
     if (voucher) { if ((state.vouchers || 0) < 1) return false; state.vouchers--; return true; }
     if ((state.pebbles || 0) < price) return false;
     state.pebbles -= price; return true;
   }
-  function doUnlock(voucher) {
-    const m = curMap(), next = Wd.nextRegion(m.unlocked);
-    if (!next) return;
+  function doUnlock(voucher, id) {
+    const m = curMap(), next = Wd.regionById[id] || Wd.nextRegion(m.unlocked);
+    if (!next || !Wd.canUnlock(m.unlocked, next.id)) return;
     if (!pay(Wd.regionPrice(openCount()), voucher)) return;
     m.unlocked.push(next.id);
     save();
@@ -197,7 +221,7 @@
   function purchase(voucher) {
     const arg = ui.sheet?.arg;
     if (!arg) return;
-    if (arg.kind === 'region') { doUnlock(voucher); return; }
+    if (arg.kind === 'region') { doUnlock(voucher, arg.id); return; }
     const g = Wd.byId[arg.id];
     if (!g || g.premium) return;
     if (g.group === 'land' && state.inv[g.id]) return;
@@ -350,11 +374,14 @@
   }
   // Zu einem Gebiet scrollen (über die Kachel-Position, nicht über feste Pixel)
   // (SVG-Elemente haben kein offsetLeft – deshalb über getBoundingClientRect)
+  // Alle Kacheln sind gleich breit → Position über den Index (klappt auch, wenn die Karte im Vollbild gedreht ist)
+  const tileInfo = wrap => { const tiles = [...wrap.querySelectorAll('.w-region')]; return { tiles, tw: tiles.length ? wrap.querySelector('.world-row').scrollWidth / tiles.length : 0 }; };
   function scrollWorldTo(regionId, smooth) {
-    const wrap = $('#world-wrap'), tile = wrap && wrap.querySelector(`.w-region[data-r="${regionId}"]`);
-    if (!tile) return;
-    const t = tile.getBoundingClientRect(), w = wrap.getBoundingClientRect();
-    const x = Math.max(0, wrap.scrollLeft + (t.left - w.left) - (w.width - t.width) / 2);
+    const wrap = $('#world-wrap');
+    if (!wrap) return;
+    const { tiles, tw } = tileInfo(wrap), idx = tiles.findIndex(t => t.dataset.r === regionId);
+    if (idx < 0 || !tw) return;
+    const x = Math.max(0, idx * tw - (wrap.clientWidth - tw) / 2);
     wrap.scrollTo({ left: x, behavior: smooth && !state.settings.calm ? 'smooth' : 'auto' });
     ui.worldX = x;
     markRegionChip(regionId);
@@ -368,10 +395,55 @@
   function regionInView() {
     const wrap = $('#world-wrap');
     if (!wrap) return null;
-    const mid = wrap.getBoundingClientRect().left + wrap.clientWidth / 2;
-    const tile = [...wrap.querySelectorAll('.w-region')].find(t => { const r = t.getBoundingClientRect(); return r.left <= mid && r.right >= mid; });
-    return tile ? tile.dataset.r : null;
+    const { tiles, tw } = tileInfo(wrap);
+    if (!tw) return null;
+    const idx = Math.min(tiles.length - 1, Math.floor((wrap.scrollLeft + wrap.clientWidth / 2) / tw));
+    return tiles[idx]?.dataset.r || null;
   }
+
+  /* ---------- Karte im Vollbild (Querformat) ----------
+     Echtes Vollbild + Querformat, wo der Browser es kann (Android). Sonst (iPhone, App im Hochformat)
+     wird die Karte selbst um 90° gedreht – dann einfach das Handy quer halten. */
+  function fitFull() {
+    const box = $('#world-box');
+    if (!box) return;
+    if (!ui.full) { box.removeAttribute('style'); box.classList.remove('rot'); return; }
+    const vw = window.visualViewport?.width || innerWidth, vh = window.visualViewport?.height || innerHeight;
+    const rot = vh > vw;
+    box.classList.toggle('rot', rot);
+    box.style.width = (rot ? vh : vw) + 'px';
+    box.style.height = (rot ? vw : vh) + 'px';
+    box.style.transform = rot ? `translateX(${vw}px) rotate(90deg)` : '';
+    const frame = box.querySelector('.world-frame');
+    box.style.setProperty('--fh', (frame ? frame.clientHeight : (rot ? vw : vh)) + 'px');
+  }
+  function setFull(on, quiet) {
+    const id = regionInView();
+    ui.full = !!on;
+    const de = document.documentElement;
+    if (on) {
+      try {
+        const p = de.requestFullscreen && de.requestFullscreen({ navigationUI: 'hide' });
+        if (p && p.then) p.then(() => { ui.fsReal = true; return screen.orientation?.lock?.('landscape'); }).catch(() => {});
+      } catch (e) { /* kein Vollbild möglich → gedrehte Karte */ }
+    } else {
+      ui.fsReal = false;
+      try { screen.orientation?.unlock?.(); } catch (e) { /* egal */ }
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    }
+    if (quiet) return;
+    render();
+    if (id) scrollWorldTo(id);
+  }
+  function refitFull() {
+    if (!ui.full) return;
+    const id = regionInView();
+    fitFull();
+    if (id) scrollWorldTo(id);
+  }
+  addEventListener('resize', refitFull);
+  window.visualViewport?.addEventListener('resize', refitFull);
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && ui.full && ui.fsReal) setFull(false); });
 
   /* ---------- Belohnungen ----------
      Absicherung (wichtig!):
@@ -385,20 +457,27 @@
     if (keep.length) state.animals.push(...keep);
     save(); refresh();
   }
-  function award(catId) {
+  function award(catId, kind = 'normal') {
     const cat = catById(catId);
     if (!cat) return null;
+    const rw = REWARDS[kind] || REWARDS.normal;
     state.checks = (state.checks || 0) + 1;
-    state.pebbles = (state.pebbles || 0) + 1;
+    state.pebbles = (state.pebbles || 0) + rw.cur;
+    if (kind === 'heavy') {
+      state.brave = (state.brave || 0) + 1;
+      ui.unlock = `${pick(rw.cheers)} +${rw.cur} ${TX.curIcon}`;
+    }
     // Ab und zu ein Fundstück auf der Wiese
     if (Math.random() < .12) {
       const f = Wd.randomFind(curMap().unlocked);
       curMap().finds.push({ id: uid(), type: f.type, region: f.region, x: f.x, y: f.y });
-      ui.unlock = `Fundstück! ${f.name.charAt(0).toUpperCase() + f.name.slice(1)} liegt jetzt auf deiner ${TX.meadow} 🔍`;
+      const msg = `Fundstück! ${f.name.charAt(0).toUpperCase() + f.name.slice(1)} liegt jetzt auf deiner ${TX.meadow} 🔍`;
+      ui.unlock = ui.unlock ? `${ui.unlock} · ${msg}` : msg;
     }
-    state.progress[catId] = (state.progress[catId] || 0) + 1;
-    if (state.progress[catId] >= state.settings.perBaby) {
-      state.progress[catId] = 0;
+    const per = state.settings.perBaby;
+    state.progress[catId] = (state.progress[catId] || 0) + rw.paws;
+    if (state.progress[catId] >= per) {
+      state.progress[catId] = Math.min(per - 1, state.progress[catId] - per); // Rest bleibt erhalten
       const a = { id: uid(), kind: cat.animal, look: A.randomLook(cat.animal), name: A.randomName(cat.animal), catName: cat.name, bornAt: Date.now() };
       state.animals.push(a);
       a.welcomed = false;    // → Schlüpf-Fenster ist fällig
@@ -410,7 +489,7 @@
   function completeTask(t) {
     t.done = true; t.doneAt = Date.now();
     let hatched = null;
-    if (!t.rewarded) { t.rewarded = true; hatched = award(t.catId); }
+    if (!t.rewarded) { t.rewarded = true; hatched = award(t.catId, rewardOf(t)); }
     return hatched;
   }
 
@@ -425,7 +504,7 @@
     }
     const hatched = completeTask(t);
     save(); refresh();
-    celebrate(ev);
+    celebrate(ev, t.heavy);
     if (hatched) showNextHatch();
     else toast(cheer(), () => { restore(snap); });
   }
@@ -487,7 +566,9 @@
         <span class="task-title"><span class="hl">${esc(t.title)}</span></span>
         ${opts.showCat ? `<span class="task-cat">${esc(cat.name)}</span>` : ''}
         ${subs.length ? `<span class="task-sub"><span class="mini-bar"><i style="width:${Math.round(sd / subs.length * 100)}%"></i></span>${sd}/${subs.length} Schritte</span>` : ''}
+        ${!t.done && validDue(t.due) ? `<span class="task-due ${t.due < isoDay() ? 'late' : ''}">📅 ${esc(dueLabel(t.due))}</span>` : ''}
       </button>
+      ${t.heavy ? `<span class="heavy-mark" title="${esc(REWARDS.heavy.label)}">${REWARDS.heavy.icon}</span>` : ''}
       ${t.today && !t.done && !opts.showCat ? '<span class="sun" title="Für heute">☀️</span>' : ''}
       ${opts.showCat ? `<span class="row-animal" title="${esc(kindOf(cat).baby)}">${mini(cat.animal, latestOfKind(cat.animal)?.look)}</span>` : ''}
     </div>`;
@@ -513,10 +594,13 @@
     const tk = dayKey();
     const doneToday = state.tasks.reduce((n, t) => n + (t.done && t.doneAt && dayKey(t.doneAt) === tk ? 1 : 0)
       + (t.subtasks || []).filter(s => s.done && s.doneAt && dayKey(s.doneAt) === tk).length, 0);
-    const todayOpen = state.tasks.filter(t => t.today && !t.done);
-    const todayDone = state.tasks.filter(t => t.today && t.done && t.doneAt && dayKey(t.doneAt) === tk).length;
-    const imp = state.tasks.filter(t => t.important && !t.done && !t.today);
+    // „Für heute“: selbst ausgewählt oder für heute (bzw. früher) geplant
+    const todayOpen = state.tasks.filter(t => (t.today || isDue(t)) && !t.done);
+    const todayDone = state.tasks.filter(t => (t.today || validDue(t.due)) && t.done && t.doneAt && dayKey(t.doneAt) === tk).length;
+    const imp = state.tasks.filter(t => t.important && !t.done && !t.today && !isDue(t));
     const impOpen = !!state.settings.impOpen;
+    const iso = isoDay(), soon = state.tasks.filter(t => !t.done && validDue(t.due) && t.due > iso && t.due <= addDays(iso, 7)).sort((a, b) => a.due.localeCompare(b.due));
+    const planOpen = state.settings.planOpen !== false;
     // Spruch wechselt nur einmal am Tag, nicht bei jedem Antippen
     const dayNum = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
     const tagline = TAGLINES[dayNum % TAGLINES.length];
@@ -550,6 +634,7 @@
 
       <div class="quiet-line">
         <span>✓ <b>${doneToday}</b> heute geschafft</span>
+        ${state.brave ? `<span title="${esc(REWARDS.heavy.label)}: geschafft">${REWARDS.heavy.icon} <b>${state.brave}</b> mutig</span>` : ''}
         ${best ? `<span class="quiet-paws" style="--cat:${best.color}" title="${esc(nextBabyText(best))}">${mini(best.animal)}${paws(best.id)}</span>` : ''}
       </div>
 
@@ -558,6 +643,9 @@
         ${impOpen ? `<div class="card list-card">${imp.slice(0, state.settings.impAll ? imp.length : MAX_VISIBLE).map(t => taskRow(t, { showCat: true })).join('')}
           ${imp.length > MAX_VISIBLE ? `<button class="more-btn" data-action="imp-all">
             ${state.settings.impAll ? 'Weniger anzeigen ▴' : `${imp.length - MAX_VISIBLE} weitere anzeigen ▾`}</button>` : ''}</div>` : ''}` : ''}
+      ${soon.length ? `<button class="fold-btn" data-action="plan-open" aria-expanded="${planOpen}">
+          <span>📅 Demnächst geplant</span><span class="muted">${soon.length} ${planOpen ? '▾' : '▸'}</span></button>
+        ${planOpen ? `<div class="card list-card">${soon.map(t => taskRow(t, { showCat: true })).join('')}</div>` : ''}` : ''}
     `;
   }
 
@@ -571,11 +659,14 @@
         const col = s.collapsed[c.id];
         const last = latestOfKind(c.animal);
         return `<section class="cat ${col ? 'collapsed' : ''}" style="--cat:${c.color}">
-          <button class="cat-head" data-action="collapse" data-cat="${c.id}" aria-expanded="${!col}">
-            <span class="cat-animal">${mini(c.animal, last?.look)}</span>
-            <span class="cat-name">${esc(c.name)}</span>
-            <span class="cat-count">${open.length} offen</span><span class="chev">▾</span>
-          </button>
+          <div class="cat-head">
+            <button class="cat-toggle" data-action="collapse" data-cat="${c.id}" aria-expanded="${!col}">
+              <span class="cat-animal">${mini(c.animal, last?.look)}</span>
+              <span class="cat-name">${esc(c.name)}</span>
+              <span class="cat-count">${open.length} offen</span><span class="chev">▾</span>
+            </button>
+            <button class="cat-gear" data-action="edit-cat" data-id="${c.id}" aria-label="Einstellungen für ${esc(c.name)}">⚙️</button>
+          </div>
           ${col ? '' : `<div class="cat-body">
             <div class="paws">${paws(c.id)} <span>${esc(nextBabyText(c))}</span></div>
             ${open.slice(0, s.showMore[c.id] ? open.length : MAX_VISIBLE).map(t => taskRow(t)).join('')}
@@ -606,6 +697,7 @@
         <button class="pill" data-action="shop">🛍️ Laden</button>
         <button class="pill ${ui.edit ? 'on' : ''}" data-action="w-edit">${ui.edit ? '✓ Fertig' : '✏️ Gestalten'}</button>
       </div>
+      <div class="world-box ${ui.full ? 'full' : ''}" id="world-box">
       ${ui.moving ? (() => {
         const ma = state.animals.find(x => x.id === ui.moving);
         return `<div class="place-banner move">
@@ -615,14 +707,17 @@
       })() : ''}
       ${ui.placing ? `<div class="place-banner">Tippe auf einen ${Wd.byId[ui.placing]?.sky ? '✨ Himmelsplatz' : 'freien Platz'} für <b>${esc(Wd.byId[ui.placing]?.name || '')}</b>
         <button class="link" data-action="place-cancel">Abbrechen</button></div>` : ''}
-      <div class="world-wrap" id="world-wrap">${Wd.world({
-        map: curMap(), owned: ownedLand(),
-        edit: ui.edit, placing: ui.placing, moving: ui.moving, animals: state.animals.map(a => ({ id: a.id, svg: A.draw(a.kind, a.look) })),
-      })}</div>
+      <div class="world-frame">
+        <div class="world-wrap" id="world-wrap">${Wd.world({
+          map: curMap(), owned: ownedLand(),
+          edit: ui.edit, placing: ui.placing, moving: ui.moving, animals: state.animals.map(a => ({ id: a.id, svg: A.draw(a.kind, a.look) })),
+        })}</div>
+        <button class="w-full-btn" data-action="w-full" aria-label="${ui.full ? 'Vollbild beenden' : 'Karte im Vollbild zeigen'}">${ui.full ? '✕' : '⛶'}</button>
+      </div></div>
       <div class="region-chips">${shownRegions().map(g => {
         const locked = !curMap().unlocked.includes(g.id);
-        return `<button class="rchip ${locked ? 'locked' : ''}" data-action="w-go" data-r="${g.id}">${locked ? '🔒 ' : ''}${esc(g.name)}</button>`;
-      }).join('')}</div>
+        return `<button class="rchip ${locked ? 'locked' : ''}" data-action="w-go" data-r="${g.id}">${locked ? (Wd.canUnlock(curMap().unlocked, g.id) ? '＋ ' : '🔒 ') : ''}${esc(g.name)}</button>`;
+      }).join('')}${Wd.lockedRegions(curMap().unlocked).length ? `<button class="rchip locked" data-action="shop-regions">🗺️ Alle Gebiete</button>` : ''}</div>
       <p class="hint" style="margin:6px 4px 12px">← Wischen zum Erkunden · ${TX.creatures} antippen · ${openCount()}/${Wd.REGIONS.length} Gebiete offen</p>
       ${(() => {
         const over = state.animals.length - Wd.animalCapacity(openCount());
@@ -666,8 +761,9 @@
       </div>
       <div class="card">
         <h3 style="margin-bottom:4px">Kategorien</h3>
-        <p class="hint">Antippen, um Name, Farbe und ${TX.creature} zu ändern.</p>
-        ${state.categories.map(c => `<button class="cat-line" data-action="edit-cat" data-id="${c.id}" style="--cat:${c.color}">${mini(c.animal)}<b>${esc(c.name)}</b><span class="muted">${esc(kindOf(c).baby)}</span><span class="dot"></span></button>`).join('')}
+        <p class="hint">Antippen, um Name, Farbe und ${TX.creature} zu ändern. Mit ▲ ▼ änderst du die Reihenfolge.</p>
+        ${state.categories.map((c, i) => `<div class="cat-row"><button class="cat-line" data-action="edit-cat" data-id="${c.id}" style="--cat:${c.color}">${mini(c.animal)}<b>${esc(c.name)}</b><span class="muted">${esc(kindOf(c).baby)}</span><span class="dot"></span></button>
+          <span class="cat-move">${catMoveBtns(c.id, i)}</span></div>`).join('')}
         <button class="ghost-btn" data-action="new-cat">＋ Neue Kategorie</button>
       </div>
       <div class="card">
@@ -704,6 +800,8 @@
       b.setAttribute('aria-current', on ? 'page' : 'false');
     });
     // Wiese: Scrollposition nach dem Neuzeichnen beibehalten
+    document.body.classList.toggle('world-full-open', !!ui.full && ui.view === 'tiere');
+    fitFull();
     const wrap = $('#world-wrap');
     if (wrap) {
       wrap.scrollLeft = ui.worldX || 0;
@@ -733,13 +831,14 @@
 
   // ---------- Sheets ----------
   function openSheet(name, arg) {
+    if (name !== 'cat' || arg !== ui.catDraft) ui.catDraft = null;
     ui.sheet = { name, arg }; ui.confirm = null;
     $('#sheet-layer').hidden = false;
     renderSheet();
     $('.sheet').scrollTop = 0;
   }
   function closeSheet() {
-    ui.sheet = null; ui.confirm = null;
+    ui.sheet = null; ui.confirm = null; ui.catDraft = null;
     $('#sheet-layer').hidden = true;
     render();
   }
@@ -751,6 +850,9 @@
     restoreFocus($('#sheet-body'));
   }
 
+  const catMoveBtns = (id, i) => `<button class="icon-btn" data-action="cat-move" data-id="${id}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Nach oben">▲</button>
+    <button class="icon-btn" data-action="cat-move" data-id="${id}" data-d="1" ${i === state.categories.length - 1 ? 'disabled' : ''} aria-label="Nach unten">▼</button>`;
+  const heavyHint = () => `Gibt beim Abhaken ${REWARDS.heavy.cur} ${TX.curIcon} statt ${REWARDS.normal.cur} und zählt ${REWARDS.heavy.paws}× fürs nächste ${TX.baby}.`;
   const catChips = (sel, action) => state.categories.map(c =>
     `<button class="chip ${c.id === sel ? 'on' : ''}" style="--cat:${c.color}" data-action="${action}" data-cat="${c.id}">${mini(c.animal)}${esc(c.name)}</button>`).join('');
 
@@ -764,7 +866,13 @@
           <button class="pill ${t.done ? 'on done' : ''}" data-action="toggle" data-id="${t.id}">✓ ${t.done ? 'Erledigt' : 'Abhaken'}</button>
           <button class="pill ${t.important ? 'on imp' : ''}" data-action="t-imp" data-id="${t.id}">💛 Wichtig</button>
           <button class="pill ${t.today ? 'on' : ''}" data-action="t-today" data-id="${t.id}">☀️ Für heute</button>
+          <button class="pill ${t.heavy ? 'on heavy' : ''}" data-action="t-heavy" data-id="${t.id}" aria-pressed="${!!t.heavy}">${REWARDS.heavy.icon} ${esc(REWARDS.heavy.label)}</button>
         </div>
+        ${t.heavy ? `<p class="hint">${heavyHint()} Das hast du dir verdient. 💜</p>` : ''}
+        <h3>📅 Planen</h3>
+        <div class="due-row"><input class="field" type="date" data-input="due" data-id="${t.id}" value="${esc(validDue(t.due) || '')}" aria-label="Geplant für">
+          ${validDue(t.due) ? `<button class="link" data-action="t-due-clear" data-id="${t.id}">Entfernen</button>` : ''}</div>
+        <p class="hint">An diesem Tag steht die Aufgabe von selbst unter ☀️ Für heute.</p>
         <h3>Kleine Schritte</h3>
         <p class="hint" style="margin-top:-4px">Zu groß? Teil es in Mini-Schritte. Jeder Schritt zählt fürs ${TX.baby}. ${TX.paw}</p>
         <div style="--cat:${catById(t.catId)?.color}">
@@ -797,7 +905,10 @@
         <div class="toggles" style="margin-top:14px">
           <button class="pill ${ui.addImp ? 'on imp' : ''}" data-action="add-imp">💛 Wichtig</button>
           <button class="pill ${ui.addToday ? 'on' : ''}" data-action="add-today">☀️ Für heute</button>
+          <button class="pill ${ui.addHeavy ? 'on heavy' : ''}" data-action="add-heavy">${REWARDS.heavy.icon} ${esc(REWARDS.heavy.label)}</button>
         </div>
+        <h3>📅 Planen <span class="muted" style="font-weight:600">(optional)</span></h3>
+        <div class="due-row"><input class="field" type="date" data-input="add-due" value="${esc(ui.addDue || '')}" aria-label="Geplant für"></div>
         <div class="sheet-actions"><button class="big-btn primary" data-action="add-save">Hinzufügen</button></div>`;
     },
 
@@ -821,17 +932,22 @@
     cat(id) {
       const c = catById(id); if (!c) return null;
       const count = state.tasks.filter(t => t.catId === id).length;
-      const confirming = ui.confirm === 'cat-' + id;
+      const confirming = ui.confirm === 'cat-' + id, draft = ui.catDraft === id;
+      const i = state.categories.indexOf(c);
       return `
-        <h2>Kategorie</h2>
+        <h2>${draft ? 'Neue Kategorie' : 'Kategorie'}</h2>
         <input class="field" type="text" value="${esc(c.name)}" data-input="cat-name" data-id="${c.id}" maxlength="30" aria-label="Name der Kategorie">
         <h3>Farbe</h3>
         <div class="swatches">${COLORS.map(col => `<button class="swatch ${c.color === col ? 'on' : ''}" style="--c:${col}" data-action="cat-color" data-id="${c.id}" data-color="${col}" aria-label="Farbe ${col}"></button>`).join('')}</div>
         <h3>Welches ${TX.baby} kommt hier?</h3>
         <div class="animal-grid">${Object.entries(A.KINDS).map(([k, v]) => `<button class="animal-pick ${c.animal === k ? 'on' : ''}" data-action="cat-animal" data-id="${c.id}" data-kind="${k}">${mini(k)}${esc(v.baby)}</button>`).join('')}</div>
         <p class="hint" style="margin-top:10px">Schon gesammelte ${TX.creatures} bleiben natürlich auf der ${TX.meadow}.</p>
-        ${state.categories.length > 1 ? `<div class="sheet-actions"><button class="big-btn danger-soft" data-action="cat-del" data-id="${c.id}">
-          ${confirming ? `Wirklich löschen? ${count ? `(${count} Aufgaben werden mitgelöscht)` : ''}` : 'Kategorie löschen'}</button></div>` : ''}`;
+        ${state.categories.length > 1 ? `<h3>Reihenfolge</h3><div class="cat-move">${catMoveBtns(c.id, i)}<span class="muted">Platz ${i + 1} von ${state.categories.length}</span></div>` : ''}
+        <div class="sheet-actions">
+          ${state.categories.length > 1 ? `<button class="big-btn danger-soft" data-action="cat-del" data-id="${c.id}">
+            ${draft ? 'Verwerfen' : confirming ? `Wirklich löschen? ${count ? `(${count} Aufgaben werden mitgelöscht)` : ''}` : 'Kategorie löschen'}</button>` : ''}
+          ${draft ? `<button class="big-btn primary" data-action="cat-create" data-id="${c.id}">✓ Kategorie erstellen</button>` : ''}
+        </div>`;
     },
 
     animal(id) {
@@ -857,17 +973,25 @@
     },
 
     shop() {
-      const p = Wd.nextRegion(curMap().unlocked);
-      const price = Wd.regionPrice(openCount());
+      const m = curMap(), price = Wd.regionPrice(openCount());
+      const locked = Wd.lockedRegions(m.unlocked);
+      // Vorschläge mit Bild: die freien Nachbarn auf der Karte (sonst die ersten wählbaren)
+      let near = Wd.shownRegions(m.unlocked).filter(r => !m.unlocked.includes(r.id) && Wd.canUnlock(m.unlocked, r.id));
+      if (!near.length) near = Wd.choosableRegions(m.unlocked).slice(0, 3);
       const items = Wd.GADGETS.filter(g => g.group === ui.shopGroup);
       return `
         <h2>${TX.shop} 🛍️</h2>
         <p class="pebble-big">${TX.curIcon} <b>${state.pebbles || 0}</b> ${TX.curN} <span class="muted">· jeder Haken = 1 ${TX.cur}</span>
           ${state.vouchers > 0 ? `<br>${ICON_TICKET} <b>${state.vouchers}</b> Wunsch-Gutschein${state.vouchers > 1 ? 'e' : ''} <span class="muted">· bei jedem Kauf einlösbar</span>` : ''}</p>
-        ${p ? `<div class="unlock-card">
-            <div><b>🗺️ Neues Gebiet: ${esc(p.name)}</b><br><span class="muted">${openCount()}/${Wd.REGIONS.length} Gebiete offen · 11 neue Plätze</span></div>
-            <button class="big-btn ${state.pebbles >= price ? 'primary' : ''}" data-action="w-unlock">${TX.curIcon} ${price}</button>
-          </div>` : '<p class="muted">Du hast alle 40 Gebiete entdeckt! 🌍</p>'}
+        ${locked.length ? `<h3 style="margin-top:4px" id="shop-regions">🗺️ Neues Gebiet aussuchen</h3>
+          <p class="hint" style="margin-top:-4px">${openCount()}/${Wd.REGIONS.length} Gebiete offen. Du darfst frei wählen, jedes kostet gerade ${TX.curIcon} ${price}. Antippen zeigt eine Vorschau.</p>
+          ${near.length ? `<div class="region-pick">${near.map(r => `<button class="region-card" data-action="w-unlock" data-r="${r.id}">
+            <span class="rc-prev">${Wd.regionPreview(r.id, ownedLand())}</span><b>${esc(r.name)}</b>
+            <span class="buy ${state.pebbles >= price ? '' : 'off'}">${TX.curIcon} ${price}</span></button>`).join('')}</div>` : ''}
+          <details class="later-regions" ${ui.allRegions ? 'open' : ''}><summary>Alle ${locked.length} Gebiete ansehen</summary>
+          ${locked.map(r => { const ok = Wd.canUnlock(m.unlocked, r.id); return `<button class="later-row" data-action="w-unlock" data-r="${r.id}">
+            <span>${ok ? '🗺️' : '🔒'} ${esc(r.name)}</span><small class="muted">${ok ? `${TX.curIcon} ${price}` : `ab ${Wd.regionNeed(r)} offenen Gebieten`}</small></button>`; }).join('')}</details>`
+          : `<p class="muted">Du hast alle ${Wd.REGIONS.length} Gebiete entdeckt! 🌍</p>`}
         <div class="shop-tabs">${Object.entries(Wd.GROUPS).map(([k, v]) => `<button class="chip ${ui.shopGroup === k ? 'on' : ''}" style="padding:6px 12px" data-action="shop-group" data-g="${k}">${v}</button>`).join('')}</div>
         <div class="shop-grid">${items.map(g => {
           const own = state.inv[g.id] || 0, free = available(g.id), land = g.group === 'land';
@@ -877,8 +1001,10 @@
             <b>${esc(g.name)}</b>
             <small class="muted">${land ? esc(g.info || '') : g.premium ? (free ? `${free} in der Kiste` : own ? 'steht am Himmel' : 'golden & exklusiv') : own ? `${own}× gekauft${free ? ` · ${free} in der Kiste` : ''}` : g.sky ? 'für den Himmel' : '&nbsp;'}</small>
             ${g.premium ? `<span class="owned">${own ? '🌟 aus deiner Truhe' : ICON_CHEST + ' nur aus der Truhe'}</span>`
-              : land && own ? '<span class="owned">✓ auf der Karte</span>'
+              : land && own ? `<span class="owned">${landHidden(g.id) ? '🙈 ausgeblendet' : '✓ auf der Karte'}</span>
+                <button class="link" data-action="land-toggle" data-id="${g.id}">${landHidden(g.id) ? 'Wieder zeigen' : 'Ausblenden'}</button>`
               : `<button class="buy ${can ? '' : 'off'}" data-action="buy" data-id="${g.id}">${TX.curIcon} ${g.price}</button>`}
+            ${land ? `<button class="link" data-action="buy" data-id="${g.id}">👁 Vorschau</button>` : ''}
             ${!land && free ? `<button class="link" data-action="place" data-id="${g.id}">Platzieren</button>` : ''}
           </div>`;
         }).join('')}</div>`;
@@ -889,11 +1015,18 @@
       const have = state.pebbles || 0;
       let title, prev, price, info, okLabel;
       if (arg.kind === 'region') {
-        const next = Wd.nextRegion(curMap().unlocked);
-        if (!next) return null;
+        const m = curMap(), next = Wd.regionById[arg.id] || Wd.nextRegion(m.unlocked);
+        if (!next || m.unlocked.includes(next.id)) return null;
+        prev = `<div class="buy-prev region">${Wd.regionPreview(next.id, ownedLand())}</div>`;
+        if (!Wd.canUnlock(m.unlocked, next.id)) {
+          const need = Wd.regionNeed(next), miss = need - openCount();
+          return `<h2>🔒 ${esc(next.name)}</h2>${prev}
+            <p class="center muted" style="margin:6px 0 12px">So wird es aussehen. Ein besonderes Gebiet ✨</p>
+            <p class="center"><b>Wird frei, sobald ${need} Gebiete offen sind.</b><br><span class="muted">Noch ${miss} ${miss === 1 ? 'Gebiet' : 'Gebiete'}.</span></p>
+            <button class="big-btn" data-action="buy-cancel">Zurück</button>`;
+        }
         price = Wd.regionPrice(openCount());
         title = `Neues Gebiet: ${next.name}`;
-        prev = `<div class="buy-prev region">${Wd.regionPreview(next.id, ownedLand())}</div>`;
         info = '11 neue Plätze: 8 am Boden und 3 am Himmel ✨';
         okLabel = 'freischalten';
       } else {
@@ -901,6 +1034,17 @@
         if (!g) return null;
         price = g.price; title = g.name;
         prev = `<div class="buy-prev">${Wd.preview(g.id)}</div>`;
+        if (g.group === 'land') {
+          // echte Vorschau: ein Gebiet, in dem man das Ding sieht (bei Bedarf nachts)
+          const lp = Wd.landPreview(g.id, curMap().unlocked, ownedLand());
+          if (lp) prev = `<div class="buy-prev region">${lp.svg}</div>
+            <p class="center hint" style="margin:4px 0 0">Vorschau: ${esc(Wd.regionById[lp.region]?.name || '')}${lp.tod === 'nacht' ? ' bei Nacht' : ''}</p>`;
+          if (ownsLand(g.id)) return `<h2>${esc(g.name)}</h2>${prev}
+            <p class="center muted" style="margin:6px 0 12px">${esc(g.info || '')}</p>
+            <button class="big-btn primary" data-action="land-toggle" data-id="${g.id}">${landHidden(g.id) ? '👁 Wieder zeigen' : '🙈 Ausblenden'}</button>
+            <p class="hint center">Es bleibt deins. Du kannst es jederzeit wieder einschalten.</p>
+            <button class="big-btn" data-action="buy-cancel">Zurück</button>`;
+        }
         info = g.group === 'land' ? `Erscheint automatisch: ${g.info || ''}` : g.sky ? 'Kommt an einen Himmelsplatz ✨' : `Kommt auf einen freien Platz auf deiner ${TX.meadow}`;
         okLabel = 'kaufen';
       }
@@ -950,7 +1094,7 @@
   // ---------- Fokus, Timer, Schlüpfen ----------
   function focusPool() {
     const open = state.tasks.filter(t => !t.done && !(ui.focus?.skipped || []).includes(t.id));
-    const pools = [open.filter(t => t.today), open.filter(t => t.important), open];
+    const pools = [open.filter(t => t.today || isDue(t)), open.filter(t => t.important), open];
     return pools.find(p => p.length) || [];
   }
   function startFocus() {
@@ -1140,14 +1284,15 @@
     clearTimeout(toastT);
     toastT = setTimeout(() => { el.classList.remove('show'); ui.undo = null; }, undo ? 5000 : 2600);
   }
-  function celebrate(ev) {
+  function celebrate(ev, heavy) {
     if (state.settings.calm || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const x = ev?.clientX || innerWidth / 2, y = ev?.clientY || innerHeight / 2;
     const fx = $('#fx');
-    for (let i = 0; i < 7; i++) {
+    const sparks = heavy ? (ED.heavySparks || ['💜', '🫂', '✨', '🌟', '💛']) : (ED.sparks || ['💛', '✨', '🍀', '⭐', '🐾', '🍫', '💧', '🌲']);
+    for (let i = 0; i < (heavy ? 14 : 7); i++) {
       const s = document.createElement('span');
       s.className = 'spark';
-      s.textContent = pick(ED.sparks || ['💛', '✨', '🍀', '⭐', '🐾', '🍫', '💧', '🌲']);
+      s.textContent = pick(sparks);
       s.style.left = (x - 11 + (Math.random() * 40 - 20)) + 'px';
       s.style.top = (y - 11) + 'px';
       s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
@@ -1211,6 +1356,7 @@
           if (state.tasks.some(x => x.catId === c.id && norm(x.title) === norm(t.title))) { skipped++; return; }
           const task = {
             id: uid(), catId: c.id, title: t.title, note: t.note || '', important: !!t.important, today: false,
+            ...(validDue(t.due) ? { due: t.due } : {}), ...(t.heavy ? { heavy: true } : {}),
             done: false, rewarded: false, createdAt: Date.now(),
             subtasks: (t.subtasks || []).map(s => ({ id: uid(), title: s.title || s, done: !!s.done, rewarded: !!s.done, doneAt: s.done ? Date.now() : null })),
           };
@@ -1231,6 +1377,7 @@
   // ---------- Aktionen ----------
   const act = {
     nav: el => {
+      if (ui.full) setFull(false, true);
       // Wer beim Versetzen die Ansicht wechselt, bricht ab – das Tier behält seinen Platz,
       // und wartende Schlüpf-Fenster kommen trotzdem.
       if (ui.moving) { ui.moving = null; const fresh = ui.movingFresh; ui.movingFresh = false; if (fresh) setTimeout(showNextHatch, 250); }
@@ -1245,14 +1392,16 @@
     'imp-open': () => { state.settings.impOpen = !state.settings.impOpen; save(); render(); },
     'show-done': el => { const s = state.settings.showDone; s[el.dataset.cat] = !s[el.dataset.cat]; save(); render(); },
     'close-tip': () => { state.settings.tipClosed = true; save(); render(); },
-    add: () => { ui.addDraft = ''; ui.addImp = false; ui.addToday = false; openSheet('add'); setTimeout(() => $('[data-key="dump"]')?.focus(), 50); },
+    add: () => { ui.addDraft = ''; ui.addImp = false; ui.addToday = false; ui.addHeavy = false; ui.addDue = ''; openSheet('add'); setTimeout(() => $('[data-key="dump"]')?.focus(), 50); },
     'add-cat': el => { ui.addCat = el.dataset.cat; renderSheet(); },
     'add-imp': () => { ui.addImp = !ui.addImp; renderSheet(); },
     'add-today': () => { ui.addToday = !ui.addToday; renderSheet(); },
+    'add-heavy': () => { ui.addHeavy = !ui.addHeavy; renderSheet(); },
     'add-save': () => {
       const lines = ui.addDraft.split('\n').map(l => l.replace(/^\s*[-•*·]\s*/, '').trim()).filter(Boolean);
       if (!lines.length) { toast('Schreib erst etwas auf ✏️'); return; }
-      lines.forEach(title => state.tasks.push({ id: uid(), catId: ui.addCat, title, note: '', important: ui.addImp, today: ui.addToday, done: false, subtasks: [], createdAt: Date.now() }));
+      const extra = { ...(validDue(ui.addDue) ? { due: ui.addDue } : {}), ...(ui.addHeavy ? { heavy: true } : {}) };
+      lines.forEach(title => state.tasks.push({ id: uid(), catId: ui.addCat, title, note: '', important: ui.addImp, today: ui.addToday, done: false, subtasks: [], createdAt: Date.now(), ...extra }));
       ui.addDraft = '';
       save(); closeSheet();
       toast(lines.length === 1 ? 'Aufgabe eingetragen 📝' : `${lines.length} Aufgaben eingetragen 📝`);
@@ -1261,6 +1410,29 @@
     pick: el => { const t = taskById(el.dataset.id); if (t) { t.today = !t.today; save(); refresh(); } },
     't-imp': el => { const t = taskById(el.dataset.id); t.important = !t.important; save(); refresh(); },
     't-today': el => { const t = taskById(el.dataset.id); t.today = !t.today; save(); refresh(); },
+    't-heavy': el => { const t = taskById(el.dataset.id); if (!t) return; if (t.heavy) delete t.heavy; else t.heavy = true; save(); refresh(); },
+    't-due-clear': el => { const t = taskById(el.dataset.id); if (t) { delete t.due; save(); refresh(); } },
+    'plan-open': () => { state.settings.planOpen = state.settings.planOpen === false; save(); render(); },
+    'cat-move': el => {
+      const a = state.categories, i = a.findIndex(c => c.id === el.dataset.id), j = i + +el.dataset.d;
+      if (i < 0 || j < 0 || j >= a.length) return;
+      [a[i], a[j]] = [a[j], a[i]];
+      save(); refresh();
+    },
+    'cat-create': el => {
+      const c = catById(el.dataset.id);
+      closeSheet();
+      if (c) toast(`Kategorie „${c.name}“ erstellt ${TX.paw}`);
+    },
+    'land-toggle': el => {
+      const id = el.dataset.id, m = curMap();
+      if (!ownsLand(id)) return;
+      m.landOff = landHidden(id) ? m.landOff.filter(x => x !== id) : [...(m.landOff || []), id];
+      save(); refresh();
+      toast(landHidden(id) ? `${Wd.byId[id].name} ist ausgeblendet. Du kannst es jederzeit wieder zeigen.` : `${Wd.byId[id].name} ist wieder da ✨`);
+    },
+    'shop-regions': () => { ui.allRegions = true; openSheet('shop'); ui.allRegions = false; },
+    'w-full': () => setFull(!ui.full),
     't-cat': el => { const t = taskById(ui.sheet.arg); t.catId = el.dataset.cat; save(); refresh(); },
     't-del': el => {
       const snap = clone(state);
@@ -1335,15 +1507,16 @@
     'gift-info': () => toast(`🎁 ${state.daily.days % 7}/7 Tage gesammelt – noch ${7 - state.daily.days % 7} bis zur Schatztruhe`),
     place: el => startPlacing(el.dataset.id),
     'place-cancel': () => { ui.placing = null; render(); },
-    'w-unlock': () => {
-      if (!Wd.nextRegion(curMap().unlocked)) return;
+    'w-unlock': el => {
+      const id = Wd.regionById[el.dataset.r] ? el.dataset.r : Wd.nextRegion(curMap().unlocked)?.id;
+      if (!id || curMap().unlocked.includes(id)) return;
       ui.buyFrom = ui.sheet?.name || null;
-      openSheet('confirmBuy', { kind: 'region' });
+      openSheet('confirmBuy', { kind: 'region', id });
     },
     'w-edit': () => { ui.edit = !ui.edit; if (!ui.edit) ui.placing = null; render(); },
     'w-go': el => {
       const r = el.dataset.r;
-      if (!curMap().unlocked.includes(r)) { openSheet('shop'); return; }
+      if (!curMap().unlocked.includes(r)) { act['w-unlock'](el); return; }
       scrollWorldTo(r, true);
     },
     'w-slot': el => {
@@ -1410,8 +1583,9 @@
     'new-cat': () => {
       const used = state.categories.map(c => c.animal);
       const free = Object.keys(A.KINDS).filter(k => !used.includes(k));
-      const c = { id: uid(), name: 'Neue Liste', color: pick(COLORS), animal: free.length ? pick(free) : 'pinguin' };
+      const c = { id: uid(), name: 'Neue Liste', color: pick(COLORS), animal: free.length ? pick(free) : Object.keys(A.KINDS)[0] };
       state.categories.push(c); save(); render();
+      ui.catDraft = c.id;            // noch „neu“: unten steht „Kategorie erstellen“
       openSheet('cat', c.id);
       setTimeout(() => { const i = $('[data-input="cat-name"]'); i?.focus(); i?.select(); }, 60);
     },
@@ -1419,6 +1593,11 @@
     'cat-animal': el => { catById(el.dataset.id).animal = el.dataset.kind; save(); refresh(); },
     'cat-del': el => {
       const id = el.dataset.id;
+      if (ui.catDraft === id && !state.tasks.some(t => t.catId === id)) {   // neue, leere Kategorie: einfach verwerfen
+        state.categories = state.categories.filter(c => c.id !== id);
+        save(); closeSheet(); toast('Neue Kategorie verworfen');
+        return;
+      }
       if (ui.confirm !== 'cat-' + id) { ui.confirm = 'cat-' + id; renderSheet(); return; }
       const snap = clone(state);
       state.categories = state.categories.filter(c => c.id !== id);
@@ -1504,15 +1683,31 @@
   let drag = null, dragMoved = false;
   document.addEventListener('mousedown', ev => {
     const w = ev.target.closest('#world-wrap');
-    if (w && ev.button === 0) { drag = { w, x: ev.clientX, left: w.scrollLeft }; dragMoved = false; }
+    if (w && ev.button === 0) { drag = { w, x: ev.clientX, y: ev.clientY, rot: !!w.closest('.world-box.rot'), left: w.scrollLeft }; dragMoved = false; }
   });
   document.addEventListener('mousemove', ev => {
     if (!drag) return;
-    const dx = ev.clientX - drag.x;
+    const dx = drag.rot ? ev.clientY - drag.y : ev.clientX - drag.x;
     if (Math.abs(dx) > 5) dragMoved = true;
     if (dragMoved) drag.w.scrollLeft = drag.left - dx;
   });
   document.addEventListener('mouseup', () => { drag = null; });
+  // Gedrehte Karte im Vollbild: Wischen „nach unten“ auf dem Bildschirm = seitwärts auf der Karte
+  let pan = null;
+  document.addEventListener('touchstart', ev => {
+    const w = ev.touches.length === 1 && ev.target.closest('.world-box.rot .world-wrap');
+    pan = w ? { w, y: ev.touches[0].clientY, left: w.scrollLeft, moved: false } : null;
+  }, { passive: true });
+  document.addEventListener('touchmove', ev => {
+    if (!pan) return;
+    const dy = ev.touches[0].clientY - pan.y;
+    if (Math.abs(dy) > 6) pan.moved = true;
+    if (pan.moved) { pan.w.scrollLeft = pan.left - dy; ev.preventDefault(); }
+  }, { passive: false });
+  document.addEventListener('touchend', () => {
+    if (pan?.moved) { dragMoved = true; setTimeout(() => { dragMoved = false; }, 350); }
+    pan = null;
+  });
 
   document.addEventListener('click', ev => {
     if (dragMoved && ev.target.closest('#world-wrap')) { dragMoved = false; return; } // Ziehen ist kein Antippen
@@ -1548,6 +1743,7 @@
     if (!k) return;
     const v = el.value;
     if (k === 'dump') { ui.addDraft = v; return; }
+    if (k === 'due' || k === 'add-due') return; // Datum: erst bei „change“ übernehmen (siehe unten)
     if (k === 'appName') { state.settings.appName = v; save(); applySettings(); renderTop(); return; }
     if (k === 'title') { const t = taskById(el.dataset.id); if (t) t.title = v.replace(/\n/g, ' '); }
     if (k === 'note') { const t = taskById(el.dataset.id); if (t) t.note = v; }
@@ -1555,6 +1751,16 @@
     if (k === 'cat-name') { const c = catById(el.dataset.id); if (c) c.name = v; }
     if (k === 'animal-name') { const a = state.animals.find(x => x.id === el.dataset.id); if (a) a.name = v; }
     save(); render();
+  });
+
+  document.addEventListener('change', ev => {
+    const el = ev.target, k = el.dataset?.input;
+    if (k === 'add-due') { ui.addDue = validDue(el.value) || ''; return; }
+    if (k === 'due') {
+      const t = taskById(el.dataset.id); if (!t) return;
+      if (validDue(el.value)) t.due = el.value; else delete t.due;
+      save(); refresh();
+    }
   });
 
   // Enter im Titel = fertig (kein Zeilenumbruch)
@@ -1569,6 +1775,7 @@
     if (ev.key === 'Enter' && ev.target.id === 'hatch-name') { ev.preventDefault(); closeHatch(); }
     if (ev.key === 'Escape') {
       if (!$('#hatch').hidden) closeHatch();
+      else if (ui.full && !ui.sheet) setFull(false);
       else if (ui.sheet) closeSheet();
       else if (ui.overlay === 'timer') closeTimer();
       else if (ui.overlay) act['ov-close']();

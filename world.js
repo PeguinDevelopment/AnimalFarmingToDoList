@@ -924,36 +924,51 @@
     return s;
   }
 
-  /* Tierplätze: pro Gebiet 2 Reihen à 9. Hintere Reihe (klein) endet genau dort, wo die vordere beginnt,
-     und innerhalb einer Reihe ist der Abstand größer als ein Tier breit ist → Tiere überlappen sich NIE.
+  /* Tierplätze: pro Gebiet 18 feste Plätze, frei über die Fläche verstreut – keine Reihen, auch mal „zwischendrin“.
+     - Die Fläche reicht von der Baumgrenze hinten (Stämme der Hintergrundbäume, y ≈ 188) bis ganz nach vorne. Wo hinten Wasser ist
+       (Küste, See, Teich …), beginnt sie erst hinter dem Ufer (ANIMAL_AREA.biomeTop, eine Edition kann ergänzen).
+     - Weiter hinten etwas kleiner (hinten ¾ der Größe vorne).
+     - Wesen überlappen sich NIE: jeder Platz hält Abstand zu allen anderen und bleibt ganz in seinem Gebiet.
+     - Alles ist fest aus der Gebiets-ID berechnet → bei jedem Öffnen gleich. Die Platz-IDs („wald:af3“) bleiben,
+       damit gespeicherte Plätze erhalten bleiben (af = vordere, ab = hintere Hälfte).
      Gibt es mehr Tiere als Plätze, werden nur die neuesten gezeigt (der Rest „kuschelt im Tierhaus“). */
-  const ROW_BACK = { y: 221, size: 27 }, ROW_FRONT = { y: 255, size: 32 }, SPOT_DX = [20, 60, 100, 140, 180, 220, 260, 300, 340];
-  const SPOTS_PER_REGION = SPOT_DX.length * 2;
+  const SPOTS_PER_REGION = 18;   // so viele Plätze hat ein Gebiet höchstens
+  // few: Plätze in Gebieten mit wenig Wiese (z. B. Wasser hinten, Fläche niedriger als minFull) – so bleiben sie verstreut
+  const ANIMAL_AREA = { top: 190, bottom: 261, small: 24, big: 32, gap: 3, minFull: 70, few: 12,
+    biomeTop: { kueste: 216, polar: 216, insel: 216, vulkan: 216, see: 206, fjord: 214, schlucht: 210 } };
   const hashId = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
-  // Tierplätze haben feste IDs („wald:af3“ = Wald, vordere Reihe, Platz 3) – getrennt von den Deko-Plätzen
-  /* Wesen stehen unregelmäßig und mit Tiefe statt auf zwei geraden Linien – und überlappen sich trotzdem NIE:
-     Jede Spalte (40 px breit) wird an einer zufälligen Höhe in ein hinteres und ein vorderes Feld geteilt.
-     Jedes Wesen steht ganz in seinem eigenen Feld, weiter hinten kleiner (Perspektive), leicht seitlich versetzt.
-     Alles hängt fest an der Platz-ID → bei jedem Öffnen gleich, und die Platz-IDs selbst bleiben unverändert. */
-  const DEPTH = { top: 172, bottom: 261, split: [204, 222], back: [21, 27], front: [27, 33] }; // split + front-Größe ≤ bottom
-  function spotList(openRegs) {
-    const spots = [], lerp = (a, b, t) => a + (b - a) * t;
-    openRegs.forEach(reg => SPOT_DX.forEach((dx, k) => {
-      const col = prng(hashId(`${reg.id}:${k}`) % 233280 + 1);
-      const split = Math.round(lerp(DEPTH.split[0], DEPTH.split[1], col()));
-      const cx0 = reg.i * RW + dx;
-      [['f', split, DEPTH.bottom, DEPTH.front], ['b', DEPTH.top, split, DEPTH.back]].forEach(([rn, top, bot, [sMin, sMax]]) => {
-        const id = `${reg.id}:a${rn}${k}`, r = prng(hashId(id) % 233280 + 1);
-        const footMin = top + sMax, t = r();
-        const y = Math.round(lerp(footMin, bot, t));                 // Fußpunkt
-        const size = Math.round(lerp(sMin, sMax, (y - footMin) / Math.max(1, bot - footMin)));
-        const room = Math.max(0, (40 - size) / 2);                   // seitlicher Spielraum im eigenen Feld
-        const x = Math.round(cx0 + (r() - .5) * 2 * room);
-        spots.push({ id, reg: reg.id, x, y, size });
-      });
-    }));
-    return spots;
+  const spotCache = {};
+  function regionSpots(reg) {
+    if (spotCache[reg.id]) return spotCache[reg.id];
+    const A = ANIMAL_AREA, X = reg.i * RW, top = Math.max(A.top, A.biomeTop[reg.biome] || 0);
+    const count = A.bottom - top >= A.minFull ? SPOTS_PER_REGION : A.few, half = Math.ceil(count / 2);
+    const sizeAt = y => Math.round(A.small + (A.big - A.small) * Math.min(1, Math.max(0, (y - A.top) / (A.bottom - A.top))));
+    const free = (pl, b) => pl.every(q => b.x + b.size / 2 + A.gap <= q.x - q.size / 2 || q.x + q.size / 2 + A.gap <= b.x - b.size / 2
+      || b.y + A.gap <= q.y - q.size || q.y + A.gap <= b.y - b.size);
+    let placed = null;
+    for (let attempt = 0; attempt < 40 && !placed; attempt++) {
+      const r = prng(hashId(`${reg.id}#${attempt}`) % 233280 + 1), pl = [];
+      for (let n = 0; n < count; n++) {
+        let ok = false;
+        for (let k = 0; k < 400 && !ok; k++) {
+          const y = Math.round(top + r() * (A.bottom - top)), size = sizeAt(y);
+          const x = Math.round(X + size / 2 + 2 + r() * (RW - size - 4));
+          const b = { x, y, size };
+          if (free(pl, b)) { pl.push(b); ok = true; }
+        }
+        if (!ok) break;
+      }
+      if (pl.length === count) placed = pl;
+    }
+    // Notlösung (sollte nie nötig sein): zwei Reihen, die sich sicher nicht überlappen
+    if (!placed) placed = [...Array(count)].map((_, n) => n < half
+      ? { x: X + 20 + n * 40, y: 255, size: 32 } : { x: X + 20 + (n - half) * 40 + (n % 2 ? 6 : -6), y: 221, size: 27 });
+    placed.sort((a, b) => b.y - a.y || a.x - b.x);   // vordere Hälfte = af0…af8, hintere = ab0…ab8 (jeweils von links)
+    const front = placed.slice(0, half).sort((a, b) => a.x - b.x), back = placed.slice(half).sort((a, b) => a.x - b.x);
+    return (spotCache[reg.id] = [...front.map((b, k) => ({ ...b, id: `${reg.id}:af${k}`, reg: reg.id })),
+      ...back.map((b, k) => ({ ...b, id: `${reg.id}:ab${k}`, reg: reg.id }))]);
   }
+  const spotList = openRegs => openRegs.flatMap(regionSpots);
   // 1. Tiere mit selbst gewähltem Platz stehen dort. 2. Der Rest bekommt automatisch einen freien Platz
   //    (die neuesten zuerst sichtbar). Nie zwei Tiere auf einem Platz.
   function animalSpots(openRegs, animals, assign = {}) {
@@ -984,7 +999,8 @@
     const taken = new Set(placeAnimals(map, animals).map(p => p.spot));
     return spotList(openRegsOf(map)).find(s => !taken.has(s.id)) || null;
   };
-  const animalCapacity = openCount => openCount * SPOTS_PER_REGION;
+  // Plätze insgesamt: mit Liste der offenen Gebiete genau gezählt (Wassergebiete haben weniger), mit Zahl geschätzt
+  const animalCapacity = open => Array.isArray(open) ? openRegsOf({ unlocked: open }).reduce((n, r) => n + regionSpots(r).length, 0) : open * SPOTS_PER_REGION;
 
   // Farbverläufe (Himmel, Gletscher, Nordlicht) – einmal pro Seite bzw. in jeder Vorschau
   const defsInner = () => `<defs>
@@ -1047,7 +1063,7 @@
     const animalsIn = {}, occupied = {};
     animalSpots(openRegs, o.animals || [], map.animalSpots || {}).sort((p, q) => p.sp.y - q.sp.y).forEach(({ a, sp, i }) => {
       occupied[sp.id] = a.id;
-      (animalsIn[sp.reg] ||= []).push(`<g class="w-anim" data-action="w-animal" data-id="${a.id}" style="animation-delay:${((i * 1.7) % 9).toFixed(1)}s"><rect x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}" fill="transparent"/>${a.svg.replace('<svg', `<svg x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}"`)}</g>`);
+      (animalsIn[sp.reg] ||= []).push({ y: sp.y, html: `<g class="w-anim" data-action="w-animal" data-id="${a.id}" style="animation-delay:${((i * 1.7) % 9).toFixed(1)}s"><rect x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}" fill="transparent"/>${a.svg.replace('<svg', `<svg x="${sp.x - sp.size / 2}" y="${sp.y - sp.size}" width="${sp.size}" height="${sp.size}"`)}</g>` });
     });
 
     const defs = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${defsInner()}</svg>`;
@@ -1060,9 +1076,9 @@
       let s = region(reg, c, owned, false);
       if (!locked) {
         sl.filter(x => x.sky).forEach(x => { if (placed[x.id]) s += gadgetAt(x, placed[x.id], c); });
-        sl.filter(x => !x.sky && x.s < 1).forEach(x => { if (placed[x.id]) s += gadgetAt(x, placed[x.id], c); });
-        s += (animalsIn[reg.id] || []).join('');
-        sl.filter(x => !x.sky && x.s === 1).forEach(x => { if (placed[x.id]) s += gadgetAt(x, placed[x.id], c); });
+        // Boden-Deko und Wesen nach Tiefe: was weiter hinten steht, wird zuerst gezeichnet
+        const depth = [...sl.filter(x => !x.sky && placed[x.id]).map(x => ({ y: x.y, html: gadgetAt(x, placed[x.id], c) })), ...(animalsIn[reg.id] || [])];
+        s += depth.sort((p, q) => p.y - q.y).map(o => o.html).join('');
         (map.finds || []).filter(f => f.region === reg.id).forEach(f => {
           const d = findById[f.type];
           if (d) s += `<g class="w-find" data-action="w-find" data-id="${f.id}" transform="translate(${reg.i * RW + f.x} ${f.y})">${d.d}</g>`;
@@ -1137,6 +1153,7 @@
       buildSlots();
     }
     if (EW.biomeHeights) Object.assign(BIOME, EW.biomeHeights);
+    if (EW.animalTop) Object.assign(ANIMAL_AREA.biomeTop, EW.animalTop);
     if (EW.sky) Object.assign(SKY, EW.sky);
     if (EW.land) Object.assign(LAND, EW.land);
     if (EW.colors) Object.assign(COL, EW.colors);

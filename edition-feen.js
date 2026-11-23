@@ -668,6 +668,7 @@ window.EDITION = (function () {
 
     return {
       regions, biomes, gadgets, groups, finds,
+      animalTop: { feenteich: 209 },   // Wesen stehen erst hinter dem Teichufer
       defs: '<linearGradient id="feen-rainbow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4a7c0"/><stop offset=".25" stop-color="#ffd6a8"/><stop offset=".5" stop-color="#fff0a8"/><stop offset=".75" stop-color="#a8e0c8"/><stop offset="1" stop-color="#c9a7e8"/></linearGradient>' +
         '<radialGradient id="feen-portal"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#f4c8e8"/><stop offset="1" stop-color="#b48ad8"/></radialGradient>',
       biomeHeights: { maerchenwald: [105, 150], rosengarten: [115, 150], kristallhoehle: [70, 120], feenteich: [110, 150], bibliothek: [100, 145],

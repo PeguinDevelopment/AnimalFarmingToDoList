@@ -41,12 +41,12 @@ Beide Editionen lassen sich nebeneinander installieren. Sie haben getrennte Spei
 - 12 Tierarten mit mehreren Fellfarben, z. B. Pinguin-Küken, Steinböckchen, Highland-Kälbchen und Otterbaby
 - Nach einer einstellbaren Zahl von Haken schlüpft ein Tier aus einem Ei
 - Zubehör wie Häkelmütze, Häkelschal, Buch oder Schokolade; Name, Fell und Outfit sind frei änderbar
-- Jedes Tier hat einen festen Platz auf der Wiese und kann versetzt werden; Tiere stehen unregelmäßig und mit Tiefe, überlappen sich aber nie
+- Jedes Tier hat einen festen Platz auf der Wiese und kann versetzt werden; Tiere stehen frei verstreut bis zur Baumgrenze (hinten etwas kleiner), überlappen sich aber nie; Gebiete mit Wasser hinten haben 12 statt 18 Plätze
 
 **Tierwiese**
 - Eine Landschaft zum Wischen mit **40 Gebieten** in 17 Landschaftstypen, z. B. Wald, Gletscher, Fjord, Moor oder Vulkaninsel
 - Jeder Haken bringt 1 🪨 Kiesel. Damit werden Gebiete freigeschaltet und Dinge im **Wiesen-Laden** gekauft. Vor jedem Kauf zeigt ein Fenster eine Vorschau und den Preis.
-- **Gebiete frei wählen:** jedes Gebiet lässt sich aussuchen; besondere Gebiete (z. B. Gipfel der Welt, Wolkenschloss) sind mit 🔒 schon sichtbar und werden ab einer bestimmten Zahl offener Gebiete frei (4. Wert in der Gebietsliste)
+- **Gebiete frei wählen:** im Laden unter „🗺️ Gebiete“ lässt sich jedes Gebiet aussuchen; besondere Gebiete (z. B. Gipfel der Welt, Wolkenschloss) sind mit 🔒 schon sichtbar und werden ab einer bestimmten Zahl offener Gebiete frei (4. Wert in der Gebietsliste)
 - **Landschaft** (z. B. Nordlicht, Zauberlandschaft) zeigt vor dem Kauf eine echte Vorschau und lässt sich danach aus- und wieder einblenden
 - **Vollbild:** ⛶ oben rechts auf der Karte zeigt sie im Querformat
 - Über 120 Dinge im Laden, z. B. 45 Baum- und Straucharten, Brunnen, Flüsse, Sternbilder, Nordlicht und Bücherei

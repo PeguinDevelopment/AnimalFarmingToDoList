@@ -61,11 +61,13 @@
      cur = Währung pro Haken, paws = Schritte bis zum nächsten Wesen. */
   const REWARDS = Object.assign({
     normal: { cur: 1, paws: 1 },
-    heavy: { cur: 3, paws: 2, icon: '🫂', label: 'Emotional anstrengend',
-      cheers: ED.heavyCheers || ['Das hat Mut gekostet, und du hast es geschafft. 💜', 'Das war schwer. Und du hast es trotzdem gemacht. 🫂',
+    // icon: leer = das eigene Schatztruhen-Symbol der App (wie beim Tagesgeschenk); eine Edition kann ein anderes setzen
+    heavy: { cur: 3, paws: 2, icon: '', label: 'Emotional anstrengend',
+      cheers: ED.heavyCheers || ['Das hat Mut gekostet, und du hast es geschafft. 💜', 'Das war schwer. Und du hast es trotzdem gemacht. Ein echter Schatz! ✨',
         'Richtig stark. Sei heute besonders lieb zu dir. 💜', 'Mutig! Das zählt doppelt. ✨'] },
   }, ED.rewards || {});
   const rewardOf = t => (t && t.heavy ? 'heavy' : 'normal');
+  const heavyIcon = () => REWARDS.heavy.icon || ICON_CHEST;
 
   /* ---------- Zustand ----------
      Regeln, damit Backups & Erweiterungen nie etwas kaputt machen:
@@ -568,7 +570,7 @@
         ${subs.length ? `<span class="task-sub"><span class="mini-bar"><i style="width:${Math.round(sd / subs.length * 100)}%"></i></span>${sd}/${subs.length} Schritte</span>` : ''}
         ${!t.done && validDue(t.due) ? `<span class="task-due ${t.due < isoDay() ? 'late' : ''}">📅 ${esc(dueLabel(t.due))}</span>` : ''}
       </button>
-      ${t.heavy ? `<span class="heavy-mark" title="${esc(REWARDS.heavy.label)}">${REWARDS.heavy.icon}</span>` : ''}
+      ${t.heavy ? `<span class="heavy-mark" title="${esc(REWARDS.heavy.label)}">${heavyIcon()}</span>` : ''}
       ${t.today && !t.done && !opts.showCat ? '<span class="sun" title="Für heute">☀️</span>' : ''}
       ${opts.showCat ? `<span class="row-animal" title="${esc(kindOf(cat).baby)}">${mini(cat.animal, latestOfKind(cat.animal)?.look)}</span>` : ''}
     </div>`;
@@ -634,7 +636,7 @@
 
       <div class="quiet-line">
         <span>✓ <b>${doneToday}</b> heute geschafft</span>
-        ${state.brave ? `<span title="${esc(REWARDS.heavy.label)}: geschafft">${REWARDS.heavy.icon} <b>${state.brave}</b> mutig</span>` : ''}
+        ${state.brave ? `<span title="${esc(REWARDS.heavy.label)}: geschafft">${heavyIcon()} <b>${state.brave}</b> mutig</span>` : ''}
         ${best ? `<span class="quiet-paws" style="--cat:${best.color}" title="${esc(nextBabyText(best))}">${mini(best.animal)}${paws(best.id)}</span>` : ''}
       </div>
 
@@ -720,8 +722,8 @@
       }).join('')}${Wd.lockedRegions(curMap().unlocked).length ? `<button class="rchip locked" data-action="shop-regions">🗺️ Alle Gebiete</button>` : ''}</div>
       <p class="hint" style="margin:6px 4px 12px">← Wischen zum Erkunden · ${TX.creatures} antippen · ${openCount()}/${Wd.REGIONS.length} Gebiete offen</p>
       ${(() => {
-        const over = state.animals.length - Wd.animalCapacity(openCount());
-        return over > 0 ? `<p class="hint" style="margin:-6px 4px 12px">🏡 ${over} ${over > 1 ? TX.babies + ' kuscheln' : TX.baby + ' kuschelt'} gerade im ${TX.home}. Mit jedem neuen Gebiet gibt es ${Wd.SPOTS_PER_REGION} Plätze mehr auf der ${TX.meadow}.</p>` : '';
+        const over = state.animals.length - Wd.animalCapacity(curMap().unlocked);
+        return over > 0 ? `<p class="hint" style="margin:-6px 4px 12px">🏡 ${over} ${over > 1 ? TX.babies + ' kuscheln' : TX.baby + ' kuschelt'} gerade im ${TX.home}. Mit jedem neuen Gebiet gibt es bis zu ${Wd.SPOTS_PER_REGION} Plätze mehr auf der ${TX.meadow}.</p>` : '';
       })()}
       <p class="muted" style="margin:0 4px 14px">${state.animals.length ? `${state.animals.length} ${state.animals.length === 1 ? TX.baby + ' wohnt' : TX.babies + ' wohnen'} schon hier.` : `Noch ist die ${TX.meadow} leer – hak etwas ab, dann kommt das erste ${TX.baby}!`}</p>
       <div class="card">
@@ -842,11 +844,30 @@
     $('#sheet-layer').hidden = true;
     render();
   }
+  /* Mini-Vorschauen der Gebiete: jede ist ein ganzes Landschaftsbild → nicht alle auf einmal, sondern in kleinen
+     Häppchen von oben nach unten zeichnen (das Fenster bleibt flüssig). Fertige Bilder werden zwischengespeichert. */
+  const previewCache = {};
+  function lazyRegionPreviews(scope) {
+    const els = [...scope.querySelectorAll('[data-lazy-region]')];
+    const owned = ownedLand(), key = owned.join(',');
+    const next = () => {
+      for (let n = 0; n < 3 && els.length; n++) {
+        const el = els.shift();
+        if (!el.isConnected) { els.length = 0; return; }   // Fenster wurde inzwischen neu gezeichnet
+        const id = el.dataset.lazyRegion, k = id + '|' + key;
+        el.innerHTML = previewCache[k] || (previewCache[k] = Wd.regionPreview(id, owned));
+        el.removeAttribute('data-lazy-region');
+      }
+      if (els.length) setTimeout(next, 16);
+    };
+    if (els.length) setTimeout(next, 0);
+  }
   function renderSheet() {
     const fn = SHEETS[ui.sheet.name];
     const html = fn && fn(ui.sheet.arg);
     if (html == null) return closeSheet();
     $('#sheet-body').innerHTML = html;
+    lazyRegionPreviews($('#sheet-body'));
     restoreFocus($('#sheet-body'));
   }
 
@@ -866,7 +887,7 @@
           <button class="pill ${t.done ? 'on done' : ''}" data-action="toggle" data-id="${t.id}">✓ ${t.done ? 'Erledigt' : 'Abhaken'}</button>
           <button class="pill ${t.important ? 'on imp' : ''}" data-action="t-imp" data-id="${t.id}">💛 Wichtig</button>
           <button class="pill ${t.today ? 'on' : ''}" data-action="t-today" data-id="${t.id}">☀️ Für heute</button>
-          <button class="pill ${t.heavy ? 'on heavy' : ''}" data-action="t-heavy" data-id="${t.id}" aria-pressed="${!!t.heavy}">${REWARDS.heavy.icon} ${esc(REWARDS.heavy.label)}</button>
+          <button class="pill ${t.heavy ? 'on heavy' : ''}" data-action="t-heavy" data-id="${t.id}" aria-pressed="${!!t.heavy}">${heavyIcon()} ${esc(REWARDS.heavy.label)}</button>
         </div>
         ${t.heavy ? `<p class="hint">${heavyHint()} Das hast du dir verdient. 💜</p>` : ''}
         <h3>📅 Planen</h3>
@@ -905,7 +926,7 @@
         <div class="toggles" style="margin-top:14px">
           <button class="pill ${ui.addImp ? 'on imp' : ''}" data-action="add-imp">💛 Wichtig</button>
           <button class="pill ${ui.addToday ? 'on' : ''}" data-action="add-today">☀️ Für heute</button>
-          <button class="pill ${ui.addHeavy ? 'on heavy' : ''}" data-action="add-heavy">${REWARDS.heavy.icon} ${esc(REWARDS.heavy.label)}</button>
+          <button class="pill ${ui.addHeavy ? 'on heavy' : ''}" data-action="add-heavy">${heavyIcon()} ${esc(REWARDS.heavy.label)}</button>
         </div>
         <h3>📅 Planen <span class="muted" style="font-weight:600">(optional)</span></h3>
         <div class="due-row"><input class="field" type="date" data-input="add-due" value="${esc(ui.addDue || '')}" aria-label="Geplant für"></div>
@@ -974,25 +995,27 @@
 
     shop() {
       const m = curMap(), price = Wd.regionPrice(openCount());
-      const locked = Wd.lockedRegions(m.unlocked);
-      // Vorschläge mit Bild: die freien Nachbarn auf der Karte (sonst die ersten wählbaren)
-      let near = Wd.shownRegions(m.unlocked).filter(r => !m.unlocked.includes(r.id) && Wd.canUnlock(m.unlocked, r.id));
-      if (!near.length) near = Wd.choosableRegions(m.unlocked).slice(0, 3);
+      // Gebiete sind eine eigene Laden-Kategorie (wie Bäume oder Wasser), vor den Kategorien der Edition
+      const tabs = [['gebiete', '🗺️ Gebiete'], ...Object.entries(Wd.GROUPS)];
+      if (!tabs.some(([k]) => k === ui.shopGroup)) ui.shopGroup = tabs[1]?.[0] || 'gebiete';
       const items = Wd.GADGETS.filter(g => g.group === ui.shopGroup);
+      const regionTile = r => {
+        const open = m.unlocked.includes(r.id), can = !open && Wd.canUnlock(m.unlocked, r.id);
+        return `<${open ? 'div' : 'button'} class="shop-item region-item ${open ? 'is-open' : can ? '' : 'is-locked'}" ${open ? '' : `data-action="w-unlock" data-r="${r.id}"`}>
+          <span class="region-mini" data-lazy-region="${r.id}"></span>
+          <b>${esc(r.name)}</b>
+          ${open ? '<span class="owned">✓ auf der Karte</span>'
+            : can ? `<span class="buy ${state.pebbles >= price ? '' : 'off'}">${TX.curIcon} ${price}</span>`
+            : `<span class="buy off">🔒 ab ${Wd.regionNeed(r)} Gebieten</span>`}
+        </${open ? 'div' : 'button'}>`;
+      };
       return `
         <h2>${TX.shop} 🛍️</h2>
         <p class="pebble-big">${TX.curIcon} <b>${state.pebbles || 0}</b> ${TX.curN} <span class="muted">· jeder Haken = 1 ${TX.cur}</span>
           ${state.vouchers > 0 ? `<br>${ICON_TICKET} <b>${state.vouchers}</b> Wunsch-Gutschein${state.vouchers > 1 ? 'e' : ''} <span class="muted">· bei jedem Kauf einlösbar</span>` : ''}</p>
-        ${locked.length ? `<h3 style="margin-top:4px" id="shop-regions">🗺️ Neues Gebiet aussuchen</h3>
-          <p class="hint" style="margin-top:-4px">${openCount()}/${Wd.REGIONS.length} Gebiete offen. Du darfst frei wählen, jedes kostet gerade ${TX.curIcon} ${price}. Antippen zeigt eine Vorschau.</p>
-          ${near.length ? `<div class="region-pick">${near.map(r => `<button class="region-card" data-action="w-unlock" data-r="${r.id}">
-            <span class="rc-prev">${Wd.regionPreview(r.id, ownedLand())}</span><b>${esc(r.name)}</b>
-            <span class="buy ${state.pebbles >= price ? '' : 'off'}">${TX.curIcon} ${price}</span></button>`).join('')}</div>` : ''}
-          <details class="later-regions" ${ui.allRegions ? 'open' : ''}><summary>Alle ${locked.length} Gebiete ansehen</summary>
-          ${locked.map(r => { const ok = Wd.canUnlock(m.unlocked, r.id); return `<button class="later-row" data-action="w-unlock" data-r="${r.id}">
-            <span>${ok ? '🗺️' : '🔒'} ${esc(r.name)}</span><small class="muted">${ok ? `${TX.curIcon} ${price}` : `ab ${Wd.regionNeed(r)} offenen Gebieten`}</small></button>`; }).join('')}</details>`
-          : `<p class="muted">Du hast alle ${Wd.REGIONS.length} Gebiete entdeckt! 🌍</p>`}
-        <div class="shop-tabs">${Object.entries(Wd.GROUPS).map(([k, v]) => `<button class="chip ${ui.shopGroup === k ? 'on' : ''}" style="padding:6px 12px" data-action="shop-group" data-g="${k}">${v}</button>`).join('')}</div>
+        <div class="shop-tabs">${tabs.map(([k, v]) => `<button class="chip ${ui.shopGroup === k ? 'on' : ''}" style="padding:6px 12px" data-action="shop-group" data-g="${k}">${v}</button>`).join('')}</div>
+        ${ui.shopGroup === 'gebiete' ? `<p class="hint" style="margin-top:-4px">${openCount()}/${Wd.REGIONS.length} Gebiete offen. Such dir frei aus, welches als Nächstes kommt – jedes kostet gerade ${TX.curIcon} ${price}. 🔒 Besondere Gebiete werden frei, wenn genug Gebiete offen sind. Antippen zeigt die große Vorschau.</p>
+        <div class="shop-grid">${Wd.REGIONS.map(regionTile).join('')}</div>` : ''}
         <div class="shop-grid">${items.map(g => {
           const own = state.inv[g.id] || 0, free = available(g.id), land = g.group === 'land';
           const can = state.pebbles >= g.price && !(land && own);
@@ -1288,7 +1311,7 @@
     if (state.settings.calm || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const x = ev?.clientX || innerWidth / 2, y = ev?.clientY || innerHeight / 2;
     const fx = $('#fx');
-    const sparks = heavy ? (ED.heavySparks || ['💜', '🫂', '✨', '🌟', '💛']) : (ED.sparks || ['💛', '✨', '🍀', '⭐', '🐾', '🍫', '💧', '🌲']);
+    const sparks = heavy ? (ED.heavySparks || ['💜', '✨', '🌟', '💛', '💎']) : (ED.sparks || ['💛', '✨', '🍀', '⭐', '🐾', '🍫', '💧', '🌲']);
     for (let i = 0; i < (heavy ? 14 : 7); i++) {
       const s = document.createElement('span');
       s.className = 'spark';
@@ -1431,7 +1454,7 @@
       save(); refresh();
       toast(landHidden(id) ? `${Wd.byId[id].name} ist ausgeblendet. Du kannst es jederzeit wieder zeigen.` : `${Wd.byId[id].name} ist wieder da ✨`);
     },
-    'shop-regions': () => { ui.allRegions = true; openSheet('shop'); ui.allRegions = false; },
+    'shop-regions': () => { ui.shopGroup = 'gebiete'; openSheet('shop'); },
     'w-full': () => setFull(!ui.full),
     't-cat': el => { const t = taskById(ui.sheet.arg); t.catId = el.dataset.cat; save(); refresh(); },
     't-del': el => {

@@ -633,6 +633,31 @@
     land: '🏞️ Landschaft', himmel: '✨ Himmel & Sternbilder', premium: '🌟 Premium', baeume: '🌳 Heimische Bäume', straeucher: '🌿 Sträucher & Hecken', weltbaeume: '🌍 Bäume der Welt', brunnen: '⛲ Brunnen',
     berge: '⛰️ Berge', wald: '🌲 Wald', wasser: '💧 Wasser', geo: '🧭 Geographie', buch: '📚 Bücher', schoko: '🍫 Schokolade', haekeln: '🧶 Häkeln',
   };
+  /* ---------- Vorschaubilder für Landschafts-Dinge im Laden ----------
+     Kleines gemaltes Bild (80 × 60) statt eines Emojis. landCard(id, himmel, inhalt, o) malt Himmel, Hügel und Boden;
+     o.sky = [oben, unten], o.hill, o.ground, o.back (zwischen Himmel und Hügel). Eine Edition gibt ihren Dingen eigene art-Funktionen. */
+  function landCard(id, sky, body, o = {}) {
+    const [a, b] = sky;
+    return `<defs><linearGradient id="pv-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>
+      <clipPath id="pc-${id}"><rect width="80" height="60" rx="10"/></clipPath></defs>
+      <g clip-path="url(#pc-${id})"><rect width="80" height="60" fill="url(#pv-${id})"/>${o.back || ''}
+      <path d="M0 40 Q20 32 42 38 T80 35 V60 H0 Z" fill="${o.hill || '#4caf50'}"/><path d="M0 49 Q34 43 80 49 V60 H0 Z" fill="${o.ground || '#6cc24a'}"/>${body}</g>
+      <rect x=".5" y=".5" width="79" height="59" rx="10" fill="none" stroke="rgba(20,35,58,.12)"/>`;
+  }
+  const DAY = ['#3f8fe0', '#bfe4fa'], NIGHT = ['#050d1f', '#1f3d74'];
+  const MTN = (col = '#5f7ba3', snow = '#fff') => `<path d="M-4 40 L18 14 L30 26 L46 8 L66 30 L84 18 V40 Z" fill="${col}"/><path d="M18 14 L23 20 L19 22 L14 19 Z M46 8 L53 16 L47 18 L41 15 Z" fill="${snow}"/>`;
+  const LAND_ART = {
+    waldbach: () => landCard('waldbach', DAY, `${[8, 20, 62, 72].map(x => fir(x, 40, .42)).join('')}<path d="M40 36 Q28 44 42 50 T34 62" stroke="#2a9bd0" stroke-width="7.5" fill="none" stroke-linecap="round"/><path d="M40 36 Q28 44 42 50 T34 62" stroke="${WATER}" stroke-width="5.5" fill="none" stroke-linecap="round"/><path d="M40 36 Q28 44 42 50 T34 62" stroke="#fff" stroke-width="1.2" fill="none" stroke-dasharray="3 5"/><ellipse cx="26" cy="52" rx="3" ry="1.6" fill="${STONE}"/><ellipse cx="50" cy="56" rx="3.4" ry="1.8" fill="${STONE}"/>`, { back: MTN('#8fa6c6') }),
+    bergbach: () => landCard('bergbach', DAY, `<path d="M46 10 Q40 22 46 30 T40 44 T46 62" stroke="#2a9bd0" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M46 10 Q40 22 46 30 T40 44 T46 62" stroke="${WATER}" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M46 10 Q40 22 46 30 T40 44 T46 62" stroke="#fff" stroke-width="1" fill="none" stroke-dasharray="2 4"/>${fir(14, 46, .4)}${fir(70, 44, .45)}`, { back: MTN() }),
+    gletschersee: () => landCard('gletschersee', DAY, `<ellipse cx="40" cy="45" rx="30" ry="6" fill="#1fb5b0"/><ellipse cx="40" cy="44" rx="27" ry="4.6" fill="#3fd8cf"/><ellipse cx="34" cy="43" rx="14" ry="1.4" fill="#fff" opacity=".35"/><path d="M52 43 l4 -2 l5 1 l1 2 Z" fill="#f4fbff"/>`, { back: MTN('#6f88ab') + '<path d="M38 12 Q46 24 40 38 H50 Q54 24 46 10 Z" fill="#e3f2fb"/>' }),
+    fluss: () => landCard('fluss', DAY, `<path d="M52 34 Q74 42 46 48 T60 64" stroke="#2a9bd0" stroke-width="15" fill="none" stroke-linecap="round"/><path d="M52 34 Q74 42 46 48 T60 64" stroke="${WATER}" stroke-width="12" fill="none" stroke-linecap="round"/><path d="M52 34 Q74 42 46 48 T60 64" stroke="#fff" stroke-width="1.6" fill="none" stroke-dasharray="4 6"/>${fir(14, 44, .42)}${fir(24, 46, .36)}`, { back: MTN('#8fa6c6') }),
+    blumenmeer: () => landCard('blumenmeer', DAY, (() => { const q = prng(7); let s = ''; for (let i = 0; i < 34; i++) { const x = q() * 80, y = 40 + q() * 20; s += flower(+x.toFixed(1), +y.toFixed(1), ['#fff', '#1e88e5', '#f2b01e', '#e53935', '#f4a7c0', '#9b6fd0'][i % 6], 1.5 + (y - 40) / 18); } return s; })(), { back: MTN('#8fa6c6') }),
+    nordlicht: () => landCard('nordlicht', NIGHT, ``,
+      { hill: '#1d3a3a', ground: '#25484a', back: `<defs><linearGradient id="pva-nl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3cf0c8" stop-opacity="0"/><stop offset=".5" stop-color="#3cf0c8" stop-opacity=".8"/><stop offset="1" stop-color="#1e88e5" stop-opacity="0"/></linearGradient><linearGradient id="pvr-nl" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#3cf0c8"/><stop offset="1" stop-color="#1e88e5" stop-opacity="0"/></linearGradient></defs>${[0, 1, 2].map(k => `<path d="M-2 ${16 + k * 7} Q20 ${6 + k * 7} 40 ${16 + k * 7} T82 ${12 + k * 7}" stroke="url(#pva-nl)" stroke-width="${14 - k * 3}" fill="none" opacity="${.85 - k * .2}"/>`).join('')}${[...Array(14)].map((_, i) => `<rect x="${3 + i * 5.6}" y="${2 + (i % 3) * 3}" width="2.4" height="${14 + (i % 4) * 3}" fill="url(#pvr-nl)" opacity=".5"/>`).join('')}${MTN('#2f4366', '#c9d6e8')}` }),
+    milchstrasse: () => landCard('milchstrasse', NIGHT, '', { hill: '#1a2c50', ground: '#22385e', back: (() => { const q = prng(11); let s = [26, 14, 5].map((w, i) => `<path d="M-4 40 Q30 6 84 12" stroke="#d8e6ff" stroke-width="${w}" fill="none" opacity="${.08 + i * .06}" stroke-linecap="round"/>`).join(''); for (let i = 0; i < 40; i++) { const t = q(), x = -4 + t * 88, y = 40 - 34 * t + 6 * t * t * 3 + (q() - .5) * 12; s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(q() * .7 + .25).toFixed(2)}" fill="${['#fff', '#ffe8c0', '#cfe3ff'][i % 3]}"/>`; } return s; })() + MTN('#2f4366', '#c9d6e8') }),
+  };
+  G.forEach(g => { if (LAND_ART[g.id]) g.art = LAND_ART[g.id]; });
+
   const byId = Object.fromEntries(G.map(g => [g.id, g]));
 
   // ---------- Fundstücke ----------
@@ -784,8 +809,286 @@
   // Gemeinsame Bausteine für Wasser im Hintergrund (Küste, Polar, Insel, Vulkan)
   const seaBand = (X, winter) => `<path d="M${X} 166 H${X + RW} V216 H${X} Z" fill="${winter ? '#9fd0ee' : DWATER}"/>
     <path d="M${X + 20} 180 q12 -4 24 0 M${X + 120} 192 q12 -4 24 0 M${X + 220} 178 q12 -4 24 0 M${X + 300} 198 q12 -4 24 0" stroke="#fff" stroke-width="1.8" fill="none" opacity=".75"/>`;
-  const creek = (d, w, winter) => `<path d="${d}" stroke="${winter ? '#d4e9f6' : WATER}" stroke-width="${w}" fill="none" stroke-linecap="round"/>
-    <path d="${d}" stroke="#fff" stroke-width="${w > 10 ? 2 : 1.4}" fill="none" stroke-dasharray="5 10" opacity=".8"/>`;
+  const creek = (d, w, winter) => `<path d="${d}" stroke="${winter ? '#b8d4e6' : '#2a9bd0'}" stroke-width="${w + 3}" fill="none" stroke-linecap="round" opacity=".55"/><path d="${d}" stroke="${winter ? '#d4e9f6' : WATER}" stroke-width="${w}" fill="none" stroke-linecap="round"/>
+    <path d="${d}" stroke="#b8ecff" stroke-width="${Math.max(1.5, w * .35)}" fill="none" stroke-linecap="round" opacity=".55" transform="translate(-1 -1)"/>
+    <path d="${d}" stroke="#fff" stroke-width="${w > 10 ? 2 : 1.4}" fill="none" stroke-dasharray="5 10" opacity=".85"/>`;
+
+  /* ---------- Eigenheiten einzelner Gebiete ----------
+     Gebiete mit demselben Landschaftstyp sollen trotzdem unverwechselbar sein. Pro Gebiets-ID (nie Positionen!):
+       sky/back/mid/front/glow: wird zusätzlich gezeichnet (ctx wie bei den Editionen, dazu ctx.reg, ctx.lvl, ctx.rs = eigener Zufall)
+       replace: { back/mid/… } ersetzt den Teil des Landschaftstyps einer Edition
+       heights: [hoch, tief] der Berge · hill/ground: Farben · river(ctx, breite): eigener Fluss
+       noGlacier, noLake, noHouses, noTrees, noFirs: Standard-Teile weglassen
+     Je besonderer ein Gebiet (4. Wert in REGIONS), desto prächtiger: ctx.lvl 0 (normal) bis 3 (die teuersten). */
+  const f1 = v => (+v).toFixed(1);
+  const pline = pts => pts.map(p => f1(p[0]) + ' ' + f1(p[1])).join(' L');
+  // Riesengipfel mit Absätzen, Schattenflanke und Schneekappe
+  function bigPeak(cx, top, half, base, col, night, snowD, rs) {
+    const y = t => top + (base - top) * t;
+    const Lp = [[cx - half, base], [cx - half * .72, y(.64)], [cx - half * .55, y(.56)], [cx - half * .32, y(.3)], [cx - half * .13, y(.13)], [cx, top]];
+    const Rp = [[cx, top], [cx + half * .15, y(.14)], [cx + half * .27, y(.25)], [cx + half * .44, y(.37)], [cx + half * .7, y(.66)], [cx + half, base]];
+    let s = `<path d="M${pline([...Lp, ...Rp.slice(1)])} Z" fill="${col}"/>`;
+    s += `<path d="M${pline(Rp)} L${f1(cx + half * .08)} ${base} Z" fill="${shade(col, .78)}"/>`;
+    if (snowD <= 0) return s;
+    const sy = top + snowD;
+    const cross = pts => {
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
+        if ((ay - sy) * (by - sy) <= 0 && ay !== by) return ax + (bx - ax) * (sy - ay) / (by - ay);
+      }
+      return cx;
+    };
+    const xl = cross(Lp), xr = cross(Rp);
+    let jag = '';
+    for (let i = 1; i < 9; i++) jag += ` L${f1(xr + (xl - xr) * i / 9)} ${f1(sy + (i % 2 ? 7 + rs() * 12 : -3))}`;
+    s += `<path d="M${pline([[xl, sy], ...Lp.filter(p => p[1] < sy), ...Rp.slice(1).filter(p => p[1] < sy), [xr, sy]])}${jag} Z" fill="${night ? '#c9d6e8' : '#fff'}"/>`;
+    s += `<path d="M${pline([[cx, top], ...Rp.slice(1).filter(p => p[1] < sy), [xr, sy]])} L${f1(cx + 5)} ${f1(sy + 8)} Z" fill="${night ? '#9fb2cc' : '#d6e4f1'}"/>`;
+    return s;
+  }
+  const puff = (x, y, k = 1, op = .95, col = '#fff') => `<g opacity="${op}" fill="${col}"><ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(30 * k)}" ry="${f1(8 * k)}"/><circle cx="${f1(x - 13 * k)}" cy="${f1(y - 4 * k)}" r="${f1(9 * k)}"/><circle cx="${f1(x + 4 * k)}" cy="${f1(y - 8 * k)}" r="${f1(12 * k)}"/><circle cx="${f1(x + 19 * k)}" cy="${f1(y - 2 * k)}" r="${f1(7.5 * k)}"/></g>`;
+  // Wimpel-/Gebetsfahnenkette zwischen zwei Punkten
+  function flagLine(x1, y1, x2, y2, n, cols, sag = 6) {
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 + sag;
+    let s = `<path d="M${f1(x1)} ${f1(y1)} Q${f1(mx)} ${f1(my)} ${f1(x2)} ${f1(y2)}" stroke="#6f5a48" stroke-width=".7" fill="none"/>`;
+    for (let i = 1; i < n; i++) {
+      const t = i / n, x = (1 - t) ** 2 * x1 + 2 * (1 - t) * t * mx + t * t * x2, y = (1 - t) ** 2 * y1 + 2 * (1 - t) * t * my + t * t * y2;
+      s += `<path d="M${f1(x - 2)} ${f1(y)} h4 l-2 5 Z" fill="${cols[i % cols.length]}"/>`;
+    }
+    return s;
+  }
+  const PRAYER = ['#1e88e5', '#ffffff', '#e53935', '#2e9e44', '#f2b01e'];
+  // Bach/Fluss in beliebiger Farbe, mit Uferkante und Glanzstrichen
+  const stream = (d, w, col, hi = '#fff', dash = '5 10') => `<path d="${d}" stroke="${shade(col, .82)}" stroke-width="${w + 3}" fill="none" stroke-linecap="round"/><path d="${d}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="round"/>
+    <path d="${d}" stroke="${hi}" stroke-width="${w > 10 ? 2 : 1.4}" fill="none" stroke-dasharray="${dash}" opacity=".85"/>`;
+  const RIVER = X => `M${X + 150} 172 Q${X + 290} 192 ${X + 210} 216 T${X + 330} ${H}`;
+  const sparkle = (x, y, k = 1, col = '#fff', op = 1) => `<path d="M${f1(x)} ${f1(y - 4 * k)} L${f1(x + k)} ${f1(y - k)} L${f1(x + 4 * k)} ${f1(y)} L${f1(x + k)} ${f1(y + k)} L${f1(x)} ${f1(y + 4 * k)} L${f1(x - k)} ${f1(y + k)} L${f1(x - 4 * k)} ${f1(y)} L${f1(x - k)} ${f1(y - k)} Z" fill="${col}" opacity="${op}"/>`;
+  const edelweiss = (x, y, k = 1) => {
+    let p = '';
+    for (let i = 0; i < 8; i++) p += `<ellipse cx="${f1(x)}" cy="${f1(y - 3.2 * k)}" rx="${f1(1.1 * k)}" ry="${f1(3.2 * k)}" fill="#f7f7f2" stroke="#d8dccf" stroke-width=".4" transform="rotate(${i * 45} ${f1(x)} ${f1(y)})"/>`;
+    return p + `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(1.6 * k)}" fill="#e8d36a"/>`;
+  };
+  const tent = (x, y, k, col) => `<path d="M${f1(x - 10 * k)} ${f1(y)} L${f1(x)} ${f1(y - 11 * k)} L${f1(x + 10 * k)} ${f1(y)} Z" fill="${col}"/><path d="M${f1(x)} ${f1(y - 11 * k)} L${f1(x + 10 * k)} ${f1(y)} L${f1(x + 2 * k)} ${f1(y)} Z" fill="${shade(col, .8)}"/><path d="M${f1(x - 2 * k)} ${f1(y)} L${f1(x)} ${f1(y - 5 * k)} L${f1(x + 2 * k)} ${f1(y)} Z" fill="#3a2a20"/>`;
+  const gams = (x, y, k = 1, flip = false) => `<g transform="translate(${f1(x)} ${f1(y)}) scale(${flip ? -k : k} ${k})"><ellipse cx="0" cy="-8" rx="7" ry="4" fill="#6b4a32"/><path d="M-5 -5 v6 M-2 -5 v6 M3 -5 v6 M5.5 -5 v6" stroke="#4a3222" stroke-width="1.4"/><path d="M5 -10 l4 -5 l3 1 l-1 3 l-4 2 Z" fill="#6b4a32"/><path d="M9 -15 q0 -4 -2 -5 M10.5 -14.5 q.5 -4 -1 -5.5" stroke="#1f1712" stroke-width=".9" fill="none"/><path d="M8 -13 l3 1" stroke="#f2efe6" stroke-width="1"/></g>`;
+  const sheep = (x, y, k = 1, flip = false) => `<g transform="translate(${f1(x)} ${f1(y)}) scale(${flip ? -k : k} ${k})"><path d="M-4 -1 v4 M3 -1 v4" stroke="#3d3a38" stroke-width="1.5"/><circle cx="-5" cy="-5" r="4" fill="#f7f4ee"/><circle cx="0" cy="-7" r="4.6" fill="#fbf9f4"/><circle cx="4" cy="-5" r="4" fill="#f2eee6"/><circle cx="0" cy="-3" r="4" fill="#f4f0ea"/><ellipse cx="8" cy="-6" rx="2.6" ry="2" fill="#3d3a38"/></g>`;
+  const peakOf = (ctx, k) => {
+    const m = ctx.main;
+    if (!m || !m.peaks.length) return [ctx.X + 180, 60];
+    const ps = m.peaks.map(i => m.P[i]);
+    return k === 'top' ? ps.reduce((a, b) => (b[1] < a[1] ? b : a)) : ps[Math.min(k, ps.length - 1)];
+  };
+  const starShape = (x, y, k, col) => { let p = ''; for (let i = 0; i < 5; i++) p += `<ellipse cx="0" cy="${f1(-3.4 * k)}" rx="${f1(1.6 * k)}" ry="${f1(3.6 * k)}" fill="${col}" transform="rotate(${i * 72})"/>`; return `<g transform="translate(${f1(x)} ${f1(y)})">${p}<circle r="${f1(1.6 * k)}" fill="${shade(col, 1.2)}"/></g>`; };
+
+  const SIG = {
+    // ★★★ Gipfel der Welt: ein einziger Riese über allem, Wolken unter dem Gipfel, Gebetsfahnen, Basislager
+    gipfelderwelt: { noGlacier: true, heights: [95, 130],
+      sky: ({ X, night }) => [70, 52, 36, 22].map((rr, i) => `<circle cx="${X + 182}" cy="34" r="${rr}" fill="${night ? '#fff6c8' : '#ffe9b8'}" opacity="${night ? .05 : .1 + i * .04}"/>`).join(''),
+      back: ({ X, night, rs }) => bigPeak(X + 46, 104, 70, 178, night ? COL.farNight : '#86a0c4', night, 16, rs) + bigPeak(X + 326, 108, 64, 178, night ? COL.farNight : '#86a0c4', night, 14, rs)
+        + bigPeak(X + 182, 30, 150, 178, night ? COL.mountNight : '#5a76a0', night, 54, rs)
+        + `<path d="M${X + 182} 30 V16" stroke="#6f5a48" stroke-width="1.2"/>` + flagLine(X + 182, 17, X + 134, 50, 8, PRAYER, 3) + flagLine(X + 182, 17, X + 226, 46, 7, PRAYER, 3)
+        + sparkle(X + 182, 12, 1.4, '#ffd23f')
+        + puff(X + 52, 150, 1.1, night ? .45 : .9) + puff(X + 300, 146, 1.2, night ? .45 : .9) + puff(X + 120, 158, .8, night ? .4 : .85),
+      mid: ({ X }) => tent(X + 70, 196, 1.3, '#e8701a') + tent(X + 98, 198, 1.1, '#f2b01e') + tent(X + 300, 197, 1.2, '#e53935')
+        + flagLine(X + 58, 182, X + 116, 184, 7, PRAYER, 3) + `<path d="M${X + 58} 196 V182 M${X + 116} 198 V184" stroke="#6f5a48" stroke-width="1"/>`,
+      glow: ({ X, night }) => night ? `<circle cx="${X + 78}" cy="192" r="10" fill="#ffd27a" opacity=".25"/><circle cx="${X + 306}" cy="192" r="9" fill="#ffd27a" opacity=".22"/>` : '' },
+
+    // ★★★ Gämsenpass: zwei Gipfel, dazwischen die Passstraße in Kehren, Passhütte mit Fahne, Gämsen auf den Felsen
+    gaemsenpass: { noGlacier: true, heights: [60, 100],
+      back: ({ X, night, rs }) => bigPeak(X + 66, 30, 100, 178, night ? COL.mountNight : '#6f88ab', night, 34, rs) + bigPeak(X + 296, 22, 104, 178, night ? COL.mountNight : '#6a83a6', night, 38, rs)
+        + `<path d="M${X + 140} 178 L${X + 166} 110 Q${X + 182} 98 ${X + 198} 110 L${X + 226} 178 Z" fill="${night ? '#405374' : '#8ea3be'}"/>`
+        + `<path d="M${X + 152} 178 L${X + 212} 166 L${X + 158} 152 L${X + 204} 140 L${X + 168} 128 L${X + 194} 118 L${X + 182} 108" stroke="#e9dcc4" stroke-width="3" fill="none" stroke-linejoin="round"/>`
+        + `<g transform="translate(${X + 182} 108)"><rect x="-9" y="-10" width="18" height="10" fill="#a0784f"/><path d="M-11 -10 L0 -18 L11 -10 Z" fill="#b23a12"/><rect x="-2" y="-6" width="4" height="6" fill="#5a3a22"/><path d="M13 0 V-22" stroke="#5a4a3a" stroke-width="1"/><path d="M13 -22 h9 v3 h-9 Z" fill="#e53935"/><path d="M13 -19 h9 v3 h-9 Z" fill="#fff"/></g>`,
+      mid: ({ X }) => `<path d="M${X + 20} 196 q12 -22 30 -18 q10 -6 18 6 q4 8 -2 12 Z" fill="${DSTONE}"/><path d="M${X + 262} 194 q10 -26 34 -20 q14 0 16 18 Z" fill="#8a96a3"/>`
+        + gams(X + 44, 182, 1.1) + gams(X + 290, 176, 1.2, true) + gams(X + 312, 180, .9),
+      front: ({ X }) => `<g transform="translate(${X + 330} 232)"><path d="M0 0 V-18" stroke="#5a4a3a" stroke-width="2"/><rect x="-14" y="-27" width="28" height="11" rx="2" fill="#f2b01e"/><text x="0" y="-19.4" font-size="5.6" font-weight="800" font-family="sans-serif" text-anchor="middle" fill="#3a2a10">PASS 2463</text></g>` },
+
+    // ★★ Edelweißgipfel: ein felsiger Einzelgipfel mit Gipfelkreuz, grüne Almhänge, überall Edelweiß
+    edelweissgipfel: { noGlacier: true, heights: [80, 120], hill: '#5aa851',
+      back: ({ X, night, rs }) => bigPeak(X + 200, 34, 124, 178, night ? '#3c4a5e' : '#8d8f94', night, 18, rs)
+        + `<path d="M${X + 200} 34 V14 M${X + 193} 20 H${X + 207}" stroke="${night ? '#d8c8a8' : '#7a5236'}" stroke-width="2.2" stroke-linecap="round"/>`
+        + `<path d="M${X + 60} 178 Q${X + 120} 150 ${X + 170} 146 Q${X + 220} 140 ${X + 260} 152 Q${X + 300} 160 ${X + 340} 178 Z" fill="${night ? '#2f4a36' : '#5f9e4c'}"/>`,
+      mid: ({ X, winter }) => `<g transform="translate(${X + 96} 190)"><rect x="-13" y="-12" width="26" height="12" fill="#a0784f"/><path d="M-16 -12 L0 -22 L16 -12 Z" fill="${winter ? '#f4f8fb' : '#7a5236'}"/><rect x="-8" y="-9" width="5" height="5" fill="#ffe08a"/><path d="M6 -16 v-6" stroke="#6f6f6f" stroke-width="2"/></g>`,
+      front: ({ X, winter, rs }) => { if (winter) return ''; let s = ''; for (let i = 0; i < 22; i++) s += edelweiss(X + 10 + rs() * 340, 214 + rs() * 44, .9 + rs() * .5); return s; } },
+
+    // ★★ Sternenberg: Sternwarte mit Kuppel auf dem höchsten Gipfel, Sterne auch tagsüber zart sichtbar
+    sternenberg: {
+      sky: ({ X, night, rs }) => {
+        let s = '';
+        for (let i = 0; i < 9; i++) s += sparkle(X + 20 + rs() * 320, 10 + rs() * 70, .6 + rs() * .8, '#fff', night ? .95 : .55);
+        return s + `<path d="M${X + 250} 20 L${X + 300} 44" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity="${night ? .8 : .45}"/>`;
+      },
+      back: ctx => { const [px, py] = peakOf(ctx, 'top'); return `<g transform="translate(${f1(px)} ${f1(py + 4)})"><rect x="-11" y="-10" width="22" height="10" fill="#e9eef5"/><path d="M-12 -10 A12 12 0 0 1 12 -10 Z" fill="#f6f8fb" stroke="#b8c4d4" stroke-width=".8"/><path d="M-1 -21 l6 -1 l-2 11 h-4 Z" fill="#2a3550"/><path d="M2 -18 l10 -8" stroke="#5a6680" stroke-width="2.2" stroke-linecap="round"/><rect x="-4" y="-6" width="4" height="6" fill="#5a6680"/></g>`; },
+      glow: ctx => { const [px, py] = peakOf(ctx, 'top'); return ctx.night ? `<circle cx="${f1(px)}" cy="${f1(py - 4)}" r="14" fill="#ffe8a8" opacity=".25"/>` : ''; } },
+
+    // ★★ Wolkenberg: Gipfel ragen aus einem Wolkenmeer, eine Seilbahn schwebt darüber
+    wolkenberg: { heights: [20, 70],
+      back: ({ X, night, rs }) => {
+        let s = '';
+        const op = night ? .55 : .96;
+        for (let x = X - 10; x < X + RW + 20; x += 34) s += puff(x, 130 + rs() * 12, 1.2 + rs() * .5, op);
+        for (let x = X + 10; x < X + RW; x += 46) s += puff(x, 114 + rs() * 8, .9 + rs() * .4, op * .9);
+        return s + `<path d="M${X + 20} 60 Q${X + 180} 92 ${X + 340} 46" stroke="#3d4652" stroke-width="1" fill="none"/>`
+          + `<g transform="translate(${X + 196} 79)"><path d="M0 -6 V0" stroke="#3d4652" stroke-width="1"/><rect x="-8" y="0" width="16" height="12" rx="3" fill="#e53935"/><rect x="-6" y="2" width="5" height="5" rx="1" fill="#cfe8f8"/><rect x="1" y="2" width="5" height="5" rx="1" fill="#cfe8f8"/></g>`;
+      } },
+
+    // Seenplatte: viele kleine Seen mit Inselchen und Kanu
+    seenplatte: { noLake: true,
+      mid: ({ X, winter }) => {
+        const w = winter ? '#d4e9f6' : DWATER;
+        return [[74, 192, 64, 12], [206, 188, 52, 10], [306, 198, 54, 11]].map(([dx, y, rx, ry]) => `<ellipse cx="${X + dx}" cy="${y}" rx="${rx}" ry="${ry}" fill="${w}"/><path d="M${X + dx - 18} ${y} q8 -2 16 0" stroke="#fff" stroke-width="1.4" fill="none" opacity=".7"/>`).join('')
+          + `<ellipse cx="${X + 210}" cy="188" rx="11" ry="3" fill="${winter ? '#f4f8fb' : '#5fae4f'}"/>${fir(X + 210, 188, .4, winter)}`
+          + (winter ? '' : `<path d="M${X + 286} 198 q14 4 28 0 l-3 3 h-22 Z" fill="#c4632a"/><path d="M${X + 300} 198 v-5" stroke="#3a2a20" stroke-width="1"/>`);
+      } },
+
+    // Kiesbank: helle Kiesinsel im See, Ruderboot, viele runde Kiesel
+    kiesbank: {
+      shore: ({ X, rs }) => {
+        let s = `<path d="M${X + 120} 192 Q${X + 180} 180 ${X + 250} 190 Q${X + 190} 199 ${X + 120} 192 Z" fill="#d8cdb6"/>`;
+        for (let i = 0; i < 26; i++) s += `<ellipse cx="${f1(X + 132 + rs() * 112)}" cy="${f1(187 + rs() * 6)}" rx="${f1(1.4 + rs() * 1.6)}" ry="1.1" fill="${['#b8ad98', '#9aa6b2', '#c9bfa8'][i % 3]}"/>`;
+        return s + `<path d="M${X + 60} 192 q16 5 32 0 l-4 4 h-24 Z" fill="#e53935"/><path d="M${X + 70} 190 l-10 -6 M${X + 82} 190 l10 -6" stroke="#a0784f" stroke-width="1"/>`;
+      },
+      front: ({ X, rs }) => { let s = ''; for (let i = 0; i < 20; i++) s += `<ellipse cx="${f1(X + rs() * 360)}" cy="${f1(218 + rs() * 40)}" rx="${f1(2 + rs() * 2.5)}" ry="${f1(1.3 + rs())}" fill="${['#b8ad98', '#9aa6b2', '#d0c6b0'][i % 3]}"/>`; return s; } },
+
+    // Mondtal: großer Sichelmond (auch am Tag blass), silberblauer Fluss mit Mondglanz
+    mondtal: {
+      sky: ({ X, night }) => `${night ? `<circle cx="${X + 92}" cy="48" r="46" fill="#fff6d8" opacity=".08"/>` : ''}<path d="M${X + 104} 24 A26 26 0 1 0 ${X + 118} 66 A22 22 0 1 1 ${X + 104} 24 Z" fill="#fff6d8" opacity="${night ? 1 : .75}"/>`,
+      river: ({ X, winter }, w) => stream(RIVER(X), w, winter ? '#d4e9f6' : '#8fb0de', '#fff8d8', '2 7'),
+      glow: ({ X, night }) => night ? `<ellipse cx="${X + 250}" cy="206" rx="20" ry="3" fill="#fff6d8" opacity=".5"/>` : '' },
+
+    // ★★ Schokoladental: Schokoladenfluss, kleine Schokoladenfabrik, Kakaobäume
+    schokoladental: {
+      river: ({ X }, w) => stream(RIVER(X), w + 2, '#6b3f26', '#e8cfa8', '8 9'),
+      mid: ({ X, night }) => `<g transform="translate(${X + 84} 194)"><rect x="-26" y="-22" width="52" height="22" fill="#b5653a"/><path d="M-28 -22 L-14 -32 L0 -22 L14 -32 L28 -22 Z" fill="#7a3f22"/><rect x="16" y="-44" width="7" height="18" fill="#7a3f22"/>
+          ${[-18, -6, 6].map(x => `<rect x="${x}" y="-16" width="8" height="7" rx="1" fill="${night ? '#ffd27a' : '#ffe8c0'}"/>`).join('')}<rect x="-24" y="-8" width="20" height="7" rx="1" fill="#4a2a18"/><path d="M-20 -8 v7 M-15 -8 v7 M-10 -8 v7 M-24 -4.5 h20" stroke="#6b3f26" stroke-width=".7"/></g>
+          <g class="smoke"><circle cx="${X + 104}" cy="142" r="5" fill="#e3e8ef" opacity=".7"/><circle cx="${X + 110}" cy="132" r="7" fill="#e3e8ef" opacity=".5"/></g>`
+        + [[30, 188], [146, 186], [196, 190]].map(([dx, y]) => `<g transform="translate(${X + dx} ${y})">${trunk(14, 4, '#6b4a32')}${crown(0, -20, 9, '#3f8a3a')}<ellipse cx="-4" cy="-13" rx="2" ry="3.4" fill="#d98a2b"/><ellipse cx="4" cy="-12" rx="2" ry="3.4" fill="#b5653a"/></g>`).join(''),
+      front: ({ X }) => [[40, 236], [300, 250], [120, 256]].map(([dx, y]) => `<g transform="translate(${X + dx} ${y}) rotate(-12)"><rect x="-6" y="-4" width="12" height="7" rx="1" fill="#5a321e"/><path d="M-2 -4 v7 M2 -4 v7 M-6 -.5 h12" stroke="#7a4a2e" stroke-width=".7"/><path d="M2 -4 h4 v7 h-4 Z" fill="#c9d3e0"/></g>`).join('') },
+
+    // Otterbach: schmaler Bach mit Trittsteinen, Biberdamm aus Stämmen, Schilf und Seerosen
+    otterbach: {
+      river: ({ X, winter }) => {
+        const d = `M${X + 60} 172 Q${X + 30} 196 ${X + 120} 206 T${X + 200} 236 T${X + 300} ${H}`;
+        return stream(d, 11, winter ? '#d4e9f6' : '#5cc3e6')
+          + [[112, 205], [124, 209], [136, 213]].map(([dx, y]) => `<ellipse cx="${X + dx}" cy="${y}" rx="5" ry="2.6" fill="#9aa6b2"/>`).join('')
+          + `<g transform="translate(${X + 196} 234) rotate(18)"><rect x="-16" y="-3" width="32" height="5" rx="2.5" fill="#8a5a3c"/><rect x="-12" y="-7" width="26" height="4.6" rx="2.3" fill="#a0784f"/><circle cx="16" cy="-.5" r="2.4" fill="#d8b892"/></g>`
+          + (winter ? '' : `<ellipse cx="${X + 258}" cy="248" rx="5" ry="2" fill="#2e9e44"/><circle cx="${X + 260}" cy="247" r="1.8" fill="#fff"/>`);
+      },
+      front: ({ X }) => `<path d="M${X + 30} 222 v-16 M${X + 34} 222 v-20 M${X + 38} 222 v-14 M${X + 320} 244 v-18 M${X + 324} 244 v-22" stroke="#5a7a3a" stroke-width="1.6"/><ellipse cx="${X + 34}" cy="203" rx="1.6" ry="4" fill="#7a5236"/><ellipse cx="${X + 324}" cy="223" rx="1.6" ry="4" fill="#7a5236"/>` },
+
+    // Silberfluss: breiter, silbern glitzernder Fluss, Birken am Ufer
+    silberfluss: {
+      river: ({ X, rs }, w) => {
+        const d = `M${X + 120} 172 Q${X + 330} 196 ${X + 180} 220 T${X + 300} ${H}`;
+        let s = stream(d, w + 6, '#c9d8e8', '#ffffff', '3 6');
+        for (let i = 0; i < 8; i++) s += sparkle(X + 150 + rs() * 150, 190 + rs() * 60, .7);
+        return s;
+      },
+      mid: ({ X, winter, c }) => [60, 92, 300].map((dx, i) => `<g transform="translate(${X + dx} ${186 + i})"><rect x="-2" y="-34" width="4" height="34" fill="#f4f4f2"/><path d="M-2 -26 h2 M0 -16 h2" stroke="#3d4652" stroke-width="1.4"/>${winter ? '' : `<ellipse cx="0" cy="-40" rx="10" ry="14" fill="${c.sea === 'herbst' ? '#f2b01e' : '#9fd07a'}"/>`}</g>`).join('') },
+
+    // Apfelgarten: Reihen voller Apfelbäume, Leiter und Apfelkorb
+    apfelgarten: { noTrees: true,
+      mid: ({ X, winter, c }) => {
+        const leafC = c.sea === 'herbst' ? '#c9a23a' : c.sea === 'fruehling' ? '#8fd06a' : '#4caf50', fruit = c.sea === 'fruehling' ? '#fbe0ea' : '#e53935';
+        let s = '';
+        for (let x = X + 20, i = 0; x < X + RW; x += 46, i++) s += `<g transform="translate(${x} 190) scale(.85)">${trunk(16, 6, DWOOD)}${winter ? '' : canopy(0, -26, 16, 12, leafC, 500 + i * 7, 8) + dots(600 + i * 7, 7, fruit, 1.8, 0, -26, 13, 9)}</g>`;
+        return s;
+      },
+      front: ({ X }) => `<path d="M${X + 300} 252 L${X + 316} 206 M${X + 312} 252 L${X + 326} 208" stroke="#a0784f" stroke-width="2"/>${[216, 226, 236, 246].map(y => `<path d="M${f1(X + 302 + (252 - y) * .33)} ${y} h11" stroke="#a0784f" stroke-width="1.6"/>`).join('')}
+        <g transform="translate(${X + 70} 252)"><path d="M-10 -8 h20 l-3 8 h-14 Z" fill="#c49a62"/><path d="M-10 -8 Q0 -18 10 -8" stroke="#a0784f" stroke-width="1.4" fill="none"/>${[-5, 0, 5, -2.5, 2.5].map((x, i) => `<circle cx="${x}" cy="${i < 3 ? -9 : -12}" r="2.6" fill="${i % 2 ? '#f2b01e' : '#e53935'}"/>`).join('')}</g>` },
+
+    // Kastanienallee: Allee aus großen Kastanienbäumen, Bank, Kastanien am Boden
+    kastanienallee: { noTrees: true, noHouses: true,
+      mid: ({ X, winter, c }) => {
+        const col = c.sea === 'herbst' ? '#d98a2b' : c.sea === 'fruehling' ? '#6cc24a' : '#3f8a3a';
+        let s = '';
+        [[30, 198, 1.1], [100, 192, .9], [160, 190, .78], [210, 190, .78], [270, 192, .9], [336, 198, 1.1]].forEach(([dx, y, k]) => {
+          s += `<g transform="translate(${X + dx} ${y}) scale(${k})">${trunk(30, 8, '#6b4a32')}${winter ? '' : canopy(0, -44, 24, 20, col, dx + 7, 11) + (c.sea === 'fruehling' ? dots(dx + 3, 8, '#fff', 1.6, 0, -46, 18, 14) : '')}</g>`;
+        });
+        return s + `<g transform="translate(${X + 64} 206)"><rect x="-10" y="-6" width="20" height="2.6" fill="#a0784f"/><rect x="-10" y="-10" width="20" height="2" fill="#a0784f"/><path d="M-8 -3.4 v4 M8 -3.4 v4" stroke="#3d4652" stroke-width="1.4"/></g>`;
+      },
+      front: ({ X, winter, rs }) => {
+        if (winter) return '';
+        let s = '';
+        for (let i = 0; i < 9; i++) { const x = X + rs() * 360, y = 222 + rs() * 34; s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="2.4" fill="#7a3f22"/><circle cx="${f1(x - .8)}" cy="${f1(y - .8)}" r=".8" fill="#c98a5a"/>`; }
+        return s;
+      } },
+
+    // Bücherdorf: Häuser wie aufgestellte Bücher, Bücherstapel, Lesebank
+    buecherdorf: { noHouses: true,
+      mid: ({ X, night }) => [[90, '#1d3f9e', 34], [118, '#b23a12', 40], [142, '#00897b', 30], [250, '#f2b01e', 38], [276, '#5e3a8a', 32]].map(([dx, col, h]) => `<g transform="translate(${X + dx} 196)"><rect x="-11" y="${-h}" width="22" height="${h}" rx="2" fill="${col}"/><path d="M-11 ${-h + 5} h22 M-11 -5 h22" stroke="#f2e2b0" stroke-width="1.6"/><rect x="-6" y="${-h + 10}" width="12" height="7" rx="1" fill="#f2e2b0"/><rect x="-3" y="-12" width="6" height="7" rx="3" fill="${night ? '#ffd27a' : '#fff4d0'}"/><path d="M-13 ${-h} L0 ${-h - 10} L13 ${-h} Z" fill="${shade(col, .75)}"/></g>`).join(''),
+      front: ({ X }) => `<g transform="translate(${X + 40} 250)">${books(0, 0, 6)}</g><g transform="translate(${X + 330} 246)">${books(0, 0, 4)}</g><g transform="translate(${X + 200} 226)"><rect x="-12" y="-6" width="24" height="2.6" fill="#a0784f"/><path d="M-10 -3.4 v4 M10 -3.4 v4" stroke="#7a5236" stroke-width="1.4"/><path d="M-4 -6 l4 -3 l4 3" stroke="#e53935" stroke-width="2" fill="none"/></g>` },
+
+    // Leuchtturmbucht: rot-weißer Leuchtturm auf Felsen, nachts mit Lichtkegel
+    leuchtturmbucht: {
+      shore: ({ X }) => `<path d="M${X + 250} 216 q4 -30 34 -36 q30 -2 40 20 q6 10 0 16 Z" fill="#7d8894"/><path d="M${X + 270} 196 q10 -12 26 -12" stroke="#9aa6b2" stroke-width="2" fill="none"/>
+        <g transform="translate(${X + 292} 184)"><path d="M-9 0 L-6 -58 H6 L9 0 Z" fill="#fff"/>${[[-4, -14], [-24, -34], [-44, -54]].map(([y0, y1]) => { const w0 = 9 - (-y0) * 3 / 58, w1 = 9 - (-y1) * 3 / 58; return `<path d="M${f1(-w0)} ${y0} L${f1(-w1)} ${y1} H${f1(w1)} L${f1(w0)} ${y0} Z" fill="#e53935"/>`; }).join('')}
+          <rect x="-8" y="-62" width="16" height="4" fill="#3d4652"/><rect x="-5" y="-72" width="10" height="10" fill="#ffe08a"/><path d="M-7 -72 L0 -80 L7 -72 Z" fill="#e53935"/><rect x="-2" y="-8" width="4" height="8" fill="#3d4652"/></g>`,
+      glow: ({ X, night }) => night ? `<path d="M${X + 292} 117 L${X + 140} 94 L${X + 140} 134 Z" fill="#fff6c0" opacity=".22"/><circle cx="${X + 292}" cy="117" r="12" fill="#fff6c0" opacity=".45"/>` : '' },
+
+    // Gezeitenküste: Watt mit Prielen und Rippeln, Seesterne und Muscheln
+    gezeitenkueste: {
+      shore: ({ X, winter }) => `<path d="M${X} 204 Q${X + 180} 196 ${X + RW} 204 V218 H${X} Z" fill="${winter ? '#e6eef4' : '#d9c9a3'}"/>
+        <path d="M${X + 20} 210 q10 -2 20 0 M${X + 60} 212 q10 -2 20 0 M${X + 150} 208 q10 -2 20 0 M${X + 230} 211 q10 -2 20 0 M${X + 300} 209 q10 -2 20 0" stroke="#b8a37a" stroke-width="1" fill="none"/>
+        <path d="M${X + 100} 206 Q${X + 140} 214 ${X + 190} 208 T${X + 270} 212" stroke="${winter ? '#c4dcec' : '#7fc6e4'}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+      front: ({ X }) => starShape(X + 60, 236, 1, '#e8701a') + starShape(X + 250, 250, 1.1, '#e53935') + starShape(X + 320, 228, .9, '#f2b01e')
+        + `<g transform="translate(${X + 150} 248)"><path d="M-5 0 Q0 -9 5 0 Z" fill="#f6c99a"/><path d="M0 0 L-3 -5 M0 0 L0 -6.5 M0 0 L3 -5" stroke="#c98a5a" stroke-width=".8"/></g>` },
+
+    // Hochplateau: Tafelberg mit flacher grüner Hochfläche und Steinmann
+    hochplateau: { heights: [95, 130],
+      back: ({ X, night, winter }) => `<path d="M${X + 60} 178 L${X + 92} 96 Q${X + 96} 90 ${X + 104} 90 H${X + 262} Q${X + 270} 90 ${X + 274} 96 L${X + 306} 178 Z" fill="${night ? '#4a5a72' : '#8a7a6a'}"/>
+        <path d="M${X + 183} 90 H${X + 262} Q${X + 270} 90 ${X + 274} 96 L${X + 306} 178 H${X + 220} Z" fill="${night ? '#3a4a60' : '#6f6254'}"/>
+        <path d="M${X + 90} 100 Q${X + 180} 86 ${X + 278} 100 L${X + 272} 91 Q${X + 180} 80 ${X + 96} 91 Z" fill="${winter ? '#f4f8fb' : night ? '#3f5a3a' : '#6fae4f'}"/>
+        <path d="M${X + 76} 142 H${X + 290} M${X + 86} 118 H${X + 280}" stroke="${night ? '#3a4658' : '#7a6c5c'}" stroke-width="1.4" opacity=".7"/>
+        <g transform="translate(${X + 230} 88)"><ellipse cx="0" cy="-2" rx="5" ry="2.6" fill="#9aa6b2"/><ellipse cx="0" cy="-6" rx="4" ry="2.2" fill="#b0bac4"/><ellipse cx="0" cy="-9.5" rx="2.8" ry="1.8" fill="#9aa6b2"/></g>` },
+
+    // Wollhügel: Schafherde auf sanften Hügeln, ein dickes Wollknäuel
+    wollhuegel: { heights: [105, 140],
+      mid: ({ X }) => [[40, 192, 1.3], [74, 187, 1.1, 1], [124, 194, 1.4], [200, 185, 1], [250, 192, 1.3, 1], [304, 187, 1.1]].map(([dx, y, k, fl]) => sheep(X + dx, y, k, !!fl)).join(''),
+      front: ({ X }) => `<g transform="translate(${X + 300} 246)"><circle r="9" fill="#e86a8a"/><path d="M-8 -3 Q0 -9 8 -2 M-8 2 Q0 -4 9 3 M-6 6 Q0 1 7 7 M-3 -8 Q2 0 -1 8" stroke="#c44a6a" stroke-width="1" fill="none"/><path d="M9 3 q10 6 20 0" stroke="#e86a8a" stroke-width="1.2" fill="none"/></g>` + sheep(X + 120, 250, 1.6, true) },
+
+    // Quelltal: Quelle sprudelt aus dem Fels, Kaskaden über Steinstufen in kleine Becken, Farne
+    quelltal: {
+      mid: ({ X, winter }) => {
+        const w = winter ? '#d4e9f6' : WATER;
+        return `<path d="M${X + 244} 206 L${X + 246} 188 Q${X + 264} 176 ${X + 290} 184 L${X + 298} 206 Z" fill="${DSTONE}"/>
+          <ellipse cx="${X + 262}" cy="204" rx="26" ry="5" fill="${w}"/><path d="M${X + 238} 204 v7" stroke="${w}" stroke-width="5" stroke-linecap="round"/>
+          <ellipse cx="${X + 222}" cy="212" rx="22" ry="4.5" fill="${w}"/><path d="M${X + 202} 212 v6" stroke="${w}" stroke-width="5" stroke-linecap="round"/>
+          <ellipse cx="${X + 188}" cy="219" rx="18" ry="4" fill="${w}"/>
+          <path d="M${X + 268} 190 q-2 6 -6 12" stroke="${w}" stroke-width="3" fill="none"/><circle cx="${X + 268}" cy="188" r="2.4" fill="#fff" opacity=".9"/><circle cx="${X + 264}" cy="184" r="1.6" fill="#fff" opacity=".8"/>`;
+      },
+      front: ({ X }) => [[40, 232], [330, 244], [140, 254]].map(([dx, y]) => `<g transform="translate(${X + dx} ${y})">${[-40, -15, 15, 40].map(a => `<path d="M0 0 Q${f1(Math.sin(a * Math.PI / 180) * 10)} -10 ${f1(Math.sin(a * Math.PI / 180) * 16)} -16" stroke="#2e7d32" stroke-width="2.4" fill="none" stroke-linecap="round"/>`).join('')}</g>`).join('') },
+
+    // Nebelwald: dunkle Tannen in Schichten, Nebelbänke dazwischen
+    nebelwald: {
+      mid: ({ X, winter, night, rs }) => {
+        let s = '';
+        for (let x = X + 10; x < X + RW; x += 22 + rs() * 8) s += fir(x, 186 + rs() * 6, .7 + rs() * .5, winter);
+        return s + `<ellipse cx="${X + 90}" cy="176" rx="130" ry="10" fill="#fff" opacity="${night ? .15 : .55}"/><ellipse cx="${X + 260}" cy="186" rx="120" ry="9" fill="#fff" opacity="${night ? .12 : .5}"/>`;
+      },
+      front: ({ X, night }) => `<ellipse cx="${X + 180}" cy="224" rx="190" ry="8" fill="#fff" opacity="${night ? .1 : .35}"/>` },
+
+    // ★★ Polarlichtebene: zartes Polarlicht immer sichtbar, Iglu und Schlitten
+    polarlichtebene: {
+      sky: ({ X, night }) => {
+        let s = '';
+        for (let k = 0; k < 2; k++) {
+          let d = `M${X} ${(46 + k * 18).toFixed(0)}`;
+          for (let x = X + 20; x <= X + RW; x += 20) d += ` L${x} ${(46 + k * 18 + 10 * Math.sin(x / 60 + k)).toFixed(1)}`;
+          s += `<path d="${d}" stroke="url(#aurora)" stroke-width="${30 - k * 8}" fill="none" opacity="${night ? .7 : .35}"/>`;
+        }
+        return s;
+      },
+      mid: ({ X }) => `<g transform="translate(${X + 110} 206)"><path d="M-18 0 A18 16 0 0 1 18 0 Z" fill="#f4f9fd"/><path d="M-18 0 A18 16 0 0 1 18 0" stroke="#cfe6f5" stroke-width="1" fill="none"/><path d="M-14 -6 H14 M-9 -12 H9 M-6 0 V-6 M6 0 V-6 M0 -6 V-12" stroke="#cfe6f5" stroke-width=".9"/><path d="M12 0 v-7 a5 5 0 0 1 10 0 v7 Z" fill="#e6f0f8"/><path d="M14 0 v-5 a3 3 0 0 1 6 0 v5 Z" fill="#3a4a60"/></g>
+        <g transform="translate(${X + 250} 212)"><rect x="-14" y="-6" width="28" height="4" rx="1" fill="#a0784f"/><path d="M-16 0 H14 Q20 0 18 -5" stroke="#5a4a3a" stroke-width="1.4" fill="none"/><path d="M-10 -6 v6 M10 -6 v6" stroke="#5a4a3a" stroke-width="1.2"/></g>` },
+
+    // Tundra: weite, flache Ebene mit Zwergsträuchern, Flechtensteinen und einem Zelt
+    tundra: { noFirs: true, heights: [110, 145],
+      mid: ({ X, winter, rs }) => {
+        let s = '';
+        for (let i = 0; i < 10; i++) { const x = X + 10 + rs() * 340, y = 186 + rs() * 12; s += `<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(6 + rs() * 6)}" ry="3" fill="${winter ? '#b8c8a8' : '#8a7a4a'}"/><circle cx="${f1(x - 2)}" cy="${f1(y - 2)}" r="2" fill="${winter ? '#fff' : '#c4632a'}"/>`; }
+        return s + `<g transform="translate(${X + 270} 200)"><path d="M-14 0 L0 -26 L14 0 Z" fill="#c9b48a"/><path d="M0 -26 L14 0 H4 Z" fill="#a8946a"/><path d="M-3 -30 L0 -26 L3 -30" stroke="#5a4a3a" stroke-width="1.2" fill="none"/><path d="M-3 0 L0 -9 L3 0 Z" fill="#5a4a3a"/></g>`;
+      },
+      front: ({ X }) => [[70, 240], [220, 252]].map(([dx, y]) => `<path d="M${X + dx - 12} ${y} q2 -10 12 -11 q12 1 13 11 Z" fill="#9aa6b2"/><circle cx="${X + dx - 4}" cy="${y - 6}" r="2.6" fill="#c9d36a" opacity=".8"/><circle cx="${X + dx + 5}" cy="${y - 4}" r="2" fill="#e8a84a" opacity=".8"/>`).join('') },
+  };
 
   function region(reg, c, owned, locked) {
     const X = reg.i * RW, b = reg.biome, r = rnd(reg.i * 97 + 13);
@@ -798,27 +1101,38 @@
     if (night) {
       for (let i = 0; i < 20; i++) s += `<circle cx="${(X + r() * RW).toFixed(0)}" cy="${(r() * 130).toFixed(0)}" r="${(r() * 1.1 + .35).toFixed(1)}" fill="#fff" opacity="${(r() * .6 + .3).toFixed(2)}"/>`;
       if (has('milchstrasse')) {
-        const yb = x => 75 + 35 * Math.sin(x / 700);
+        // Milchstraße: weiches, mehrlagiges Leuchtband mit vielen, teils farbigen Sternen (eigener Zufall → Landschaft bleibt gleich)
+        const yb = x => 75 + 35 * Math.sin(x / 700), q = prng(reg.i * 53 + 11);
         let d = `M${X} ${yb(X).toFixed(1)}`;
         for (let x = X + 30; x <= X + RW; x += 30) d += ` L${x} ${yb(x).toFixed(1)}`;
-        s += `<path d="${d}" stroke="#cfe3ff" stroke-width="38" fill="none" opacity=".12"/>`;
-        for (let i = 0; i < 40; i++) { const x = X + r() * RW; s += `<circle cx="${x.toFixed(0)}" cy="${(yb(x) + (r() - .5) * 34).toFixed(0)}" r="${(r() * .9 + .3).toFixed(1)}" fill="#fff" opacity="${(r() * .5 + .3).toFixed(2)}"/>`; }
+        s += [[72, .06], [44, .1], [20, .16], [7, .2]].map(([w, o]) => `<path d="${d}" stroke="${COL.milky || '#d8e6ff'}" stroke-width="${w}" fill="none" opacity="${o}" stroke-linecap="round"/>`).join('');
+        for (let i = 0; i < 70; i++) {
+          const x = X + q() * RW, y = yb(x) + (q() - .5) * (q() < .7 ? 26 : 50), big = q() < .08, col = ['#fff', '#fff', '#ffe8c0', '#cfe3ff'][i % 4];
+          if (big) s += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="4" fill="${col}" opacity=".18"/>`;
+          s += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(big ? 1.4 : q() * .8 + .3).toFixed(1)}" fill="${col}" opacity="${(q() * .5 + .45).toFixed(2)}"/>`;
+        }
       }
       if (has('nordlicht')) for (let k = 0; k < 3; k++) {
         const ya = x => 38 + k * 14 + 12 * Math.sin(x / 180 + k) + 8 * Math.sin(x / 77 + k * 2);
         let d = `M${X} ${ya(X).toFixed(1)}`;
         for (let x = X + 20; x <= X + RW; x += 20) d += ` L${x} ${ya(x).toFixed(1)}`;
         s += `<path class="aurora" d="${d}" stroke="url(#aurora)" stroke-width="${44 - k * 10}" fill="none" opacity="${.8 - k * .2}"/>`;
+        // senkrechte Lichtvorhänge über dem Band
+        if (k === 0) { const q = prng(reg.i * 71 + 5); for (let x = X + 4; x < X + RW; x += 7) { const h = 28 + q() * 34; s += `<rect class="aurora" x="${x}" y="${(ya(x) - h).toFixed(1)}" width="4.4" height="${h.toFixed(1)}" fill="url(#aurora-ray)" opacity="${(.25 + q() * .35).toFixed(2)}"/>`; } }
       }
       if (reg.i === 1) s += `<circle cx="${X + 250}" cy="40" r="15" fill="${COL.moon}"/><circle cx="${X + 257}" cy="35" r="13" fill="${SKY.nacht[0]}"/>`;
     } else if (reg.i === 1) s += `<circle cx="${X + 250}" cy="${c.tod === 'tag' ? 40 : 70}" r="18" fill="${COL.sun}"/>`;
     const bio = EW && EW.biomes && EW.biomes[b];
-    const ctx = { X, r, c, sea: c.sea, winter: c.sea === 'winter', night, has, land: LAND[c.sea], RW, H };
-    if (bio && bio.sky) s += bio.sky(ctx);
+    // Eigenheiten genau dieses Gebiets (siehe SIG); lvl 0–3 = wie besonders/teuer es ist
+    const sig = SIG[reg.id] || {};
+    const lvl = reg.need >= 20 ? 3 : reg.need >= 12 ? 2 : reg.need ? 1 : 0;
+    const ctx = { X, r, c, sea: c.sea, winter: c.sea === 'winter', night, has, land: LAND[c.sea], RW, H, reg, lvl, tod: c.tod, rs: prng(reg.i * 131 + 7) };
+    const part = k => (sig.replace && sig.replace[k] ? sig.replace[k](ctx) : bio && bio[k] ? bio[k](ctx) : '') + (sig[k] ? sig[k](ctx) : '');
+    s += part('sky');
 
     // Gebirge: hintere Dunstkette + vordere Kette mit Graten, Schattenflanken und hangtreuem Schnee.
     // Feste Randhöhen (118/128), damit die Gebiete nahtlos aneinanderpassen.
-    const [hi, lo] = BIOME[b] || [100, 140];
+    const [hi, lo] = sig.heights || BIOME[b] || [100, 140];
     const snowLine = (snowy ? 200 : { gletscher: 125, berge: 100, fjord: 100, schlucht: 95, alm: 88, schneewald: 200 }[b] || 82) + (winter ? 35 : 0);
     const pkFar = [30, 120, 210, 290].map(dx => [X + dx + (r() - .5) * 30, Math.max(10, Math.round(hi - 14 + r() * (lo - hi)))]);
     s += mountainRange(X, pkFar, r, 118, night ? COL.farNight : b === 'canyon' ? '#cf8a5a' : COL.far, snowLine - 8, night, .85);
@@ -827,10 +1141,10 @@
     const main = mountainRange(X, pk, r, 128, mount, snowLine, night, 1, true);
     s += main.svg;
     ctx.main = main;
-    if (bio && bio.back) s += bio.back(ctx);   // Edition: Dinge vor den Bergen, hinter dem Hügel
-    if (b === 'gletscher') s += glacier(main, r, night);
+    s += part('back');   // Edition/Gebiet: Dinge vor den Bergen, hinter dem Hügel
+    if (b === 'gletscher' && !sig.noGlacier) s += glacier(main, r, night);
     const sdG = main.saddles[1] ?? main.saddles[0];
-    const gx = b === 'gletscher' && sdG != null ? main.P[sdG][0] + 3 : null; // Gletschertor → Gletscherbach
+    const gx = b === 'gletscher' && !sig.noGlacier && sdG != null ? main.P[sdG][0] + 3 : null; // Gletschertor → Gletscherbach
     if (b === 'vulkan') s += `<path d="M${X + 110} 175 L${X + 165} 70 L${X + 195} 70 L${X + 250} 175 Z" fill="${night ? '#3a3f52' : '#5a5f72'}"/>
       <ellipse cx="${X + 180}" cy="71" rx="15" ry="4" fill="#e8701a"/><g class="smoke"><circle cx="${X + 184}" cy="56" r="8" fill="#e3e8ef" opacity=".8"/><circle cx="${X + 194}" cy="42" r="10" fill="#e3e8ef" opacity=".6"/><circle cx="${X + 208}" cy="28" r="12" fill="#e3e8ef" opacity=".45"/></g>`;
     if (b === 'canyon') s += `<path d="M${X + 20} 175 V120 H${X + 90} V175 Z M${X + 200} 175 V100 H${X + 250} V138 H${X + 290} V175 Z" fill="#c96a3a"/>
@@ -842,37 +1156,40 @@
     // Hügel bzw. Wasser im Hintergrund
     const hy = 160 + r() * 16;
     const hillCol = b === 'canyon' ? '#d9894a' : b === 'moor' ? '#4f7a46' : land.hill;
-    s += `<path d="M${X} 172 Q${X + 90} ${hy.toFixed(0)} ${X + 180} 172 T${X + RW} 172 V${H} H${X} Z" fill="${(bio && bio.hill) || hillCol}"/>`;
-    if (bio && bio.mid) s += bio.mid(ctx);     // Edition: Dinge auf dem Hügel (Bäume, Häuser, Wasser …)
+    s += `<path d="M${X} 172 Q${X + 90} ${hy.toFixed(0)} ${X + 180} 172 T${X + RW} 172 V${H} H${X} Z" fill="${sig.hill || (bio && bio.hill) || hillCol}"/>`;
+    s += part('mid');     // Edition: Dinge auf dem Hügel (Bäume, Häuser, Wasser …)
     if (b === 'kueste' || b === 'polar' || b === 'insel' || b === 'vulkan') s += seaBand(X, winter);
     if (b === 'fjord') s += `<path d="M${X + 120} 216 Q${X + 150} 180 ${X + 170} 150 L${X + 200} 150 Q${X + 220} 185 ${X + 260} 216 Z" fill="${DWATER}"/>`;
     if (b === 'polar') [[60, 196, 1.2], [180, 186, .8], [290, 200, 1]].forEach(([dx, y, k]) =>
       s += `<path d="M${X + dx - 22 * k} ${y} L${X + dx - 12 * k} ${y - 26 * k} L${X + dx} ${y - 18 * k} L${X + dx + 10 * k} ${y - 34 * k} L${X + dx + 24 * k} ${y} Z" fill="#f4f9fd"/><path d="M${X + dx - 2 * k} ${y - 18 * k} L${X + dx + 10 * k} ${y - 34 * k} L${X + dx + 8 * k} ${y} Z" fill="#cfe6f5"/>`);
     if (b === 'insel') [[90, 1], [260, .8]].forEach(([dx, k]) =>
       s += `<ellipse cx="${X + dx}" cy="192" rx="${40 * k}" ry="${9 * k}" fill="${land.hill}"/>${fir(X + dx - 10, 190, .5 * k, winter)}${fir(X + dx + 8, 190, .65 * k, winter)}`);
-    if (b === 'see') {
+    if (b === 'see' && !sig.noLake) {
       s += `<ellipse cx="${X + 180}" cy="190" rx="150" ry="14" fill="${winter ? '#d4e9f6' : DWATER}"/>`;
       s += `<path d="M${X + 80} 190 q10 -3 20 0 M${X + 180} 194 q10 -3 20 0 M${X + 260} 187 q10 -3 20 0" stroke="#fff" stroke-width="1.6" fill="none" opacity=".7"/>`;
     }
     if (gx != null) {
       // Gletscherbach aus dem Gletschertor; mit „Gletschersee“ staut er sich zum türkisen Schmelzwassersee
       s += creek(`M${gx} 176 Q${gx - 8} 188 ${gx + 6} 198 T${gx - 4} 214`, 4, winter);
-      if (has('gletschersee')) s += `<ellipse cx="${gx}" cy="190" rx="70" ry="9" fill="${winter ? '#d4e9f6' : '#2bd0c8'}"/><path d="M${gx - 40} 190 h22 M${gx + 6} 193 h26" stroke="#fff" stroke-width="1.6" opacity=".7"/>`;
+      if (has('gletschersee')) s += `<ellipse cx="${gx}" cy="190" rx="72" ry="10" fill="${winter ? '#c4dcec' : '#1fb5b0'}"/><ellipse cx="${gx}" cy="189" rx="66" ry="8" fill="${winter ? '#d4e9f6' : '#3fd8cf'}"/><ellipse cx="${gx - 10}" cy="188" rx="40" ry="3.4" fill="#fff" opacity=".22"/>
+        <path d="M${gx - 40} 190 h22 M${gx + 6} 193 h26" stroke="#fff" stroke-width="1.6" opacity=".7"/><path d="M${gx + 30} 188 l6 -3 l7 1 l2 3 Z M${gx - 52} 191 l4 -2 l5 1 l1 2 Z" fill="#f4fbff"/>`;
     }
     if (b === 'moor') for (let i = 0; i < 5; i++) {
       const x = X + 30 + r() * 300, y = 186 + r() * 18;
       s += `<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="${(18 + r() * 16).toFixed(0)}" ry="4" fill="#2f5d5c"/><path d="M${(x - 8).toFixed(0)} ${y.toFixed(0)} v-12 M${(x - 4).toFixed(0)} ${y.toFixed(0)} v-16 M${(x + 2).toFixed(0)} ${y.toFixed(0)} v-10" stroke="#5a7a3a" stroke-width="1.4"/>`;
     }
 
+    s += part('shore');   // Gebiet: Dinge vor dem Wasser im Hintergrund (Inseln, Ufer, Felsen)
+
     // Bäume & Häuser im Hintergrund
-    if (b === 'wald' || b === 'schneewald') for (let x = X + 12; x < X + RW - 8; x += 24 + r() * 10) s += fir(x, 182 + r() * 6, .7 + r() * .4, winter);
-    if (b === 'berge' || b === 'alm' || b === 'fluss' || b === 'see') [X + 14, X + 40, X + RW - 30].forEach(x => s += fir(x, 180, .8, winter));
+    if ((b === 'wald' || b === 'schneewald') && !sig.noFirs) for (let x = X + 12; x < X + RW - 8; x += 24 + r() * 10) s += fir(x, 182 + r() * 6, .7 + r() * .4, winter);
+    if ((b === 'berge' || b === 'alm' || b === 'fluss' || b === 'see') && !sig.noFirs) [X + 14, X + 40, X + RW - 30].forEach(x => s += fir(x, 180, .8, winter));
     if (b === 'birken') for (let x = X + 16; x < X + RW - 8; x += 30 + r() * 10) {
       const y = 184;
       s += `<rect x="${x - 2}" y="${y - 34}" width="4" height="34" fill="#f4f4f2"/><path d="M${x - 2} ${y - 26} h2 M${x} ${y - 16} h2" stroke="#3d4652" stroke-width="1.4"/>`;
       if (!winter) s += `<ellipse cx="${x}" cy="${y - 40}" rx="10" ry="14" fill="${c.sea === 'herbst' ? '#f2b01e' : land.leaf[0]}"/>`;
     }
-    if (b === 'dorf' || b === 'blumen') for (let x = X + 20; x < X + RW - 10; x += 38 + r() * 18) {
+    if ((b === 'dorf' || b === 'blumen') && !sig.noTrees) for (let x = X + 20; x < X + RW - 10; x += 38 + r() * 18) {
       const y = 182 + r() * 4;
       s += `<rect x="${x - 2}" y="${y - 14}" width="4" height="14" fill="${DWOOD}"/>`;
       if (winter) s += `<path d="M${x} ${y - 14} l-7 -10 M${x} ${y - 16} l6 -11 M${x} ${y - 20} v-8" stroke="${DWOOD}" stroke-width="1.6"/><circle cx="${x}" cy="${y - 26}" r="2" fill="#fff"/>`;
@@ -881,18 +1198,18 @@
         if (c.sea === 'fruehling' || b === 'blumen') s += `<circle cx="${x - 4}" cy="${y - 27}" r="1.6" fill="#fff"/><circle cx="${x + 5}" cy="${y - 22}" r="1.6" fill="#fff"/>`;
       }
     }
-    if (b === 'dorf') [[110, '#1d3f9e'], [250, '#b23a12']].forEach(([dx, roof]) =>
+    if (b === 'dorf' && !sig.noHouses) [[110, '#1d3f9e'], [250, '#b23a12']].forEach(([dx, roof]) =>
       s += `<rect x="${X + dx - 14}" y="176" width="28" height="18" fill="#e3eef7"/><path d="M${X + dx - 17} 177 L${X + dx} 164 L${X + dx + 17} 177 Z" fill="${roof}"/><rect x="${X + dx - 3}" y="184" width="6" height="10" fill="${DWOOD}"/><rect x="${X + dx - 11}" y="180" width="5" height="5" fill="#ffe08a"/>`);
     if (b === 'alm') s += `<path d="M${X} 204 H${X + RW}" stroke="${WOOD}" stroke-width="1.6"/>` + [...Array(10)].map((_, i) => `<rect x="${X + 10 + i * 36}" y="196" width="2.4" height="10" fill="${DWOOD}"/>`).join('');
 
     // Vorderer Boden, Weg, Bäche
     const gy = 204 + r() * 10;
     const groundCol = b === 'canyon' ? '#e0a060' : b === 'moor' ? '#6f8f4a' : land.ground;
-    s += `<path d="M${X} 214 Q${X + 90} ${gy.toFixed(0)} ${X + 180} 214 T${X + RW} 214 V${H} H${X} Z" fill="${(bio && bio.ground) || groundCol}"/>`;
+    s += `<path d="M${X} 214 Q${X + 90} ${gy.toFixed(0)} ${X + 180} 214 T${X + RW} 214 V${H} H${X} Z" fill="${sig.ground || (bio && bio.ground) || groundCol}"/>`;
     s += `<path d="M${X} 238 Q${X + 90} ${(230 + r() * 8).toFixed(0)} ${X + 180} 238 T${X + RW} 238" stroke="${winter ? COL.pathWinter : COL.path}" stroke-width="7" fill="none" opacity=".8"/>`;
-    if (bio && bio.front) s += bio.front(ctx); // Edition: Dinge im Vordergrund
+    s += part('front'); // Edition/Gebiet: Dinge im Vordergrund
     if ((b === 'wald' || b === 'birken' || b === 'schneewald') && has('waldbach')) s += creek(`M${X + 110} 176 Q${X + 60} 200 ${X + 140} 222 T${X + 90} ${H}`, 9, winter);
-    if (b === 'fluss') s += creek(`M${X + 150} 172 Q${X + 290} 192 ${X + 210} 216 T${X + 330} ${H}`, has('fluss') ? 20 : 8, winter);
+    if (b === 'fluss') s += sig.river ? sig.river(ctx, has('fluss') ? 20 : 8) : creek(`M${X + 150} 172 Q${X + 290} 192 ${X + 210} 216 T${X + 330} ${H}`, has('fluss') ? 20 : 8, winter);
     if (b === 'kueste' || b === 'vulkan') s += `<path d="M${X + 8} 216 q8 -12 18 -6 q6 -8 14 0 v6 Z M${X + 160} 218 q10 -14 22 -6 q6 -6 12 2 v4 Z" fill="${DSTONE}"/>`;
 
     // Streudetails je Jahreszeit + Blumen
@@ -904,10 +1221,22 @@
     }
     if (b === 'blumen' && !winter) {
       const n = has('blumenmeer') ? 80 : 22;
-      for (let i = 0; i < n; i++) s += flower(Math.round(X + r() * RW), Math.round(216 + r() * 40), ['#fff', '#1e88e5', '#f2b01e', '#00a5a0'][i % 4], has('blumenmeer') ? 2.6 : 2);
+      if (!has('blumenmeer')) for (let i = 0; i < n; i++) s += flower(Math.round(X + r() * RW), Math.round(216 + r() * 40), ['#fff', '#1e88e5', '#f2b01e', '#00a5a0'][i % 4], 2);
+      else {
+        // Blumenmeer: Margeriten, Tulpen und Mohn mit Stielen, hinten kleiner als vorne
+        const q = prng(reg.i * 17 + 3), cols = ['#fff', '#1e88e5', '#f2b01e', '#e53935', '#f4a7c0', '#9b6fd0', '#00a5a0'];
+        const fl = [...Array(95)].map(() => ({ x: X + q() * RW, y: 214 + q() * 44, k: q(), t: Math.floor(q() * 3), c: cols[Math.floor(q() * cols.length)] })).sort((a, b) => a.y - b.y);
+        fl.forEach(({ x, y, k, t, c }) => {
+          const z = .7 + (y - 214) / 44 * .6, xs = x.toFixed(1), ys = y.toFixed(1);
+          s += `<path d="M${xs} ${ys} v${(6 * z).toFixed(1)}" stroke="#3f8a3a" stroke-width="${(.9 * z).toFixed(2)}"/>`;
+          if (t === 0) s += flower(Math.round(x), Math.round(y), c, 2.6 * z);
+          else if (t === 1) s += `<path d="M${(x - 2.6 * z).toFixed(1)} ${(y - 4 * z).toFixed(1)} q${(2.6 * z).toFixed(1)} ${(7 * z).toFixed(1)} ${(5.2 * z).toFixed(1)} 0 l${(-1.3 * z).toFixed(1)} ${(1.8 * z).toFixed(1)} l${(-1.3 * z).toFixed(1)} ${(-2 * z).toFixed(1)} l${(-1.3 * z).toFixed(1)} ${(2 * z).toFixed(1)} Z" fill="${c === '#fff' ? '#f4a7c0' : c}"/>`;
+          else s += `<circle cx="${xs}" cy="${ys}" r="${(2.6 * z).toFixed(1)}" fill="${k < .5 ? '#e53935' : '#ff7043'}"/><circle cx="${xs}" cy="${ys}" r="${(.9 * z).toFixed(1)}" fill="#2a1a14"/>`;
+        });
+      }
     }
     if (night) s += `<rect x="${X}" y="140" width="${RW}" height="${H - 140}" fill="${COL.night}" opacity=".3"/>`;
-    if (bio && bio.glow) s += bio.glow(ctx);   // Edition: Leuchtendes, das nachts nicht abgedunkelt wird
+    s += part('glow');   // Edition/Gebiet: Leuchtendes, das nachts nicht abgedunkelt wird
 
     // Schild mit Gebietsnamen
     const lw = reg.name.length * 5.6 + 16;
@@ -1008,6 +1337,7 @@
     <linearGradient id="w-seam-l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${COL.seam || '#ffffff'}" stop-opacity=".55"/><stop offset="1" stop-color="${COL.seam || '#ffffff'}" stop-opacity="0"/></linearGradient>
     <linearGradient id="w-seam-r" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${COL.seam || '#ffffff'}" stop-opacity="0"/><stop offset="1" stop-color="${COL.seam || '#ffffff'}" stop-opacity=".55"/></linearGradient>
     <linearGradient id="glacier" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6fbff"/><stop offset=".6" stop-color="#d8ecf8"/><stop offset="1" stop-color="#a9d3ee"/></linearGradient>
+    <linearGradient id="aurora-ray" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${COL.aurora1 || '#3cf0c8'}" stop-opacity=".75"/><stop offset=".6" stop-color="${COL.aurora2 || '#1e88e5'}" stop-opacity=".25"/><stop offset="1" stop-color="${COL.aurora2 || '#1e88e5'}" stop-opacity="0"/></linearGradient>
     <linearGradient id="aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${COL.aurora1 || '#3cf0c8'}" stop-opacity="0"/><stop offset=".5" stop-color="${COL.aurora1 || '#3cf0c8'}" stop-opacity=".55"/><stop offset="1" stop-color="${COL.aurora2 || '#1e88e5'}" stop-opacity="0"/></linearGradient>
     ${(EW && EW.defs) || ''}
   </defs>`;
@@ -1116,6 +1446,7 @@
     if (!g) return '';
     const c = { tod: 'nacht', sea: season(new Date().getMonth()) };
     if (g.group === 'land') {
+      if (g.art) return `<svg viewBox="0 0 80 60" aria-hidden="true">${g.art()}</svg>`;
       const ic = g.icon || { waldbach: '🏞️', bergbach: '🏔️', gletschersee: '🧊', fluss: '🌊', blumenmeer: '🌼', nordlicht: '🌌', milchstrasse: '🌠' }[g.id] || '🏞️';
       return `<svg viewBox="0 0 40 40" aria-hidden="true"><text x="20" y="28" font-size="22" text-anchor="middle">${ic}</text></svg>`;
     }
@@ -1143,15 +1474,17 @@
   const ED = window.EDITION;
   if (ED && ED.world) {
     const Hw = { RW, H, OL, WOOD, DWOOD, STONE, DSTONE, WATER, DWATER, COLS, flower, fir, books, shelfBooks, shade, prng, canopy, trunk, bareCrown,
-      dots, decid, conifer, shrub, crown, creek, seaBand, starfig, leaf };
+      dots, decid, conifer, shrub, crown, creek, seaBand, starfig, leaf, bigPeak, puff, flagLine, stream, f1, peakOf, landCard };
     EW = ED.world(Hw);
     if (EW.regions) {
+      Object.keys(SIG).forEach(k => delete SIG[k]);   // diese Eigenheiten gehören zu den Gebieten der Tier-Edition
       REGIONS.splice(0, REGIONS.length, ...EW.regions.map(([id, name, biome, need], i) => ({ id, name, biome, i, need })));
       Object.keys(regionById).forEach(k => delete regionById[k]);
       REGIONS.forEach(r => { regionById[r.id] = r; });
       START_REGIONS.splice(0, START_REGIONS.length, ...REGIONS.slice(0, 4).map(r => r.id));
       buildSlots();
     }
+    if (EW.signatures) Object.assign(SIG, EW.signatures);
     if (EW.biomeHeights) Object.assign(BIOME, EW.biomeHeights);
     if (EW.animalTop) Object.assign(ANIMAL_AREA.biomeTop, EW.animalTop);
     if (EW.sky) Object.assign(SKY, EW.sky);

@@ -375,7 +375,7 @@ window.EDITION = (function () {
       <path d="M-5 0 v-12 a5 5 0 0 1 10 0 v12 Z" fill="#c8a0c0"/><rect x="-29" y="-38" width="4" height="6" rx="2" fill="#ffe8a8"/><rect x="25" y="-38" width="4" height="6" rx="2" fill="#ffe8a8"/><rect x="-2" y="-48" width="4" height="6" rx="2" fill="#ffe8a8"/></g>`;
     // Pastell-Bach (statt kräftig blau)
     const creekP = (d, w) => `<path d="${d}" stroke="#bfe0f4" stroke-width="${w}" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff" stroke-width="1.6" fill="none" stroke-dasharray="5 10" opacity=".9"/>`;
-    const fireflies = (ctx, n, y0 = 150, y1 = 240) => { let s = ''; for (let i = 0; i < n; i++) { const x = ctx.X + ctx.r() * RW, y = y0 + ctx.r() * (y1 - y0); s += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="4" fill="#fff6a8" opacity=".25"/><circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="1.4" fill="#fffbd0"/>`; } return s; };
+    const fireflies = (ctx, n, y0 = 150, y1 = 240) => { let s = ''; for (let i = 0; i < n; i++) { const x = ctx.X + ctx.r() * RW, y = y0 + ctx.r() * (y1 - y0); s += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="7" fill="url(#fx-warm)"/><circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="1.4" fill="#fffbd0"/>`; } return s; };
     const pastelTrees = (ctx, y = 184) => { let s = ''; for (let x = ctx.X + 18; x < ctx.X + RW - 10; x += 34 + ctx.r() * 16) s += ctx.winter ? `<g transform="translate(${x.toFixed(0)} ${y})">${trunk(22, 5, '#b09a88')}</g>${sp(x, y - 30, 1.2, '#fff')}` : tree(x.toFixed(0), y + ctx.r() * 4, .6 + ctx.r() * .3, PASTELL[Math.floor(ctx.r() * PASTELL.length)], Math.floor(ctx.r() * 999)); return s; };
 
     const biomes = {
@@ -412,24 +412,284 @@ window.EDITION = (function () {
       sternenwiese: { sky: ctx => [40, 120, 210, 300].map(dx => sp(ctx.X + dx, 30 + ctx.r() * 60, .9, ctx.night ? '#fff' : '#fff8fc')).join(''),
         front: ctx => { let s = ''; const n = ctx.has('funkelbach') ? 34 : 24; for (let i = 0; i < n; i++) s += flower(Math.round(ctx.X + ctx.r() * RW), Math.round(216 + ctx.r() * 40), PASTELL[i % PASTELL.length], 2.4); return s + (ctx.has('funkelbach') ? creekP(`M${ctx.X + 150} 176 Q${ctx.X + 290} 192 ${ctx.X + 210} 216 T${ctx.X + 330} 262`, 8) : ''); } },
       zauberberg: { back: ctx => [100, 220].map(dx => crystal(ctx.X + dx, 120, 1.2, dx === 100 ? FLIEDER : HIMMEL)).join(''), mid: pastelTrees },
-    };    // ---- Zauberlandschaft für alle Lichtungen: gekaufte Effekte erscheinen in jedem Gebiet ----
+    };// ---- Zauberlandschaft für alle Lichtungen: gekaufte Effekte erscheinen in jedem Gebiet ----
+    // Weiche Lichter über Verläufe (fx-…, siehe defs unten) statt harter Punkte
+    const glowAt = (x, y, rr, grad, core, cr = 1.4) => `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(rr)}" fill="url(#${grad})"/>${core ? `<circle cx="${f1(x)}" cy="${f1(y)}" r="${cr}" fill="${core}"/>` : ''}`;
+    const petal = (x, y, k, rot, col) => `<path d="M0 0 C-2.2 -1.6 -2.4 -4.6 -1 -6 L0 -5 L1 -6 C2.4 -4.6 2.2 -1.6 0 0 Z" fill="${col}" transform="translate(${f1(x)} ${f1(y)}) rotate(${rot}) scale(${k})"/>`;
+    const dragonfly = (x, y, k, rot) => `<g transform="translate(${f1(x)} ${f1(y)}) rotate(${rot}) scale(${k})"><ellipse cx="-3" cy="-3.4" rx="6" ry="2" fill="url(#fx-wing)" stroke="#fff" stroke-width=".4" transform="rotate(-14 -3 -3.4)"/><ellipse cx="-3" cy="3.4" rx="6" ry="2" fill="url(#fx-wing)" stroke="#fff" stroke-width=".4" transform="rotate(14 -3 3.4)"/>
+      <ellipse cx="3" cy="-3" rx="5" ry="1.7" fill="url(#fx-wing)" stroke="#fff" stroke-width=".4" transform="rotate(14 3 -3)"/><ellipse cx="3" cy="3" rx="5" ry="1.7" fill="url(#fx-wing)" stroke="#fff" stroke-width=".4" transform="rotate(-14 3 3)"/>
+      <path d="M-11 0 H4" stroke="#5aa8b8" stroke-width="1.6" stroke-linecap="round"/><circle cx="5.4" cy="0" r="1.8" fill="#3f8fa0"/></g>`;
+    const seed = (x, y, k) => `<g transform="translate(${f1(x)} ${f1(y)}) scale(${k})"><path d="M0 0 V5" stroke="#efe8dc" stroke-width=".5"/>${[-60, -30, 0, 30, 60].map(a => `<path d="M0 0 l${f1(Math.sin(a * Math.PI / 180) * 3.4)} ${f1(-Math.cos(a * Math.PI / 180) * 3.4)}" stroke="#fff" stroke-width=".45"/>`).join('')}<circle cx="0" cy="5.4" r=".7" fill="#b8a888"/></g>`;
+    const dandelion = (x, y) => { let s = `<path d="M${x} ${y} q1 -8 0 -14" stroke="#7aa87a" stroke-width="1" fill="none"/>`; for (let a = 0; a < 360; a += 24) s += `<path d="M${x} ${y - 14} l${f1(Math.cos(a * Math.PI / 180) * 5)} ${f1(Math.sin(a * Math.PI / 180) * 5)}" stroke="#fff" stroke-width=".5"/><circle cx="${f1(x + Math.cos(a * Math.PI / 180) * 5)}" cy="${f1(y - 14 + Math.sin(a * Math.PI / 180) * 5)}" r=".6" fill="#fff"/>`; return s; };
+    const glowShroom = (x, y, k, cap, night) => `<g transform="translate(${f1(x)} ${f1(y)}) scale(${k})">${night ? `<circle cx="0" cy="-7" r="13" fill="url(#fx-mint)"/>` : ''}<path d="M-1.6 0 v-6 h3.2 v6 Z" fill="#fff4ea"/><path d="M-7 -5.6 Q0 -16 7 -5.6 Q0 -4 -7 -5.6 Z" fill="${cap}"/><circle cx="-2.6" cy="-9" r="1.1" fill="#fff" opacity=".9"/><circle cx="2.4" cy="-8" r=".9" fill="#fff" opacity=".9"/>
+      <g transform="translate(7 1) scale(.6)"><path d="M-1.6 0 v-6 h3.2 v6 Z" fill="#fff4ea"/><path d="M-7 -5.6 Q0 -16 7 -5.6 Q0 -4 -7 -5.6 Z" fill="${cap}"/></g></g>`;
     const landFx = ctx => {
-      const { X, r, night, winter, has } = ctx; let s = '';
-      const at = (n, y0, y1, f) => { for (let i = 0; i < n; i++) s += f(X + 10 + r() * (RW - 20), y0 + r() * (y1 - y0), i); };
-      if (has('nebelschleier')) s += `<ellipse cx="${X + 110}" cy="214" rx="140" ry="12" fill="#fff" opacity="${night ? .1 : .32}"/><ellipse cx="${X + 270}" cy="226" rx="120" ry="10" fill="#fff" opacity="${night ? .08 : .26}"/>`;
-      if (has('tauglitzer')) at(18, 214, 258, (x, y) => sp(Math.round(x), Math.round(y), .35, '#fff'));
-      if (has('lichterpfad')) for (let x = X + 24; x < X + RW; x += 44) s += (night ? `<circle cx="${x}" cy="236" r="9" fill="#fff4b0" opacity=".3"/>` : '') + `<rect x="${x - 1}" y="236" width="2" height="10" fill="#b0a0b8"/><circle cx="${x}" cy="235" r="2.6" fill="${night ? '#fff6c0' : '#fff8e0'}" stroke="#b0a0b8" stroke-width=".8"/>`;
-      if (has('leuchtpilze')) at(5, 238, 256, (x, y, i) => (night ? `<circle cx="${x.toFixed(0)}" cy="${(y - 6).toFixed(0)}" r="10" fill="#bcf0e4" opacity=".3"/>` : '') + mushroom(x.toFixed(0), y.toFixed(0), .45, ['#9fd4bc', '#a8dcec', '#bba8e0'][i % 3]));
-      if (has('libellen')) at(3, 168, 204, (x, y) => `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)})"><path d="M-7 0 h14" stroke="#7fb8c8" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="-1" cy="-3" rx="5" ry="1.8" fill="#e8f6fc" opacity=".85"/><ellipse cx="-1" cy="3" rx="5" ry="1.8" fill="#e8f6fc" opacity=".85"/></g>`);
-      if (has('falterschwarm') && !winter) at(5, 120, 200, (x, y, i) => { const c = [ROSA, FLIEDER, HIMMEL, '#f6e3a6', MINZE][i % 5]; return `<path d="M${x.toFixed(0)} ${y.toFixed(0)} q-5 -5 -6 0 q1 4 6 0 Z M${x.toFixed(0)} ${y.toFixed(0)} q5 -5 6 0 q-1 4 -6 0 Z" fill="${c}"/>`; });
-      if (has('bluetenregen') && !winter) at(14, 40, 220, (x, y, i) => `<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="2.4" ry="1.4" fill="${['#f6c6d6', '#fff', '#fbe6ee'][i % 3]}" transform="rotate(${(i * 37) % 180} ${x.toFixed(0)} ${y.toFixed(0)})"/>`);
-      if (has('pusteblumen')) at(8, 60, 180, (x, y) => `<path d="M${x.toFixed(0)} ${y.toFixed(0)} v6" stroke="#fff" stroke-width=".8"/><circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="2.4" fill="none" stroke="#fff" stroke-width=".8" opacity=".9"/>`);
-      if (has('seifenblasen')) at(7, 60, 190, (x, y) => { const rr = (3 + r() * 5).toFixed(1); return `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${rr}" fill="#e8f6fc" opacity=".35" stroke="#fff" stroke-width=".9"/><circle cx="${(x - rr / 3).toFixed(1)}" cy="${(y - rr / 3).toFixed(1)}" r="${(rr / 4).toFixed(1)}" fill="#fff" opacity=".8"/>`; });
-      if (has('feenstaubregen')) at(16, 20, 200, (x, y) => sp(Math.round(x), Math.round(y), .3 + r() * .3, night ? '#fff6a8' : GOLD));
+      const { X, night, winter, has } = ctx, q = prng(ctx.reg.i * 29 + 3); let s = '';
+      const at = (n, y0, y1, fn) => { for (let i = 0; i < n; i++) s += fn(X + 10 + q() * (RW - 20), y0 + q() * (y1 - y0), i); };
+      if (has('nebelschleier')) s += [[110, 210, 160, 18], [270, 224, 140, 14], [190, 240, 190, 12], [40, 230, 90, 10]].map(([dx, y, rx, ry]) => `<ellipse cx="${X + dx}" cy="${y}" rx="${rx}" ry="${ry}" fill="url(#fx-mist)" opacity="${night ? .4 : .95}"/>`).join('');
+      if (has('tauglitzer')) at(16, 220, 258, (x, y, i) => `<path d="M${f1(x)} ${f1(y)} q-1 -6 ${i % 2 ? 3 : -3} -9" stroke="#8fc89a" stroke-width="1" fill="none"/><path d="M${f1(x + (i % 2 ? 3 : -3))} ${f1(y - 9)} q-1.6 2.6 0 3.6 q1.6 -1 0 -3.6 Z" fill="#dff4ff" stroke="#a8d8f0" stroke-width=".4"/><circle cx="${f1(x + (i % 2 ? 2.6 : -3.4))}" cy="${f1(y - 7.4)}" r=".5" fill="#fff"/>` + (i % 4 ? '' : sp(Math.round(x + (i % 2 ? 3 : -3)), Math.round(y - 11), .35, '#fff')));
+      if (has('lichterpfad')) for (let x = X + 24; x < X + RW; x += 46) s += (night ? glowAt(x + 5, 232, 14, 'fx-warm') : glowAt(x + 5, 232, 7, 'fx-warm'))
+        + `<path d="M${x} 248 V228 q0 -4 4 -4 h1" stroke="#a090a8" stroke-width="1.3" fill="none"/><path d="M${x + 5} 224 v2" stroke="#a090a8" stroke-width=".7"/><rect x="${x + 2.6}" y="226" width="4.8" height="6" rx="1.4" fill="${night ? '#fff3b0' : '#fff8e4'}" stroke="#a090a8" stroke-width=".7"/><path d="M${x + 2} 226 h6 l-1 -1.6 h-4 Z" fill="#a090a8"/>`;
+      if (has('leuchtpilze')) at(5, 238, 256, (x, y, i) => glowShroom(x, y, .8, ['#9fd4bc', '#a8dcec', '#bba8e0'][i % 3], night) + (night ? '' : glowAt(x, y - 7, 6, 'fx-mint')));
+      if (has('libellen')) at(3, 168, 206, (x, y, i) => dragonfly(x, y, .95, [-10, 8, -4][i % 3]));
+      if (has('falterschwarm') && !winter) at(5, 120, 206, (x, y, i) => butterfly(x, y, .55 + q() * .3, [ROSA, FLIEDER, HIMMEL, '#f6e3a6', MINZE][i % 5], [FLIEDER, HIMMEL, ROSA, PFIRSICH, '#fff'][i % 5]));
+      if (has('bluetenregen') && !winter) at(18, 30, 230, (x, y, i) => petal(x, y, .8 + q() * .5, Math.round(q() * 360), ['#f8c8d8', '#fde4ec', '#f4b0c8'][i % 3]));
+      if (has('pusteblumen')) { at(10, 50, 190, (x, y) => seed(x, y, .9 + q() * .4)); s += dandelion(X + 70, 244) + dandelion(X + 290, 250); }
+      if (has('seifenblasen')) at(7, 60, 200, (x, y) => { const rr = 4 + q() * 6; return `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(rr)}" fill="url(#fx-bubble)"/><path d="M${f1(x - rr * .6)} ${f1(y - rr * .2)} a${f1(rr * .65)} ${f1(rr * .65)} 0 0 1 ${f1(rr * .5)} ${f1(-rr * .45)}" stroke="#fff" stroke-width="1" fill="none" opacity=".9" stroke-linecap="round"/>`; });
+      if (has('feenstaubregen')) {
+        for (let k = 0; k < 3; k++) { const x0 = X + 40 + q() * 280, y0 = 20 + q() * 50; for (let j = 0; j < 9; j++) { const t = j / 8; s += `<circle cx="${f1(x0 - t * 40)}" cy="${f1(y0 + t * 70 + t * t * 30)}" r="${f1(1.4 - t)}" fill="${night ? '#fff6a8' : GOLD}" opacity="${f1(1 - t * .8)}"/>`; } s += glowAt(x0, y0, 7, 'fx-gold') + sp(Math.round(x0), Math.round(y0), .7, '#fff'); }
+        at(12, 30, 210, (x, y, i) => sp(Math.round(x), Math.round(y), .25 + q() * .35, i % 3 ? (night ? '#fff6a8' : GOLD) : '#fff'));
+      }
       return s;
     };
     for (const b of Object.values(biomes)) { const own = b.glow; b.glow = ctx => (own ? own(ctx) : '') + landFx(ctx); }
 
+
+    // ---- Eigenheiten einzelner Gebiete: kein Gebiet sieht aus wie ein anderes. Je besonderer (4. Wert), desto prächtiger ----
+    const { bigPeak, puff, f1 } = H;
+    // runder Turm mit Spitzdach, Goldspitze, Fenster und Schattenseite
+    const spire = (x, y, w, h, wall, roof, rh = w * 1.6, flag = null) => `<rect x="${f1(x - w / 2)}" y="${f1(y - h)}" width="${w}" height="${h}" fill="${wall}"/><rect x="${f1(x)}" y="${f1(y - h)}" width="${f1(w / 2)}" height="${h}" fill="#5a4a7a" opacity=".08"/>
+      <path d="M${f1(x - w / 2 - 2)} ${f1(y - h)} L${f1(x)} ${f1(y - h - rh)} L${f1(x + w / 2 + 2)} ${f1(y - h)} Z" fill="${roof}"/><path d="M${f1(x)} ${f1(y - h - rh)} L${f1(x + w / 2 + 2)} ${f1(y - h)} H${f1(x)} Z" fill="#3a2a5a" opacity=".12"/>
+      <path d="M${f1(x)} ${f1(y - h - rh)} v-6" stroke="${GOLD}" stroke-width="1.2"/><circle cx="${f1(x)}" cy="${f1(y - h - rh - 6)}" r="1.7" fill="${GOLD}"/>
+      ${flag ? `<path d="M${f1(x)} ${f1(y - h - rh - 6)} l8 2 l-8 3 Z" fill="${flag}"/>` : ''}<rect x="${f1(x - 1.8)}" y="${f1(y - h + 7)}" width="3.6" height="6" rx="1.8" fill="#ffe8a8"/>`;
+    const balloon = (x, y, k, c1, c2) => `<g transform="translate(${x} ${y}) scale(${k})"><path d="M0 -20 C-14 -20 -14 -2 -4 6 H4 C14 -2 14 -20 0 -20 Z" fill="${c1}"/><path d="M0 -20 C-5 -20 -5 -2 -2 6 H2 C5 -2 5 -20 0 -20 Z" fill="${c2}"/><path d="M-4 6 L-3 11 M4 6 L3 11" stroke="#a88a78" stroke-width=".7"/><rect x="-3.4" y="11" width="6.8" height="4.4" rx="1" fill="#c8a088"/></g>`;
+    const floatIsle = (x, y, k, ctx) => `<g transform="translate(${x} ${y}) scale(${k})"><path d="M-30 0 Q-24 26 -4 40 Q4 30 10 34 Q24 18 30 0 Z" fill="#c8bcd8"/><path d="M4 0 Q10 22 10 34 Q24 18 30 0 Z" fill="#b0a2c8"/>
+      <ellipse cx="0" cy="0" rx="31" ry="6" fill="${ctx.winter ? '#f6f8fc' : '#b8e0b8'}"/>${tree(-12, 0, .55, PASTELL[1], 41)}${tree(10, -1, .45, PASTELL[2], 42)}<path d="M22 2 Q24 20 20 44" stroke="#bfe0f4" stroke-width="2.4" fill="none" opacity=".9"/></g>`;
+    const unicorn = (x, y, k) => `<g transform="translate(${x} ${y}) scale(${k})"><path d="M-12 -12 v14 M-7 -12 v15 M8 -12 v14 M12 -12 v15" stroke="#efe6f4" stroke-width="3.4" stroke-linecap="round"/>
+      <ellipse cx="0" cy="-16" rx="16" ry="8" fill="#fff"/><path d="M12 -20 L18 -34 L24 -32 L22 -22 Z" fill="#fff"/><ellipse cx="23" cy="-33" rx="6" ry="4" fill="#fff"/><path d="M22 -37 L27 -50 L25 -37 Z" fill="${GOLD}"/>
+      <path d="M17 -35 Q10 -32 12 -22 Q8 -28 9 -34 Z" fill="${ROSA}"/><path d="M15 -36 Q8 -30 10 -24" stroke="${FLIEDER}" stroke-width="2.2" fill="none"/><path d="M-16 -18 Q-26 -14 -24 -2" stroke="${HIMMEL}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-16 -16 Q-24 -10 -20 0" stroke="${ROSA}" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="25" cy="-34" r=".9" fill="#5a4a6a"/></g>`;
+    const butterfly = (x, y, k, c1, c2) => `<g transform="translate(${x} ${y}) scale(${k})"><path d="M0 0 Q-10 -12 -14 -4 Q-12 2 0 0 Z M0 0 Q10 -12 14 -4 Q12 2 0 0 Z" fill="${c1}"/><path d="M0 0 Q-8 8 -10 4 Q-8 1 0 0 Z M0 0 Q8 8 10 4 Q8 1 0 0 Z" fill="${c2}"/>
+      <circle cx="-8" cy="-5" r="1.6" fill="#fff" opacity=".8"/><circle cx="8" cy="-5" r="1.6" fill="#fff" opacity=".8"/><path d="M0 -4 v8" stroke="#5a4a6a" stroke-width="1.2" stroke-linecap="round"/><path d="M0 -4 l-2 -4 M0 -4 l2 -4" stroke="#5a4a6a" stroke-width=".6"/></g>`;
+    const lantern = (x, y, night) => `<path d="M${x} ${y - 6} v-4" stroke="#a88a78" stroke-width=".7"/><rect x="${x - 2.6}" y="${y - 6}" width="5.2" height="7" rx="1.6" fill="${night ? '#fff0a8' : '#ffe0b0'}" stroke="#c8a088" stroke-width=".6"/>`;
+    const lavRow = (x0, y0, x1, y1, w0, w1, col) => `<path d="M${f1(x0 - w0)} ${y0} L${f1(x1 - w1)} ${y1} L${f1(x1 + w1)} ${y1} L${f1(x0 + w0)} ${y0} Z" fill="${col}"/>`;
+    const SIGNATURES = {
+      // ★★★ Feenkönigreich: großer Perlmutt-Palast mit Goldspitzen auf Wolken, Regenbogenbrücke, Laternen am Himmel
+      feenkoenigreich: { heights: [95, 140],
+        sky: ctx => { let s = ''; [[40, 40], [110, 22], [250, 30], [318, 54], [76, 76]].forEach(([dx, y], i) => { s += `<circle cx="${ctx.X + dx}" cy="${y + 2}" r="7" fill="#ffe8a8" opacity="${ctx.night ? .35 : .18}"/>` + lantern(ctx.X + dx, y + 6, ctx.night); }); for (let i = 0; i < 8; i++) s += sp(ctx.X + 20 + ctx.rs() * 320, 10 + ctx.rs() * 90, .6 + ctx.rs() * .6, ctx.night ? '#fff6a8' : GOLD); return s; },
+        replace: { back: ctx => {
+          const X = ctx.X, P = '#fdf4fa';
+          let s = ctx.night ? '' : `<path d="M${X + 20} 176 A160 136 0 0 1 ${X + 340} 176" fill="none" stroke-width="18" stroke="url(#feen-rainbow)" opacity=".55"/>`;
+          s += cloud(X + 110, 160, 2.6) + cloud(X + 250, 162, 2.8) + cloud(X + 180, 168, 3.2);
+          s += `<g><rect x="${X + 128}" y="118" width="104" height="38" fill="${P}"/><rect x="${X + 180}" y="118" width="52" height="38" fill="#5a4a7a" opacity=".06"/>`
+            + [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<rect x="${X + 128 + i * 12}" y="113" width="7" height="6" fill="${P}"/>`).join('')
+            + `<path d="M${X + 170} 156 v-16 a10 10 0 0 1 20 0 v16 Z" fill="${GOLD}"/><path d="M${X + 173} 156 v-15 a7 7 0 0 1 14 0 v15 Z" fill="#c8a0c0"/>`
+            + [140, 154, 206, 220].map(x => `<path d="M${X + x - 3} 136 v-5 a3 3 0 0 1 6 0 v5 Z" fill="#ffe8a8"/>`).join('') + '</g>';
+          s += spire(X + 116, 156, 14, 56, P, LILA, 22, ROSA) + spire(X + 244, 156, 14, 56, P, LILA, 22, ROSA)
+            + spire(X + 142, 120, 14, 30, P, ROSE, 24) + spire(X + 218, 120, 14, 30, P, ROSE, 24) + spire(X + 180, 120, 22, 46, P, ROSE, 34, FLIEDER);
+          s += `<ellipse cx="${X + 180}" cy="96" rx="9" ry="9" fill="#e8f4fc" opacity=".8"/><path d="M${X + 175} 92 a6 6 0 0 1 6 -4" stroke="#fff" stroke-width="1.4" fill="none"/>`;
+          return s;
+        }, mid: ctx => cloud(ctx.X + 40, 198, 1.4) + cloud(ctx.X + 320, 202, 1.2) },
+        glow: ctx => ctx.night ? [116, 142, 180, 218, 244].map(dx => `<circle cx="${ctx.X + dx}" cy="${dx === 180 ? 80 : dx % 2 ? 108 : 92}" r="8" fill="#fff0a8" opacity=".25"/>`).join('') + `<circle cx="${ctx.X + 180}" cy="146" r="14" fill="#ffe8a8" opacity=".25"/>` : '' },
+
+      // ★★ Wolkenmeer: kein Schloss – ein Meer aus Wolken mit schwebenden Inseln und Heißluftballons
+      wolkenmeer: { heights: [120, 150],
+        sky: ctx => balloon(ctx.X + 60, 46, 1.1, ROSA, '#fff4f8') + balloon(ctx.X + 300, 34, .9, HIMMEL, '#f4fbff') + balloon(ctx.X + 200, 70, .7, '#f6e3a6', '#fffbea'),
+        replace: { back: ctx => { let s = ''; for (let x = ctx.X - 10; x < ctx.X + RW + 20; x += 40) s += cloud(x, 150 + ctx.rs() * 10, 1.6 + ctx.rs() * .5, ctx.night ? .5 : .97); for (let x = ctx.X + 6; x < ctx.X + RW; x += 52) s += cloud(x, 134 + ctx.rs() * 8, 1.1, ctx.night ? .45 : .9);
+          return s + floatIsle(ctx.X + 96, 92, .9, ctx) + floatIsle(ctx.X + 268, 74, .7, ctx); },
+          mid: ctx => cloud(ctx.X + 40, 198, 1.6) + cloud(ctx.X + 180, 204, 1.3) + cloud(ctx.X + 320, 200, 1.5) } },
+
+      // ★★ Sternenturm: schlanke Sternwarte in Mitternachtsblau mit Goldspirale, Kuppel mit Teleskop, Sternenring
+      sternenturm: { heights: [118, 150],
+        sky: ctx => { let s = ''; for (let i = 0; i < 10; i++) s += sp(ctx.X + 10 + ctx.rs() * 340, 8 + ctx.rs() * 90, .5 + ctx.rs() * .7, ctx.night ? '#fff' : '#fff8fc'); return s; },
+        replace: { back: ctx => {
+          const X = ctx.X + 196, B = 182, N = '#5a5a9e';
+          let s = `<path d="M${X - 20} ${B} L${X - 13} ${B - 118} H${X + 13} L${X + 20} ${B} Z" fill="${N}"/><path d="M${X} ${B} L${X} ${B - 118} H${X + 13} L${X + 20} ${B} Z" fill="#2a2a5a" opacity=".25"/>`;
+          for (let i = 0; i < 6; i++) { const y = B - 8 - i * 19; s += `<path d="M${f1(X - 19 + i * 1.1)} ${y} L${f1(X + 18 - i * 1.1)} ${y - 12}" stroke="${GOLD}" stroke-width="2"/>`; }
+          s += [B - 30, B - 62, B - 94].map(y => `<rect x="${X - 3}" y="${y}" width="6" height="9" rx="3" fill="#ffe8a8"/>`).join('');
+          s += `<rect x="${X - 18}" y="${B - 124}" width="36" height="6" rx="2" fill="${GOLD}"/><path d="M${X - 16} ${B - 124} A16 16 0 0 1 ${X + 16} ${B - 124} Z" fill="#e8eef8"/><path d="M${X - 2} ${B - 140} h5 v15 h-5 Z" fill="#3a3a6a"/>`
+            + `<path d="M${X + 2} ${B - 134} l16 -12" stroke="${GOLD}" stroke-width="3" stroke-linecap="round"/><path d="M${X + 1} ${B - 140} v-8" stroke="${GOLD}" stroke-width="1.2"/><path d="M${X + 4} ${B - 156} a5 5 0 1 0 0 8 a4 4 0 1 1 0 -8 z" fill="${GOLD}"/>`
+            + `<ellipse cx="${X}" cy="${B - 120}" rx="40" ry="8" fill="none" stroke="#fff" stroke-width="1" opacity=".7"/>` + sp(X - 38, B - 121, .8, '#fff6a8') + sp(X + 30, B - 114, .6, '#fff');
+          return s + `<path d="M${X - 26} ${B} h52 v-4 h-52 Z" fill="#c8c0e0"/>`;
+        } },
+        glow: ctx => ctx.night ? `<circle cx="${ctx.X + 196}" cy="${182 - 132}" r="22" fill="#fff6c0" opacity=".18"/>` : '' },
+
+      // Lesehain: kein Turm – ein Lesewäldchen mit Hängematte, Bücherregal und Lichterkette
+      lesehain: { heights: [115, 150],
+        replace: { back: () => '' },
+        mid: ctx => {
+          const X = ctx.X;
+          let s = `<g transform="translate(${X + 210} 196)">${trunk(46, 12, '#b09a88')}${canopy(0, -64, 34, 26, '#bfe5cf', 77, 12)}</g><g transform="translate(${X + 320} 194)">${trunk(40, 10, '#b09a88')}${canopy(0, -56, 28, 22, '#f6e3a6', 78, 11)}</g>`;
+          s += `<path d="M${X + 216} 172 Q${X + 266} 192 ${X + 314} 170" stroke="#f6c6d6" stroke-width="5" fill="none"/><path d="M${X + 216} 172 Q${X + 266} 186 ${X + 314} 170" stroke="#fff" stroke-width="1" fill="none" opacity=".7"/>`;
+          s += `<path d="M${X + 196} 150 Q${X + 260} 166 ${X + 330} 148" stroke="#a88a78" stroke-width=".7" fill="none"/>` + [210, 232, 254, 276, 298, 318].map((dx, i) => `<circle cx="${X + dx}" cy="${f1(152 + Math.sin(i / 5 * Math.PI) * 10)}" r="2" fill="${ctx.night ? '#fff0a8' : ['#f6c6d6', '#f6e3a6', '#bcdcf2'][i % 3]}"/>`).join('');
+          s += `<g transform="translate(${X + 120} 198)"><rect x="-18" y="-40" width="36" height="40" rx="2" fill="#c8a088"/><rect x="-15" y="-37" width="30" height="34" fill="#f6eedc"/><path d="M-15 -25 h30 M-15 -13 h30" stroke="#c8a088" stroke-width="2"/>${shelfBooks(-14, -36, 28, 10)}${shelfBooks(-14, -24, 28, 10)}${shelfBooks(-14, -12, 28, 9)}<path d="M-20 -40 L0 -50 L20 -40 Z" fill="${ROSE}"/></g>`;
+          return s;
+        },
+        glow: ctx => ctx.night ? [210, 254, 298].map(dx => `<circle cx="${ctx.X + dx}" cy="156" r="7" fill="#fff0a8" opacity=".25"/>`).join('') : '' },
+
+      // ★★ Rosenschloss: rosa Palast mit runden Kuppeltürmen, Herzfenster und Kletterrosen – steht im Garten, nicht auf Wolken
+      rosenschloss: { heights: [118, 150],
+        back: ctx => {
+          const X = ctx.X + 180, B = 178, W = '#fde6ee';
+          const dome = (x, w, h, y) => `<rect x="${x - w / 2}" y="${y - h}" width="${w}" height="${h}" fill="${W}"/><path d="M${x - w / 2 - 2} ${y - h} Q${x - w / 2} ${y - h - w} ${x} ${y - h - w * 1.3} Q${x + w / 2} ${y - h - w} ${x + w / 2 + 2} ${y - h} Z" fill="${ROSE}"/><path d="M${x} ${y - h - w * 1.3} v-6" stroke="${GOLD}" stroke-width="1.2"/><circle cx="${x}" cy="${y - h - w * 1.3 - 6}" r="1.8" fill="${GOLD}"/><rect x="${x - 2}" y="${y - h + 8}" width="4" height="7" rx="2" fill="#ffe8a8"/>`;
+          let s = `<rect x="${X - 46}" y="${B - 40}" width="92" height="40" fill="${W}"/><path d="M${X - 50} ${B - 40} L${X} ${B - 70} L${X + 50} ${B - 40} Z" fill="${ROSA}"/>`
+            + `<path d="M${X} ${B - 46} C${X - 12} ${B - 54} ${X - 8} ${B - 66} ${X} ${B - 58} C${X + 8} ${B - 66} ${X + 12} ${B - 54} ${X} ${B - 46} Z" fill="${ROSE}"/>`
+            + `<path d="M${X - 8} ${B} v-16 a8 8 0 0 1 16 0 v16 Z" fill="#c8a0c0"/><path d="M${X - 26} ${B - 30} h52" stroke="#fff" stroke-width="2"/>`
+            + [-30, -18, 18, 30].map(dx => `<path d="M${X + dx - 3} ${B - 14} v-6 a3 3 0 0 1 6 0 v6 Z" fill="#ffe8a8"/>`).join('');
+          s += dome(X - 56, 22, 62, B) + dome(X + 56, 22, 62, B);
+          s += dots(91, 22, ROSE, 2.2, X - 46, B - 16, 14, 18) + dots(92, 22, ROSE, 2.2, X + 46, B - 16, 14, 18) + dots(93, 14, '#6aaa88', 2.4, X - 50, B - 10, 12, 12) + dots(94, 14, '#6aaa88', 2.4, X + 50, B - 10, 12, 12);
+          return s;
+        } },
+
+      // Dornröschenhecke: hohe dunkle Dornenhecke voller Rosen, dahinter schaut ein verwunschener Turm hervor
+      dornroeschenhecke: {
+        back: ctx => { const X = ctx.X + 250; return `<rect x="${X - 12}" y="86" width="24" height="92" fill="#d8d2e0"/><rect x="${X}" y="86" width="12" height="92" fill="#5a4a7a" opacity=".1"/><path d="M${X - 15} 86 L${X} 56 L${X + 15} 86 Z" fill="#8a6aa8"/><rect x="${X - 3}" y="100" width="6" height="10" rx="3" fill="${ctx.night ? '#fff0a8' : '#ffe8c8'}"/>${dots(81, 10, '#8fbf9a', 2, X - 6, 130, 8, 30)}`; },
+        replace: { mid: ctx => {
+          const X = ctx.X;
+          let s = `<path d="M${X} 200 V160 Q${X + 30} 140 ${X + 60} 156 Q${X + 90} 138 ${X + 130} 152 Q${X + 170} 136 ${X + 210} 150 Q${X + 250} 138 ${X + 290} 152 Q${X + 330} 140 ${X + RW} 158 V200 Z" fill="#4f8a6a"/>`;
+          s += `<path d="M${X} 200 V172 Q${X + 60} 160 ${X + 120} 170 Q${X + 200} 158 ${X + 260} 170 Q${X + 320} 160 ${X + RW} 172 V200 Z" fill="#3f7a5e"/>`;
+          for (let i = 0; i < 14; i++) { const x = X + 12 + i * 25, y = 160 + (i % 3) * 10; s += `<path d="M${x} ${y} q6 -6 10 0 q-4 4 -8 2" stroke="#2f5a46" stroke-width="1.2" fill="none"/>`; }
+          return s + dots(85, 26, ROSE, 2.8, X + 180, 170, 175, 20) + dots(86, 12, '#fbe0ea', 2.2, X + 180, 176, 170, 16);
+        } } },
+
+      // ★★ Regenbogenfälle: hoher Wasserfall zwischen Felsen, ein fester Regenbogen, Gischt
+      regenbogenfaelle: { heights: [90, 140],
+        back: ctx => {
+          const X = ctx.X;
+          let s = `<path d="M${X + 80} 180 L${X + 104} 66 Q${X + 140} 54 ${X + 170} 70 L${X + 172} 180 Z" fill="#c8bcd8"/><path d="M${X + 188} 180 L${X + 190} 64 Q${X + 226} 54 ${X + 260} 72 L${X + 286} 180 Z" fill="#b8aacc"/>`
+            + `<path d="M${X + 140} 64 Q${X + 160} 58 ${X + 172} 68 L${X + 172} 180 H${X + 150} Z M${X + 236} 60 Q${X + 254} 64 ${X + 260} 72 L${X + 286} 180 H${X + 250} Z" fill="#5a4a7a" opacity=".1"/>`
+            + `<path d="M${X + 104} 66 Q${X + 140} 54 ${X + 170} 70 M${X + 190} 64 Q${X + 226} 54 ${X + 260} 72" stroke="#b8e0b8" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+          s += `<rect x="${X + 168}" y="66" width="24" height="122" fill="#d8eefa"/>` + [172, 178, 184, 189].map(x => `<path d="M${X + x} 70 V184" stroke="#fff" stroke-width="1.4" stroke-dasharray="${6 + x % 5} 6" opacity=".9"/>`).join('');
+          if (!ctx.night) s += `<path d="M${X + 60} 182 A120 104 0 0 1 ${X + 300} 182" fill="none" stroke-width="16" stroke="url(#feen-rainbow)" opacity=".7"/>`;
+          return s + cloud(X + 172, 186, .9, .85) + cloud(X + 196, 190, .7, .8);
+        } },
+
+      // Glitzerbach: kein Teich, sondern ein funkelnder Bach mit Trittsteinen
+      glitzerbach: {
+        replace: { mid: ctx => tree(ctx.X + 40, 186, .8, '#c8e8c0', 5) + tree(ctx.X + 300, 188, .7, '#f6e3a6', 6) },
+        front: ctx => {
+          const X = ctx.X, d = `M${X + 120} 198 Q${X + 40} 214 ${X + 140} 230 T${X + 220} 262`;
+          let s = `<path d="${d}" stroke="#a8d4ec" stroke-width="16" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#cfe8f6" stroke-width="11" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff" stroke-width="1.6" fill="none" stroke-dasharray="4 8"/>`;
+          s += [[96, 214], [112, 222], [128, 228]].map(([dx, y]) => `<ellipse cx="${X + dx}" cy="${y}" rx="5" ry="2.4" fill="#d8d0e0"/>`).join('');
+          for (let i = 0; i < 9; i++) s += sp(X + 60 + ctx.rs() * 160, 202 + ctx.rs() * 56, .5 + ctx.rs() * .4, '#fff');
+          return s;
+        } },
+
+      // Perlmuttbucht: schimmernde Meeresbucht, Riesenmuschel mit Perle, Seesterne
+      perlmuttbucht: {
+        replace: { mid: ctx => `<path d="M${ctx.X} 178 Q${ctx.X + 180} 170 ${ctx.X + RW} 178 V206 Q${ctx.X + 180} 198 ${ctx.X} 206 Z" fill="${ctx.winter ? '#e0ecf8' : '#a6d2ec'}"/>
+            <path d="M${ctx.X} 184 Q${ctx.X + 180} 178 ${ctx.X + RW} 184 V194 Q${ctx.X + 180} 188 ${ctx.X} 194 Z" fill="url(#feen-rainbow)" opacity=".28"/>
+            <path d="M${ctx.X + 30} 190 q10 -3 20 0 M${ctx.X + 150} 196 q10 -3 20 0 M${ctx.X + 270} 188 q10 -3 20 0" stroke="#fff" stroke-width="1.6" fill="none"/>
+            <path d="M${ctx.X} 206 Q${ctx.X + 180} 198 ${ctx.X + RW} 206 V212 H${ctx.X} Z" fill="#f6ecdc"/>` },
+        front: ctx => {
+          const X = ctx.X + 280, Y = 238;
+          let s = `<g transform="translate(${X} ${Y})"><path d="M-22 0 Q-24 -30 0 -34 Q24 -30 22 0 Z" fill="#fbe6ee"/>` + [-16, -8, 0, 8, 16].map(x => `<path d="M0 0 L${x} -30" stroke="#f0c8d8" stroke-width="1.4"/>`).join('')
+            + `<path d="M-22 0 Q0 8 22 0 Q0 4 -22 0 Z" fill="#f6d8e4"/><circle cx="0" cy="-4" r="6" fill="#fff"/><circle cx="-2" cy="-6" r="2" fill="#fff" opacity=".9"/><circle cx="0" cy="-4" r="6" fill="url(#feen-rainbow)" opacity=".25"/></g>`;
+          return s + [[60, 236, ROSA], [180, 252, PFIRSICH]].map(([dx, y, col]) => { let p = ''; for (let i = 0; i < 5; i++) p += `<ellipse cx="0" cy="-3.4" rx="1.6" ry="3.6" fill="${col}" transform="rotate(${i * 72})"/>`; return `<g transform="translate(${ctx.X + dx} ${y})">${p}</g>`; }).join('');
+        } },
+
+      // ★★★ Einhornwiese: Einhorn auf der Wiese, goldenes Horn-Denkmal, großer Regenbogen, Goldglitzer
+      einhornwiese: { heights: [125, 155],
+        sky: ctx => (ctx.night ? '' : `<path d="M${ctx.X + 10} 176 A170 150 0 0 1 ${ctx.X + 350} 176" fill="none" stroke-width="22" stroke="url(#feen-rainbow)" opacity=".6"/>`)
+          + [[60, 30], [150, 18], [280, 26], [330, 70], [30, 80]].map(([dx, y]) => sp(ctx.X + dx, y, 1, ctx.night ? '#fff6a8' : GOLD)).join(''),
+        mid: ctx => {
+          const X = ctx.X + 220;
+          let s = `<path d="M${X - 16} 196 h32 l-4 -10 h-24 Z" fill="#f0e8f4"/><path d="M${X - 10} 186 h20 v-6 h-20 Z" fill="#e8dcf0"/>`
+            + `<path d="M${X - 8} 180 L${X} 118 L${X + 8} 180 Z" fill="${GOLD}"/><path d="M${X} 118 L${X + 8} 180 H${X + 2} Z" fill="#d8b060" opacity=".6"/>`
+            + [0, 1, 2, 3, 4, 5].map(i => `<path d="M${f1(X - 7 + i * 1.1)} ${f1(172 - i * 10)} L${f1(X + 6 - i * 1)} ${f1(166 - i * 10)}" stroke="#fff4c8" stroke-width="1.6"/>`).join('') + sp(X, 114, 1.4, '#fff');
+          return s + unicorn(ctx.X + 80, 200, 1.1) + tree(ctx.X + 320, 192, .75, PASTELL[2], 61);
+        },
+        front: ctx => { let s = ''; for (let i = 0; i < 16; i++) s += sp(ctx.X + ctx.rs() * 360, 214 + ctx.rs() * 44, .5 + ctx.rs() * .4, GOLD); return s; },
+        glow: ctx => `<circle cx="${ctx.X + 220}" cy="130" r="${ctx.night ? 24 : 16}" fill="#fff6c0" opacity="${ctx.night ? .3 : .25}"/>` },
+
+      // Lavendelfeld: Reihen voller Lavendel bis zum Horizont, kleines Steinhaus mit lila Läden
+      lavendelfeld: {
+        mid: ctx => `<g transform="translate(${ctx.X + 290} 194)"><rect x="-18" y="-20" width="36" height="20" fill="#f6eedc"/><path d="M-21 -20 L0 -34 L21 -20 Z" fill="#d8a088"/><rect x="-12" y="-14" width="7" height="7" fill="#ffe8a8"/><rect x="-15" y="-14" width="3" height="7" fill="${LILA}"/><rect x="-5" y="-14" width="3" height="7" fill="${LILA}"/><path d="M-3 0 v-9 h6 v9" fill="#c8a088"/></g>`,
+        replace: { front: ctx => {
+          if (ctx.winter) return '';
+          const X = ctx.X, vx = X + 180;
+          let s = '';
+          for (let i = -4; i <= 4; i++) s += lavRow(vx + i * 22, 212, vx + i * 70, 262, 3, 13, i % 2 ? '#c4b0e8' : '#b8a0e2') + lavRow(vx + i * 22, 212, vx + i * 70, 262, 1.4, 6, '#d8c8f4');
+          for (let i = 0; i < 30; i++) { const x = X + ctx.rs() * 360, y = 222 + ctx.rs() * 38; s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="1.4" fill="#e8dcf8"/>`; }
+          return s;
+        } } },
+
+      // Schmetterlingstal: blühende Büsche und große bunte Schmetterlinge in der Luft
+      schmetterlingstal: {
+        sky: ctx => [[50, 70, 1.2, ROSA, FLIEDER], [140, 40, 1, HIMMEL, MINZE], [230, 80, 1.4, '#f6e3a6', PFIRSICH], [310, 50, 1, FLIEDER, ROSA], [90, 120, .9, MINZE, HIMMEL], [270, 130, 1.1, PFIRSICH, ROSA]].map(([dx, y, k, a, b]) => butterfly(ctx.X + dx, y, k, a, b)).join(''),
+        mid: ctx => [40, 110, 190, 260, 330].map((dx, i) => `<g transform="translate(${ctx.X + dx} 194)">${canopy(0, -8, 16, 10, '#9fd4b0', 70 + i, 7)}${dots(80 + i, 8, [ROSA, FLIEDER, '#f6e3a6', HIMMEL, PFIRSICH][i], 2.4, 0, -10, 13, 7)}</g>`).join('') },
+
+      // Elfenhain: Steinkreis mit Elfenlichtern, Baumhaus mit Leiter
+      elfenhain: {
+        mid: ctx => {
+          const X = ctx.X;
+          let s = `<g transform="translate(${X + 70} 196)">${trunk(50, 14, '#b09a88')}${canopy(0, -70, 36, 26, '#bfe5cf', 31, 12)}<rect x="-14" y="-62" width="28" height="18" rx="4" fill="#f6eedc"/><path d="M-17 -62 L0 -76 L17 -62 Z" fill="${ROSE}"/><circle cx="0" cy="-53" r="4" fill="#ffe8a8"/>`
+            + `<path d="M10 -44 L14 0 M18 -44 L22 0" stroke="#c8a088" stroke-width="1.6"/>${[-36, -28, -20, -12, -4].map(y => `<path d="M${10 + (y + 44) * .09} ${y} h8" stroke="#c8a088" stroke-width="1.4"/>`).join('')}</g>`;
+          [[160, 196, .8], [196, 192, .7], [236, 194, .75], [270, 198, .85], [214, 204, 1], [176, 204, .95]].forEach(([dx, y, k]) => { s += `<path d="M${X + dx - 5 * k} ${y} L${X + dx - 4 * k} ${y - 22 * k} Q${X + dx} ${y - 26 * k} ${X + dx + 4 * k} ${y - 22 * k} L${X + dx + 5 * k} ${y} Z" fill="#d0c8dc"/>`; });
+          return s;
+        },
+        glow: ctx => [[176, 176], [214, 172], [196, 166], [236, 172], [160, 174], [270, 176]].map(([dx, y]) => `<circle cx="${ctx.X + dx}" cy="${y}" r="${ctx.night ? 7 : 4}" fill="#c8f4e4" opacity="${ctx.night ? .45 : .35}"/><circle cx="${ctx.X + dx}" cy="${y}" r="1.6" fill="#fff"/>`).join('') },
+
+      // Glühwürmchenwald: dunklerer Wald mit Laternen an Schnüren, auch tagsüber ein paar Glühwürmchen
+      gluehwuermchenwald: { hill: '#8fbaa8',
+        replace: { mid: ctx => { let s = ''; for (let x = ctx.X + 14; x < ctx.X + RW - 6; x += 30 + ctx.r() * 10) s += ctx.winter ? `<g transform="translate(${x.toFixed(0)} 186)">${trunk(22, 5, '#8a7a88')}</g>` : tree(x.toFixed(0), 186 + ctx.r() * 4, .7 + ctx.r() * .3, ['#7fb8a0', '#8aa8c8', '#9a90c0', '#6fa894'][Math.floor(ctx.r() * 4)], Math.floor(ctx.r() * 999));
+          return s + `<path d="M${ctx.X + 20} 150 Q${ctx.X + 100} 166 ${ctx.X + 180} 150 Q${ctx.X + 260} 166 ${ctx.X + 340} 150" stroke="#a88a78" stroke-width=".7" fill="none"/>` + [40, 80, 120, 160, 200, 240, 280, 320].map((dx, i) => lantern(ctx.X + dx, 160 + (i % 2) * 4, ctx.night)).join(''); } },
+        glow: ctx => { let s = ''; for (let i = 0; i < (ctx.night ? 18 : 8); i++) { const x = ctx.X + ctx.rs() * 360, y = 150 + ctx.rs() * 100; s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="4" fill="#fff6a8" opacity=".3"/><circle cx="${f1(x)}" cy="${f1(y)}" r="1.4" fill="#fffbd0"/>`; } return s; } },
+
+      // Silberwald: silberne Bäume mit glitzerndem Laub
+      silberwald: { hill: '#dfe6ee',
+        replace: { mid: ctx => { let s = ''; for (let x = ctx.X + 16; x < ctx.X + RW - 6; x += 32 + ctx.r() * 10) { const k = .7 + ctx.r() * .35, y = 186 + ctx.r() * 4; s += `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) scale(${k.toFixed(2)})"><rect x="-3" y="-24" width="6" height="24" fill="#e8ecf4"/><path d="M-3 -16 h3 M0 -8 h3" stroke="#a8b0c8" stroke-width="1.2"/>${ctx.winter ? '' : canopy(0, -34, 16, 14, '#cdd8ec', Math.floor(x), 8) + dots(Math.floor(x) + 1, 8, '#ffffff', 1.6, 0, -36, 13, 11)}</g>`; } return s; } },
+        glow: ctx => { let s = ''; for (let i = 0; i < 10; i++) s += sp(ctx.X + 10 + ctx.rs() * 340, 140 + ctx.rs() * 50, .5, '#fff'); return s; } },
+
+      // ★★ Mondsteinhöhle: Höhle in Sichelform mit leuchtenden Mondsteinen, goldener Mond darüber
+      mondsteinhoehle: { heights: [60, 110],
+        sky: ctx => `<path d="M${ctx.X + 266} 24 A22 22 0 1 0 ${ctx.X + 278} 60 A18 18 0 1 1 ${ctx.X + 266} 24 Z" fill="#fff6d8" opacity="${ctx.night ? 1 : .7}"/>`,
+        replace: { back: ctx => {
+          const X = ctx.X + 180;
+          let s = `<path d="M${X - 80} 178 Q${X - 70} 92 ${X} 84 Q${X + 70} 92 ${X + 80} 178 Z" fill="#dfe4f4"/><path d="M${X} 84 Q${X + 70} 92 ${X + 80} 178 H${X + 30} Z" fill="#5a4a7a" opacity=".08"/>`
+            + `<path d="M${X - 52} 178 Q${X - 46} 110 ${X} 104 Q${X + 46} 110 ${X + 52} 178 Z" fill="#2e2a5a"/>`
+            + [-22, 2, 24].map((dx, i) => `<path d="M${X + dx - 2} 108 L${X + dx} ${114 + i * 2} L${X + dx + 2} 108 Z" fill="#8a88b8"/>`).join('');
+          s += [[-26, 166, 7], [0, 160, 10], [24, 168, 6], [-10, 172, 5], [38, 172, 4]].map(([dx, y, rr]) => `<circle cx="${X + dx}" cy="${y}" r="${rr}" fill="#e8f0ff"/><circle cx="${X + dx - rr / 3}" cy="${y - rr / 3}" r="${rr / 3}" fill="#fff"/>`).join('');
+          return s + `<path d="M${X + 4} 74 a8 8 0 1 0 0 14 a6 6 0 1 1 0 -14 z" fill="${GOLD}"/>`;
+        } },
+        glow: ctx => [[-26, 166, 7], [0, 160, 10], [24, 168, 6]].map(([dx, y, rr]) => `<circle cx="${ctx.X + 180 + dx}" cy="${y}" r="${rr * 2.4}" fill="#cfe0ff" opacity="${ctx.night ? .35 : .2}"/>`).join('') },
+
+      // Amethystgrotte: aufgebrochene Geode mit lila Kristallkranz
+      amethystgrotte: {
+        replace: { back: ctx => {
+          const X = ctx.X + 180, Y = 140;
+          let s = `<ellipse cx="${X}" cy="${Y}" rx="62" ry="44" fill="#a898b4"/><ellipse cx="${X}" cy="${Y}" rx="50" ry="34" fill="#6a4a8a"/>`;
+          for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, x = X + Math.cos(a) * 44, y = Y + Math.sin(a) * 29, x2 = X + Math.cos(a) * 30, y2 = Y + Math.sin(a) * 19; s += `<path d="M${f1(x - Math.sin(a) * 5)} ${f1(y + Math.cos(a) * 5)} L${f1(x2)} ${f1(y2)} L${f1(x + Math.sin(a) * 5)} ${f1(y - Math.cos(a) * 5)} Z" fill="${i % 2 ? LILA : FLIEDER}"/>`; }
+          return s + `<ellipse cx="${X}" cy="${Y}" rx="20" ry="12" fill="#f0d8ff" opacity=".6"/>`;
+        } } },
+
+      // ★★ Drachenfels: dunkler Felsturm mit Drachenhöhle, ein schlafender Drache obendrauf, Goldschatz
+      drachenfels: {
+        replace: { back: ctx => {
+          const X = ctx.X + 190, R = '#8a7a9a';
+          let s = `<path d="M${X - 90} 178 L${X - 60} 112 L${X - 40} 118 L${X - 20} 76 L${X + 20} 72 L${X + 36} 104 L${X + 64} 96 L${X + 92} 178 Z" fill="${R}"/><path d="M${X + 20} 72 L${X + 36} 104 L${X + 64} 96 L${X + 92} 178 H${X + 10} Z" fill="#5a4a6a" opacity=".25"/>`
+            + `<path d="M${X - 26} 178 Q${X - 22} 140 ${X} 136 Q${X + 22} 140 ${X + 26} 178 Z" fill="#3a2e4a"/>`
+            + `<path d="M${X - 18} 178 q6 -10 12 -4 q6 -8 12 0 q6 -6 12 4 Z" fill="${GOLD}"/>${sp(X - 4, 168, .6, '#fff')}${sp(X + 10, 172, .5, '#fff')}`;
+          s += `<g transform="translate(${X} 72)"><path d="M-30 0 Q-40 -6 -34 -14 Q-28 -8 -22 -6" stroke="#9fd4bc" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="-4" cy="-8" rx="24" ry="10" fill="#9fd4bc"/><path d="M-12 -16 L-4 -30 L4 -16 Z" fill="#b8e4d0"/><path d="M-6 -16 L4 -26 L8 -14 Z" fill="#8fc8b0"/>`
+            + `<ellipse cx="22" cy="-6" rx="10" ry="7" fill="#9fd4bc"/><path d="M18 -9 q3 2 6 0" stroke="#3a5a4a" stroke-width="1" fill="none"/><path d="M24 -12 l2 -6 M18 -12 l-1 -6" stroke="#f2d38a" stroke-width="1.6" stroke-linecap="round"/>`
+            + [-18, -10, -2, 6].map(x => `<path d="M${x} -18 l3 -5 l3 5 Z" fill="${ROSA}"/>`).join('') + `<text x="30" y="-18" font-size="8" font-family="sans-serif" font-weight="800" fill="#fff" opacity=".85">z</text><text x="36" y="-26" font-size="6" font-family="sans-serif" font-weight="800" fill="#fff" opacity=".7">z</text></g>`;
+          return s;
+        } } },
+
+      // Pilzkönigreich: ein riesiges Pilzschloss mit Fenstern, Türmchen-Pilzen und Wimpeln
+      pilzkoenigreich: {
+        replace: { mid: ctx => {
+          const X = ctx.X + 200, B = 198;
+          let s = `<path d="M${X - 22} ${B} Q${X - 26} ${B - 40} ${X - 18} ${B - 62} H${X + 18} Q${X + 26} ${B - 40} ${X + 22} ${B} Z" fill="#fff4ea"/><path d="M${X} ${B - 62} H${X + 18} Q${X + 26} ${B - 40} ${X + 22} ${B} H${X} Z" fill="#e8d8c8" opacity=".6"/>`
+            + `<path d="M${X - 7} ${B} v-14 a7 7 0 0 1 14 0 v14 Z" fill="#c8a098"/>` + [[-10, -34], [6, -34], [-2, -50]].map(([dx, dy]) => `<rect x="${X + dx}" y="${B + dy}" width="6" height="8" rx="3" fill="#ffe8a8"/>`).join('')
+            + `<path d="M${X - 64} ${B - 58} Q${X - 50} ${B - 112} ${X} ${B - 116} Q${X + 50} ${B - 112} ${X + 64} ${B - 58} Q${X} ${B - 70} ${X - 64} ${B - 58} Z" fill="#e9a8a8"/>`
+            + [[-40, -78, 6], [-14, -100, 7], [16, -90, 6], [42, -76, 5], [0, -78, 4], [-28, -94, 3.6]].map(([dx, dy, rr]) => `<circle cx="${X + dx}" cy="${B + dy}" r="${rr}" fill="#fff"/>`).join('');
+          s += [[-38, -104, '#bba8e0'], [30, -108, '#9cc8e8']].map(([dx, dy, cap]) => `<rect x="${X + dx - 3}" y="${B + dy}" width="6" height="12" fill="#fff4ea"/><path d="M${X + dx - 10} ${B + dy + 1} Q${X + dx} ${B + dy - 16} ${X + dx + 10} ${B + dy + 1} Z" fill="${cap}"/><path d="M${X + dx} ${B + dy - 14} v-8" stroke="${GOLD}" stroke-width="1"/><path d="M${X + dx} ${B + dy - 22} l7 2 l-7 3 Z" fill="${ROSA}"/>`).join('');
+          return s + [[60, 196, .8, 1], [320, 198, .7, 2]].map(([dx, y, k, i]) => `<g transform="translate(${ctx.X + dx} ${y}) scale(${k})"><rect x="-12" y="-24" width="24" height="24" rx="4" fill="#fff4ea"/><path d="M-26 -22 Q0 -58 26 -22 Z" fill="${CAPS[i]}"/><circle cx="-10" cy="-34" r="3" fill="#fff"/><path d="M-4 0 v-10 a4 4 0 0 1 8 0 v10 Z" fill="#c8a098"/></g>`).join('');
+        } },
+        glow: ctx => ctx.night ? `<circle cx="${ctx.X + 200}" cy="160" r="22" fill="#fff4b0" opacity=".2"/>` : '' },
+
+      // Nebelmoor: dunkle Moortümpel, Schilf, Nebelbänke und blaue Irrlichter
+      nebelmoor: {
+        replace: { mid: ctx => {
+          const X = ctx.X;
+          let s = '';
+          [[60, 192, 40], [180, 196, 52], [300, 190, 36]].forEach(([dx, y, rx]) => { s += `<ellipse cx="${X + dx}" cy="${y}" rx="${rx}" ry="6" fill="#8a9ab8"/><path d="M${X + dx - rx + 6} ${y} v-14 M${X + dx - rx + 10} ${y} v-18 M${X + dx + rx - 8} ${y} v-12" stroke="#7a9a7a" stroke-width="1.6"/><ellipse cx="${X + dx - rx + 10}" cy="${y - 19}" rx="1.6" ry="4" fill="#a88a78"/>`; });
+          for (let x = X + 20; x < X + RW; x += 70) s += `<g transform="translate(${x} 182)">${trunk(26, 5, '#9a8aa0')}<path d="M0 -20 l-10 -10 M0 -24 l9 -9" stroke="#9a8aa0" stroke-width="2" stroke-linecap="round"/></g>`;
+          return s + `<ellipse cx="${X + 120}" cy="186" rx="150" ry="10" fill="#fff" opacity="${ctx.night ? .12 : .5}"/><ellipse cx="${X + 270}" cy="196" rx="120" ry="9" fill="#fff" opacity="${ctx.night ? .1 : .45}"/>`;
+        } },
+        glow: ctx => [[90, 176], [210, 168], [300, 180]].map(([dx, y]) => `<circle cx="${ctx.X + dx}" cy="${y}" r="${ctx.night ? 9 : 6}" fill="#a8e0f8" opacity="${ctx.night ? .4 : .3}"/><circle cx="${ctx.X + dx}" cy="${y}" r="2" fill="#f0fbff"/>`).join('') },
+    };
 
     // ---- Gebiete (IDs nie ändern; Neues hinten anhängen). 4. Wert = besonderes Gebiet: erst ab so vielen offenen Gebieten wählbar ----
     const regions = [
@@ -666,10 +926,45 @@ window.EDITION = (function () {
       { id: 'kleeblatt', name: 'ein Glücksklee', d: `<circle cx="-2" cy="-6" r="2.2" fill="${BLATT}"/><circle cx="2" cy="-6" r="2.2" fill="${BLATT}"/><circle cx="-2" cy="-2.5" r="2.2" fill="${BLATT}"/><circle cx="2" cy="-2.5" r="2.2" fill="${BLATT}"/>` },
     ];
 
+    // ---- Vorschaubilder der Zauberlandschaft im Laden (gemalt statt Emoji) ----
+    const FD = ['#a9c4ec', '#fbf0f4'], FN = ['#1d1438', '#6a4a9a'], FA = ['#7a72b4', '#ffd2a8'], FM = ['#bcc8ee', '#fff0d8'];
+    const FMTN = (night) => `<path d="M-4 40 L16 18 L28 28 L46 10 L64 30 L84 20 V40 Z" fill="${night ? '#3a2f66' : '#c6cfe9'}"/><path d="M46 10 L52 17 L46 19 L41 16 Z M16 18 L20 23 L16 24 L12 22 Z" fill="${night ? '#8a7ab8' : '#fff'}"/>`;
+    const fcard = (id, sky, body, night = false, o = {}) => H.landCard(id, sky, body, { hill: night ? '#3a5a5a' : '#b8e0b8', ground: night ? '#4a6a68' : '#cfeac4', back: (o.back || '') + FMTN(night) });
+    const pvDefs = `<defs><radialGradient id="pv-warm"><stop offset="0" stop-color="#fff6c0" stop-opacity=".9"/><stop offset="1" stop-color="#fff6c0" stop-opacity="0"/></radialGradient><radialGradient id="pv-mint"><stop offset="0" stop-color="#c8f4e4" stop-opacity=".9"/><stop offset="1" stop-color="#c8f4e4" stop-opacity="0"/></radialGradient></defs>`;
+    const FEEN_ART = {
+      funkelbach: () => fcard('funkelbach', FD, `${tree(14, 42, .5, PASTELL[0], 3)}${tree(68, 40, .45, PASTELL[2], 4)}<path d="M42 36 Q28 44 44 50 T34 62" stroke="#a8d4ec" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M42 36 Q28 44 44 50 T34 62" stroke="#d6ecf8" stroke-width="5" fill="none" stroke-linecap="round"/>${sp(36, 44, .5)}${sp(44, 52, .6)}${sp(38, 58, .45)}`),
+      rosenmeer: () => fcard('rosenmeer', FD, [10, 28, 46, 64, 20, 54].map((x, i) => roseBush(x, i < 4 ? 48 : 58, i < 4 ? .55 : .7, 50 + i, 7)).join('')),
+      kristallglanz: () => fcard('kristallglanz', FA, `${[0, 1, 2, 3, 4, 5].map(i => `<path d="M40 40 L${f1(40 + Math.cos(i * 1.05 - 2.6) * 40)} ${f1(40 + Math.sin(i * 1.05 - 2.6) * 40)}" stroke="#fff" stroke-width="1.4" opacity=".35"/>`).join('')}${crystal(30, 50, .8, FLIEDER)}${crystal(48, 52, 1, HIMMEL)}${crystal(62, 50, .6, ROSA)}${sp(44, 22, 1, '#fff')}${sp(26, 30, .6, '#fff')}`),
+      gluehwuermchen: () => fcard('gluehwuermchen', FN, `${pvDefs}${tree(16, 44, .55, '#6f8fa8', 5)}${tree(62, 42, .6, '#6a7fa0', 6)}${[[30, 30], [46, 22], [56, 36], [22, 40], [40, 46], [68, 26]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="url(#pv-warm)"/><circle cx="${x}" cy="${y}" r="1" fill="#fffbd0"/>`).join('')}`, true),
+      regenbogen: () => fcard('regenbogen', FD, `<path d="M6 46 A34 30 0 0 1 74 46" fill="none" stroke="url(#feen-rainbow)" stroke-width="9" opacity=".85"/><ellipse cx="40" cy="50" rx="24" ry="4" fill="#bfe4f4"/>${cloud(12, 44, .35)}${cloud(70, 44, .35)}`, false, { back: '<defs><linearGradient id="feen-rainbow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4a7c0"/><stop offset=".25" stop-color="#ffd6a8"/><stop offset=".5" stop-color="#fff0a8"/><stop offset=".75" stop-color="#a8e0c8"/><stop offset="1" stop-color="#b9a8e8"/></linearGradient></defs>' }),
+      nordlicht: () => fcard('nordlicht', FN, '', true, { back: `<defs><linearGradient id="pvf-nl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8e0c8" stop-opacity="0"/><stop offset=".5" stop-color="#a8e0c8" stop-opacity=".85"/><stop offset="1" stop-color="#b9a8e8" stop-opacity="0"/></linearGradient><linearGradient id="pvf-nr" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#a8e0c8"/><stop offset="1" stop-color="#b9a8e8" stop-opacity="0"/></linearGradient></defs>
+        ${[0, 1, 2].map(k => `<path d="M-2 ${16 + k * 7} Q20 ${6 + k * 7} 40 ${16 + k * 7} T82 ${12 + k * 7}" stroke="url(#pvf-nl)" stroke-width="${14 - k * 3}" fill="none" opacity="${.9 - k * .2}"/>`).join('')}${[...Array(14)].map((_, i) => `<rect x="${3 + i * 5.6}" y="${2 + (i % 3) * 3}" width="2.4" height="${14 + (i % 4) * 3}" fill="url(#pvf-nr)" opacity=".5"/>`).join('')}` }),
+      milchstrasse: () => fcard('milchstrasse', FN, '', true, { back: (() => { const q = prng(13); let s = [26, 14, 5].map((w, i) => `<path d="M-4 40 Q30 6 84 12" stroke="#f0e4ff" stroke-width="${w}" fill="none" opacity="${.08 + i * .06}" stroke-linecap="round"/>`).join(''); for (let i = 0; i < 34; i++) { const t = q(), x = -4 + t * 88, y = 40 - 30 * t + (q() - .5) * 12; s += i % 5 ? `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(q() * .7 + .3)}" fill="${['#fff', '#fff6a8', '#f4c8e8'][i % 3]}"/>` : sp(Math.round(x), Math.round(y), .4, '#fff6a8'); } return s; })() }),
+      pusteblumen: () => fcard('pusteblumen', FD, `<path d="M20 58 q1 -10 0 -18" stroke="#7aa87a" stroke-width="1.2" fill="none"/>${[...Array(14)].map((_, i) => { const a = i / 14 * Math.PI * 2; return `<path d="M20 40 l${f1(Math.cos(a) * 7)} ${f1(Math.sin(a) * 7)}" stroke="#fff" stroke-width=".7"/><circle cx="${f1(20 + Math.cos(a) * 7)}" cy="${f1(40 + Math.sin(a) * 7)}" r=".9" fill="#fff"/>`; }).join('')}
+        ${[[38, 26, 1.4], [52, 16, 1.2], [64, 28, 1], [46, 36, 1.1], [70, 12, .9]].map(([x, y, k]) => `<g transform="translate(${x} ${y}) scale(${k})"><path d="M0 0 V5" stroke="#efe8dc" stroke-width=".6"/>${[-60, -30, 0, 30, 60].map(a => `<path d="M0 0 l${f1(Math.sin(a * Math.PI / 180) * 3.4)} ${f1(-Math.cos(a * Math.PI / 180) * 3.4)}" stroke="#fff" stroke-width=".6"/>`).join('')}</g>`).join('')}`),
+      feenstaubregen: () => fcard('feenstaubregen', FA, `${[[60, 8], [30, 14]].map(([x0, y0]) => [...Array(9)].map((_, j) => { const t = j / 8; return `<circle cx="${f1(x0 - t * 22)}" cy="${f1(y0 + t * 30 + t * t * 10)}" r="${f1(1.6 - t)}" fill="${GOLD}" opacity="${f1(1 - t * .7)}"/>`; }).join('') + sp(x0, y0, .9, '#fff8d8')).join('')}${[[18, 40], [50, 46], [70, 34], [40, 30]].map(([x, y]) => sp(x, y, .45, GOLD)).join('')}`),
+      falterschwarm: () => fcard('falterschwarm', FD, `${butterfly(24, 24, 1, ROSA, FLIEDER)}${butterfly(54, 16, .8, HIMMEL, MINZE)}${butterfly(60, 38, .7, '#f6e3a6', PFIRSICH)}${butterfly(34, 44, .6, FLIEDER, ROSA)}`),
+      bluetenregen: () => fcard('bluetenregen', FD, `<g transform="translate(18 50)">${trunk(16, 5, '#8a6a70')}${canopy(0, -24, 14, 11, '#f8c8d8', 301, 9)}</g>${[[34, 18, 20], [48, 30, 80], [62, 14, 140], [70, 34, 200], [42, 44, 260], [56, 46, 320], [30, 34, 10]].map(([x, y, r], i) => `<path d="M0 0 C-2.2 -1.6 -2.4 -4.6 -1 -6 L0 -5 L1 -6 C2.4 -4.6 2.2 -1.6 0 0 Z" fill="${['#f8c8d8', '#fde4ec', '#f4b0c8'][i % 3]}" transform="translate(${x} ${y}) rotate(${r}) scale(1.2)"/>`).join('')}`),
+      nebelschleier: () => fcard('nebelschleier', FM, `<defs><radialGradient id="pv-mist"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>${tree(16, 42, .5, PASTELL[3], 7)}${tree(64, 40, .5, PASTELL[1], 8)}<ellipse cx="30" cy="44" rx="40" ry="7" fill="url(#pv-mist)"/><ellipse cx="58" cy="52" rx="36" ry="6" fill="url(#pv-mist)"/><ellipse cx="40" cy="36" rx="30" ry="4" fill="url(#pv-mist)" opacity=".7"/>`),
+      leuchtpilze: () => fcard('leuchtpilze', FN, `${pvDefs}${[[22, 54, 1.3, '#9fd4bc'], [44, 52, 1.6, '#bba8e0'], [62, 56, 1.1, '#a8dcec']].map(([x, y, k, cap]) => `<circle cx="${x}" cy="${y - 8 * k}" r="${11 * k}" fill="url(#pv-mint)"/><g transform="translate(${x} ${y}) scale(${k})"><path d="M-1.6 0 v-6 h3.2 v6 Z" fill="#fff4ea"/><path d="M-7 -5.6 Q0 -16 7 -5.6 Q0 -4 -7 -5.6 Z" fill="${cap}"/><circle cx="-2.6" cy="-9" r="1.1" fill="#fff"/><circle cx="2.4" cy="-8" r=".9" fill="#fff"/></g>`).join('')}`, true),
+      libellen: () => fcard('libellen', FD, `<defs><linearGradient id="pv-wing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f6fc"/><stop offset=".5" stop-color="#d8c8f4"/><stop offset="1" stop-color="#c8f0e4"/></linearGradient></defs><ellipse cx="40" cy="52" rx="30" ry="5" fill="#bfe4f4"/><path d="M66 52 v-12 M70 52 v-16 M74 52 v-10" stroke="${DBLATT}" stroke-width="1.2"/>
+        ${[[28, 24, 1.6, -8], [54, 34, 1.2, 12]].map(([x, y, k, r]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${k})"><ellipse cx="-3" cy="-3.4" rx="6" ry="2" fill="url(#pv-wing)" stroke="#fff" stroke-width=".4" transform="rotate(-14 -3 -3.4)"/><ellipse cx="-3" cy="3.4" rx="6" ry="2" fill="url(#pv-wing)" stroke="#fff" stroke-width=".4" transform="rotate(14 -3 3.4)"/><ellipse cx="3" cy="-3" rx="5" ry="1.7" fill="url(#pv-wing)" stroke="#fff" stroke-width=".4" transform="rotate(14 3 -3)"/><ellipse cx="3" cy="3" rx="5" ry="1.7" fill="url(#pv-wing)" stroke="#fff" stroke-width=".4" transform="rotate(-14 3 3)"/><path d="M-11 0 H4" stroke="#5aa8b8" stroke-width="1.6" stroke-linecap="round"/><circle cx="5.4" cy="0" r="1.8" fill="#3f8fa0"/></g>`).join('')}`),
+      tauglitzer: () => fcard('tauglitzer', FM, [12, 22, 32, 44, 54, 66, 74].map((x, i) => `<path d="M${x} 60 q-1 -10 ${i % 2 ? 5 : -5} -16" stroke="#7fbf8a" stroke-width="1.6" fill="none"/><path d="M${x + (i % 2 ? 5 : -5)} 44 q-2.4 4 0 5.6 q2.4 -1.6 0 -5.6 Z" fill="#dff4ff" stroke="#a8d8f0" stroke-width=".5"/><circle cx="${x + (i % 2 ? 4.4 : -5.6)}" cy="47" r=".7" fill="#fff"/>`).join('') + sp(30, 40, .5, '#fff') + sp(58, 42, .4, '#fff')),
+      seifenblasen: () => fcard('seifenblasen', FD, `<defs><radialGradient id="pv-bub" cx=".5" cy=".5" r=".5"><stop offset=".6" stop-color="#ffffff" stop-opacity=".05"/><stop offset=".85" stop-color="#c8e8f8" stop-opacity=".5"/><stop offset=".95" stop-color="#f4c8e8" stop-opacity=".8"/><stop offset="1" stop-color="#fff" stop-opacity=".9"/></radialGradient></defs>${[[24, 26, 9], [48, 18, 6], [58, 36, 11], [36, 44, 5], [70, 16, 4]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#pv-bub)"/><path d="M${f1(x - r * .6)} ${f1(y - r * .2)} a${f1(r * .65)} ${f1(r * .65)} 0 0 1 ${f1(r * .5)} ${f1(-r * .45)}" stroke="#fff" stroke-width="1" fill="none"/>`).join('')}`),
+      lichterpfad: () => fcard('lichterpfad', FN, `${pvDefs}<path d="M26 62 Q36 50 42 40" stroke="#efe6f6" stroke-width="12" fill="none" opacity=".25" stroke-linecap="round"/>${[[16, 52, 1.3], [64, 52, 1.3], [28, 42, 1], [54, 42, 1]].map(([x, y, k]) => `<circle cx="${x + 4 * k}" cy="${y - 10 * k}" r="${10 * k}" fill="url(#pv-warm)"/><g transform="translate(${x} ${y}) scale(${k})"><path d="M0 0 V-12 q0 -3 3 -3 h1" stroke="#c8b8d8" stroke-width="1" fill="none"/><rect x="2" y="-13" width="4" height="5" rx="1.2" fill="#fff3b0"/></g>`).join('')}`, true),
+    };
+    gadgets.forEach(gd => { if (FEEN_ART[gd.id]) gd.art = FEEN_ART[gd.id]; });
+
     return {
-      regions, biomes, gadgets, groups, finds,
+      regions, biomes, gadgets, groups, finds, signatures: SIGNATURES,
       animalTop: { feenteich: 209 },   // Wesen stehen erst hinter dem Teichufer
       defs: '<linearGradient id="feen-rainbow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4a7c0"/><stop offset=".25" stop-color="#ffd6a8"/><stop offset=".5" stop-color="#fff0a8"/><stop offset=".75" stop-color="#a8e0c8"/><stop offset="1" stop-color="#c9a7e8"/></linearGradient>' +
+        '<radialGradient id="fx-warm"><stop offset="0" stop-color="#fff6c0" stop-opacity=".85"/><stop offset=".4" stop-color="#fff6c0" stop-opacity=".35"/><stop offset="1" stop-color="#fff6c0" stop-opacity="0"/></radialGradient>' +
+        '<radialGradient id="fx-mint"><stop offset="0" stop-color="#c8f4e4" stop-opacity=".8"/><stop offset="1" stop-color="#c8f4e4" stop-opacity="0"/></radialGradient>' +
+        '<radialGradient id="fx-gold"><stop offset="0" stop-color="#fff0b0" stop-opacity=".9"/><stop offset="1" stop-color="#f2d38a" stop-opacity="0"/></radialGradient>' +
+        '<radialGradient id="fx-mist"><stop offset="0" stop-color="#ffffff" stop-opacity=".75"/><stop offset=".6" stop-color="#ffffff" stop-opacity=".35"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>' +
+        '<radialGradient id="fx-bubble" cx=".5" cy=".5" r=".5"><stop offset=".6" stop-color="#ffffff" stop-opacity=".05"/><stop offset=".85" stop-color="#c8e8f8" stop-opacity=".45"/><stop offset=".95" stop-color="#f4c8e8" stop-opacity=".75"/><stop offset="1" stop-color="#ffffff" stop-opacity=".9"/></radialGradient>' +
+        '<linearGradient id="fx-wing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f6fc" stop-opacity=".9"/><stop offset=".5" stop-color="#d8c8f4" stop-opacity=".85"/><stop offset="1" stop-color="#c8f0e4" stop-opacity=".9"/></linearGradient>' +
         '<radialGradient id="feen-portal"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#f4c8e8"/><stop offset="1" stop-color="#b48ad8"/></radialGradient>',
       biomeHeights: { maerchenwald: [105, 150], rosengarten: [115, 150], kristallhoehle: [70, 120], feenteich: [110, 150], bibliothek: [100, 145],
         wolkenschloss: [60, 110], mondlichtung: [110, 150], pilzdorf: [110, 150], sternenwiese: [120, 155], zauberberg: [25, 80] },

@@ -31,6 +31,10 @@ Beide Editionen lassen sich nebeneinander installieren. Sie haben getrennte Spei
 - **Für heute:** 1–3 Aufgaben auswählen statt die ganze Liste vor sich zu haben
 - **Planen:** Aufgaben bekommen ein Datum und stehen an diesem Tag von selbst unter „Für heute“; auf Heute zeigt „Demnächst geplant“ die nächsten 7 Tage
 - **Emotional anstrengend:** solche Aufgaben geben beim Abhaken 3 statt 1 Kiesel/Kristall, zählen doppelt fürs nächste Tier und werden extra gefeiert
+- **Wiederholen:** täglich, wöchentlich, monatlich oder alle X Tage. Beim Abhaken bleibt die erledigte Aufgabe unter „geschafft“, und eine neue mit frischen Mini-Schritten wird eingetragen. Ihr Datum zählt ab dem Tag des Abhakens. Wer sie wieder öffnet, nimmt die noch unberührte nächste Runde wieder weg.
+- **Wartet auf etwas (⏸):** solche Aufgaben stehen eingeklappt unter „⏸ wartet“ und tauchen nicht in „Für heute“, „Wichtig“ oder „Eine Sache“ auf. Optional mit „Worauf?“ und einem Tag, ab dem sie zum Nachschauen unter „Für heute“ stehen.
+- **Vorlagen:** Unter Einstellen → Vorlagen anlegen und bearbeiten (Name, Mini-Schritte mit ▲ ▼, Liste, Markierungen, Wiederholen, Notiz), oder eine Aufgabe über „📋 Als Vorlage speichern“ übernehmen. Benutzen: in Listen das 📋 neben „+ Aufgabe hinzufügen“ (neue Aufgabe in dieser Liste), unter „＋ Aufgaben eintragen“ oder in einer Aufgabe „📋 Schritte aus einer Vorlage einfügen“ (vorhandene Schritte werden übersprungen).
+- **Mini-Schritte sortieren:** ▲ ▼ neben jedem Schritt ändern die Reihenfolge.
 - Jede Kategorie hat in **Listen** ein ⚙️ für ihre Einstellungen; die Reihenfolge lässt sich mit ▲ ▼ ändern
 - **Eine Sache:** zeigt nur eine Aufgabe, mit „Kleiner machen“ und „Was anderes“
 - **5-Minuten-Starthilfe:** ein sanfter Timer zum Anfangen
@@ -132,7 +136,8 @@ In den Einstellungen gibt es einen versteckten Debug-Bereich: Tippt man fünfmal
       "tasks": [
         { "title": "Hausarbeit gliedern", "important": true },
         { "title": "Literatur suchen", "done": true },
-        { "title": "Umzug", "subtasks": ["Kisten holen", "Ummelden"] }
+        { "title": "Umzug", "subtasks": ["Kisten holen", "Ummelden"] },
+        { "title": "Pflanzen gießen", "repeat": { "unit": "day", "every": 3 } }
       ]
     }
   ]
@@ -152,7 +157,9 @@ Persönliche Listen gehören in den Ordner `import/`, der per `.gitignore` aus d
 Alle gespeicherten Daten hängen an **festen IDs** (Tiere, Gadgets, Gebiete, Plätze) und nie an Positionen in Listen. Deshalb gilt:
 
 1. **IDs nie ändern oder wiederverwenden.** Namen und Aussehen dürfen sich ändern, die `id` nicht.
-2. **Neues immer anhängen:**
+2. **Jedes Gebiet soll unverwechselbar sein.** Teilen sich Gebiete einen Landschaftstyp, bekommen sie eigene Merkmale über ihre ID: in `world.js` im Objekt `SIG`, in der Feen-Edition in `SIGNATURES` (`edition-feen.js`). Möglich sind zusätzliche Teile (`sky`, `back`, `mid`, `shore`, `front`, `glow`), ersetzte Teile (`replace`), eigene Berghöhen (`heights`) und Schalter wie `noGlacier`. `ctx.lvl` (0–3) sagt, wie besonders ein Gebiet ist; teurere Gebiete dürfen prächtiger sein. Den Landschaftstyp eines Gebiets nicht tauschen, sonst verschieben sich die Tierplätze.
+   Landschafts-Dinge im Laden zeigen mit `art` ein eigenes kleines Bild (`landCard` in `world.js`).
+3. **Neues immer anhängen:**
 
    | Neues … | Datei | Stelle |
    |---|---|---|
@@ -163,9 +170,9 @@ Alle gespeicherten Daten hängen an **festen IDs** (Tiere, Gadgets, Gebiete, Pl�
    | Landschaftstyp | `world.js` | `BIOME` und `region()` |
    | Fundstück | `world.js` | `FINDS` |
 
-3. **Datenformat geändert?** In `app.js` `SCHEMA` um 1 erhöhen und in `MIGRATIONS` einen Schritt ergänzen. Alte Speicherstände und Backups werden dann beim Laden Schritt für Schritt umgestellt.
-4. **Nichts wird stillschweigend gelöscht.** Unbekannte IDs, z. B. aus einem Backup einer neueren Version, bleiben gespeichert und werden nur nicht angezeigt.
-5. **Nach jeder Änderung** die Versionsnummer `VERSION` in `sw.js` erhöhen, damit installierte Apps die neue Fassung laden.
+4. **Datenformat geändert?** In `app.js` `SCHEMA` um 1 erhöhen und in `MIGRATIONS` einen Schritt ergänzen. Alte Speicherstände und Backups werden dann beim Laden Schritt für Schritt umgestellt.
+5. **Nichts wird stillschweigend gelöscht.** Unbekannte IDs, z. B. aus einem Backup einer neueren Version, bleiben gespeichert und werden nur nicht angezeigt.
+6. **Nach jeder Änderung** die Versionsnummer `VERSION` in `sw.js` erhöhen, damit installierte Apps die neue Fassung laden.
 
 **Karten:** Die Wiese ist als „Karte“ gespeichert (`state.world.maps`). Eine Karte enthält die freigeschalteten Gebiete, die Deko-Plätze, die Tierplätze und die Fundstücke.
 Eine volle Karte lässt sich später archivieren (`archived: true`) und durch eine neue ersetzen.

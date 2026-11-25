@@ -666,3 +666,27 @@ section { margin-bottom: 8px; }
 .world-box.full .w-full-btn { top: 10px; right: 10px; width: 44px; height: 44px; }
 .world-box.full.rot .world-wrap { touch-action: none; }
 body.world-full-open { overflow: hidden; }
+
+/* ---------- Wiederholen, Warten, Vorlagen ---------- */
+.rep-chip { padding: 6px 14px; }
+.rep-days { margin-top: 8px; }
+.task-wait { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.task-wait.back { color: var(--ink); }
+.pill.on.wait { background: #dcecf7; border-color: #6fa3c8; color: #14233a; }
+.wait-box { margin: 10px 0 4px; padding: 4px 14px 14px; border-radius: 18px; border: 2px dashed var(--line); }
+.wait-box .big-btn { margin-top: 4px; }
+.tpl-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; min-height: 56px; padding: 6px 2px; }
+.tpl-row .chev { flex: none; font-size: 1.4rem; color: var(--muted); }
+.tpl-row + .tpl-row { border-top: 1px dashed var(--line); }
+.tpl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.tpl-main small { font-size: .8rem; }
+.tpl-row .dot, .tpl-chip .dot { flex: none; width: 14px; height: 14px; border-radius: 50%; background: var(--cat); }
+.tpl-chip { padding: 6px 14px 6px 10px; text-align: left; }
+.tpl-chip small { font-weight: 600; }
+.cat-line b { flex: 1; overflow-wrap: anywhere; }
+.quick-tpl { flex: none; width: 48px; min-height: 48px; border-radius: 14px; border: 2px solid var(--line); background: var(--bg); font-size: 1.15rem; }
+.sub-move { display: inline-flex; flex: none; }
+.sub-move .mv { width: 34px; height: 44px; border-radius: 10px; color: var(--muted); font-size: .8rem; }
+.sub-move .mv[disabled] { opacity: .25; cursor: default; }
+.step-no { flex: none; width: 28px; text-align: right; font-weight: 800; color: var(--muted); }
+.tpl-insert { margin-top: 8px; }

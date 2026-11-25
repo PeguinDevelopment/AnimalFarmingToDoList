@@ -26,7 +26,25 @@
   const isoDay = (t = Date.now()) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const validDue = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
   const addDays = (iso, n) => isoDay(new Date(iso + 'T12:00').getTime() + n * 864e5);
-  const isDue = t => !t.done && !!validDue(t.due) && t.due <= isoDay();
+  const isDue = t => !t.done && !isWaiting(t) && !!validDue(t.due) && t.due <= isoDay();
+  const norm = x => String(x || '').trim().toLowerCase();
+  /* Wiederholen: t.repeat = { every: n, unit: 'day' | 'week' | 'month' }.
+     Beim Abhaken kommt eine frische Kopie; ihr Datum zählt ab dem Tag des Abhakens (kein Stapel verpasster Termine). */
+  const REPEAT_UNITS = ['day', 'week', 'month'];
+  const validRepeat = r => (r && REPEAT_UNITS.includes(r.unit) && Number.isInteger(r.every) && r.every >= 1 && r.every <= 365 ? r : null);
+  function addMonths(iso, n) {
+    const d = new Date(iso + 'T12:00'), day = d.getDate();
+    d.setDate(1); d.setMonth(d.getMonth() + n);
+    d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));  // 31. → letzter Tag des Monats
+    return isoDay(d.getTime());
+  }
+  const nextRepeat = (r, from = isoDay()) => (r.unit === 'month' ? addMonths(from, r.every) : addDays(from, r.every * (r.unit === 'week' ? 7 : 1)));
+  const repeatLabel = r => (r.every === 1 ? { day: 'täglich', week: 'wöchentlich', month: 'monatlich' }[r.unit]
+    : `alle ${r.every} ${{ day: 'Tage', week: 'Wochen', month: 'Monate' }[r.unit]}`);
+  /* Wartet auf etwas: t.wait = { for: 'Antwort vom Amt', until: 'JJJJ-MM-TT' | null }.
+     Solange sie wartet, steht sie eingeklappt unter „⏸ Wartet“; ab „until“ taucht sie zum Nachschauen unter „Für heute“ auf. */
+  const waitBack = t => !!t.wait && !t.done && !!validDue(t.wait.until) && t.wait.until <= isoDay();
+  const isWaiting = t => !!t.wait && !t.done && !waitBack(t);
   function dueLabel(due) {
     const today = isoDay();
     if (due === today) return 'heute';
@@ -99,6 +117,7 @@
       v: 1, schema: SCHEMA, edition: EDITION_ID,
       categories: START_CATS.map(c => ({ ...c })),
       tasks: [],
+      templates: [],       // Vorlagen: { id, title, catId, important, heavy?, repeat?, note, subtasks: [Titel] }
       // Start-Bewohner wohnt von Anfang an auf der Wiese (ohne Schlüpf-Fenster)
       animals: [{ ...starter, look: { ...starter.look }, bornAt: Date.now(), welcomed: true }],
       progress: {},
@@ -109,7 +128,7 @@
       daily: { last: null, days: 0, chests: 0 }, // Tagesgeschenk: gesammelte Tage bis zur Truhe (keine Serie nötig)
       vouchers: 0,         // Wunsch-Gutscheine aus der Schatztruhe
       brave: 0,            // geschaffte „emotional anstrengende“ Aufgaben
-      settings: { appName: APP_NAME, theme: THEMES[0].id, calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, impOpen: false, planOpen: true, tipClosed: false, introSeen: false },
+      settings: { appName: APP_NAME, theme: THEMES[0].id, calm: false, size: 'm', perBaby: 3, collapsed: {}, showDone: {}, showMore: {}, showWait: {}, impOpen: false, planOpen: true, tipClosed: false, introSeen: false },
     };
   }
   // Schrittweise Umstellung alter Speicherstände/Backups auf das aktuelle Format
@@ -146,6 +165,7 @@
       pebbles: s.pebbles ?? s.checks ?? 0,
       inv: s.inv || {},
       tasks: (s.tasks || []).map(t => ({ subtasks: [], note: '', ...t })),
+      templates: (Array.isArray(s.templates) ? s.templates : []).map(p => ({ ...p, subtasks: Array.isArray(p.subtasks) ? p.subtasks : [] })),
       categories: (s.categories && s.categories.length ? s.categories : d.categories)
         .map(c => c.color === '#0b6fb8' ? { ...c, color: '#084a85' } : c) // altes Uni-Blau → dunkler
         .map(c => {
@@ -492,7 +512,20 @@
     t.done = true; t.doneAt = Date.now();
     let hatched = null;
     if (!t.rewarded) { t.rewarded = true; hatched = award(t.catId, rewardOf(t)); }
+    spawnRepeat(t);
     return hatched;
+  }
+  // Wiederkehrende Aufgabe: beim Abhaken kommt eine frische Kopie mit dem nächsten Datum (ab heute gerechnet).
+  // Die erledigte bleibt unter „geschafft“. Pro Runde gibt es nur eine Kopie (Merker repeatNext).
+  function spawnRepeat(t) {
+    const r = validRepeat(t.repeat);
+    if (!r || (t.repeatNext && taskById(t.repeatNext))) return null;
+    const n = { id: uid(), catId: t.catId, title: t.title, note: t.note || '', important: !!t.important, today: false, done: false, rewarded: false,
+      subtasks: (t.subtasks || []).map(s => ({ id: uid(), title: s.title, done: false })), createdAt: Date.now(),
+      due: nextRepeat(r), repeat: { ...r }, ...(t.heavy ? { heavy: true } : {}) };
+    state.tasks.push(n);
+    t.repeatNext = n.id;
+    return n;
   }
 
   function toggleTask(id, ev) {
@@ -500,15 +533,20 @@
     const snap = clone(state);
     if (t.done) {
       t.done = false; t.doneAt = null;
+      // Wiederkehrend: die schon eingetragene nächste Runde wieder wegnehmen, solange sie noch unberührt ist
+      const nx = t.repeatNext && taskById(t.repeatNext);
+      if (nx && !nx.done && !nx.rewarded && !nx.subtasks.some(s => s.done)) { state.tasks = state.tasks.filter(x => x !== nx); delete t.repeatNext; }
       save(); refresh();
       toast('Wieder offen – kein Problem.');
       return;
     }
+    const before = t.repeatNext;
     const hatched = completeTask(t);
+    const again = t.repeatNext !== before && taskById(t.repeatNext);
     save(); refresh();
     celebrate(ev, t.heavy);
     if (hatched) showNextHatch();
-    else toast(cheer(), () => { restore(snap); });
+    else toast(cheer() + (again ? ` · 🔁 Wieder dran: ${dueLabel(again.due)}` : ''), () => { restore(snap); });
   }
 
   function cheer(fallback) {
@@ -568,7 +606,11 @@
         <span class="task-title"><span class="hl">${esc(t.title)}</span></span>
         ${opts.showCat ? `<span class="task-cat">${esc(cat.name)}</span>` : ''}
         ${subs.length ? `<span class="task-sub"><span class="mini-bar"><i style="width:${Math.round(sd / subs.length * 100)}%"></i></span>${sd}/${subs.length} Schritte</span>` : ''}
-        ${!t.done && validDue(t.due) ? `<span class="task-due ${t.due < isoDay() ? 'late' : ''}">📅 ${esc(dueLabel(t.due))}</span>` : ''}
+        ${!t.done && (validDue(t.due) || validRepeat(t.repeat)) ? `<span class="task-due ${validDue(t.due) && t.due < isoDay() ? 'late' : ''}">${[
+          validDue(t.due) ? `📅 ${esc(dueLabel(t.due))}` : '', validRepeat(t.repeat) ? `🔁 ${esc(repeatLabel(t.repeat))}` : ''].filter(Boolean).join(' · ')}</span>` : ''}
+        ${t.wait && !t.done ? `<span class="task-wait ${waitBack(t) ? 'back' : ''}">${waitBack(t)
+          ? `⏸ Nachschauen${t.wait.for ? ': ' + esc(t.wait.for) : ''}`
+          : `⏸ Wartet${t.wait.for ? ' auf ' + esc(t.wait.for) : ''}${validDue(t.wait.until) ? ' · bis ' + esc(dueLabel(t.wait.until)) : ''}`}</span>` : ''}
       </button>
       ${t.heavy ? `<span class="heavy-mark" title="${esc(REWARDS.heavy.label)}">${heavyIcon()}</span>` : ''}
       ${t.today && !t.done && !opts.showCat ? '<span class="sun" title="Für heute">☀️</span>' : ''}
@@ -597,11 +639,12 @@
     const doneToday = state.tasks.reduce((n, t) => n + (t.done && t.doneAt && dayKey(t.doneAt) === tk ? 1 : 0)
       + (t.subtasks || []).filter(s => s.done && s.doneAt && dayKey(s.doneAt) === tk).length, 0);
     // „Für heute“: selbst ausgewählt oder für heute (bzw. früher) geplant
-    const todayOpen = state.tasks.filter(t => (t.today || isDue(t)) && !t.done);
+    // (wartende Aufgaben nicht – außer ihr Nachschau-Tag ist da)
+    const todayOpen = state.tasks.filter(t => (t.today || isDue(t) || waitBack(t)) && !t.done && !isWaiting(t));
     const todayDone = state.tasks.filter(t => (t.today || validDue(t.due)) && t.done && t.doneAt && dayKey(t.doneAt) === tk).length;
-    const imp = state.tasks.filter(t => t.important && !t.done && !t.today && !isDue(t));
+    const imp = state.tasks.filter(t => t.important && !t.done && !t.today && !isDue(t) && !t.wait);
     const impOpen = !!state.settings.impOpen;
-    const iso = isoDay(), soon = state.tasks.filter(t => !t.done && validDue(t.due) && t.due > iso && t.due <= addDays(iso, 7)).sort((a, b) => a.due.localeCompare(b.due));
+    const iso = isoDay(), soon = state.tasks.filter(t => !t.done && !isWaiting(t) && validDue(t.due) && t.due > iso && t.due <= addDays(iso, 7)).sort((a, b) => a.due.localeCompare(b.due));
     const planOpen = state.settings.planOpen !== false;
     // Spruch wechselt nur einmal am Tag, nicht bei jedem Antippen
     const dayNum = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
@@ -631,7 +674,7 @@
         : `<div class="card empty">
             <p>${todayDone ? 'Alles für heute geschafft. 🎉<br>Du darfst jetzt Pause machen.' : 'Such dir 1–3 Sachen für heute aus.<br>Mehr musst du nicht.'}</p>
             <button class="big-btn soft" data-action="pick-today">${todayDone ? '☀️ Noch etwas aussuchen' : '☀️ Für heute aussuchen'}</button>
-            ${!todayDone && state.tasks.some(t => !t.done) ? '<button class="link" data-action="focus">Oder: 🎯 Gib mir einfach eine Sache</button>' : ''}</div>`}
+            ${!todayDone && state.tasks.some(t => !t.done && !isWaiting(t)) ? '<button class="link" data-action="focus">Oder: 🎯 Gib mir einfach eine Sache</button>' : ''}</div>`}
       ${todayOpen.length ? '<button class="big-btn primary" data-action="focus">🎯 Mit einer Sache anfangen</button>' : ''}
 
       <div class="quiet-line">
@@ -656,7 +699,8 @@
     return `
       <button class="big-btn primary" data-action="add">＋ Aufgaben eintragen</button>
       ${state.categories.map(c => {
-        const open = state.tasks.filter(t => t.catId === c.id && !t.done);
+        const open = state.tasks.filter(t => t.catId === c.id && !t.done && !isWaiting(t));
+        const waiting = state.tasks.filter(t => t.catId === c.id && isWaiting(t));
         const done = state.tasks.filter(t => t.catId === c.id && t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
         const col = s.collapsed[c.id];
         const last = latestOfKind(c.animal);
@@ -676,7 +720,10 @@
               ${s.showMore[c.id] ? 'Weniger anzeigen ▴' : `${open.length - MAX_VISIBLE} weitere anzeigen ▾`}</button>` : ''}
             <form class="quick" data-form="quick" data-cat="${c.id}">
               <input type="text" name="t" data-key="quick-${c.id}" placeholder="+ Aufgabe hinzufügen" enterkeyhint="done" autocomplete="off" aria-label="Neue Aufgabe in ${esc(c.name)}">
+              <button type="button" class="quick-tpl" data-action="tpl-pick" data-cat="${c.id}" aria-label="Aufgabe aus Vorlage in ${esc(c.name)}">📋</button>
             </form>
+            ${waiting.length ? `<button class="done-toggle" data-action="show-wait" data-cat="${c.id}" aria-expanded="${!!s.showWait[c.id]}">⏸ ${waiting.length} ${waiting.length === 1 ? 'wartet' : 'warten'} ${s.showWait[c.id] ? '▾' : '▸'}</button>
+              ${s.showWait[c.id] ? waiting.map(t => taskRow(t)).join('') : ''}` : ''}
             ${done.length ? `<button class="done-toggle" data-action="show-done" data-cat="${c.id}">✓ ${done.length} geschafft ${s.showDone[c.id] ? '▾' : '▸'}</button>
               ${s.showDone[c.id] ? done.map(t => taskRow(t)).join('') : ''}` : ''}
           </div>`}
@@ -764,9 +811,17 @@
       <div class="card">
         <h3 style="margin-bottom:4px">Kategorien</h3>
         <p class="hint">Antippen, um Name, Farbe und ${TX.creature} zu ändern. Mit ▲ ▼ änderst du die Reihenfolge.</p>
-        ${state.categories.map((c, i) => `<div class="cat-row"><button class="cat-line" data-action="edit-cat" data-id="${c.id}" style="--cat:${c.color}">${mini(c.animal)}<b>${esc(c.name)}</b><span class="muted">${esc(kindOf(c).baby)}</span><span class="dot"></span></button>
+        ${state.categories.map((c, i) => `<div class="cat-row"><button class="cat-line" data-action="edit-cat" data-id="${c.id}" style="--cat:${c.color}">${mini(c.animal)}<b>${esc(c.name)}</b><span class="dot"></span></button>
           <span class="cat-move">${catMoveBtns(c.id, i)}</span></div>`).join('')}
         <button class="ghost-btn" data-action="new-cat">＋ Neue Kategorie</button>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:4px">📋 Vorlagen</h3>
+        <p class="hint">Für Dinge, die immer wieder mit denselben Mini-Schritten kommen. Antippen zum Bearbeiten.
+          Benutzen: in <b>Listen</b> das 📋 neben „+ Aufgabe hinzufügen“, unter <b>＋ Aufgaben eintragen</b> oder in einer Aufgabe „Schritte aus Vorlage einfügen“.</p>
+        ${state.templates.map(p => tplRow(p, 'tpl-edit')).join('')}
+        <button class="ghost-btn" data-action="tpl-new">＋ Neue Vorlage</button>
+        <p class="hint">Eine fertige Aufgabe geht auch: Aufgabe öffnen → „📋 Als Vorlage speichern“.</p>
       </div>
       <div class="card">
         <h3 style="margin-bottom:4px">Daten</h3>
@@ -834,13 +889,15 @@
   // ---------- Sheets ----------
   function openSheet(name, arg) {
     if (name !== 'cat' || arg !== ui.catDraft) ui.catDraft = null;
+    if (name !== 'tpl') { ui.tplDraft = null; ui.tplBack = null; dropEmptyTemplates(); }
     ui.sheet = { name, arg }; ui.confirm = null;
     $('#sheet-layer').hidden = false;
     renderSheet();
     $('.sheet').scrollTop = 0;
   }
   function closeSheet() {
-    ui.sheet = null; ui.confirm = null; ui.catDraft = null;
+    ui.sheet = null; ui.confirm = null; ui.catDraft = null; ui.tplDraft = null; ui.tplBack = null;
+    dropEmptyTemplates();
     $('#sheet-layer').hidden = true;
     render();
   }
@@ -877,6 +934,54 @@
   const catChips = (sel, action) => state.categories.map(c =>
     `<button class="chip ${c.id === sel ? 'on' : ''}" style="--cat:${c.color}" data-action="${action}" data-cat="${c.id}">${mini(c.animal)}${esc(c.name)}</button>`).join('');
 
+  // Auswahl „Wiederholen“: Nie / Täglich / Wöchentlich / Monatlich / Alle … Tage (mit − +)
+  function repeatPicker(rep, action, id = '') {
+    const r = validRepeat(rep);
+    const k = !r ? 'none' : r.every === 1 ? r.unit : r.unit === 'day' ? 'dn' : '';
+    const opts = [['none', 'Nie'], ['day', 'Täglich'], ['week', 'Wöchentlich'], ['month', 'Monatlich'], ['dn', 'Alle … Tage']];
+    return `<div class="chips">${opts.map(([v, l]) => `<button class="chip rep-chip ${k === v ? 'on' : ''}" data-action="${action}" data-id="${id}" data-k="${v}" aria-pressed="${k === v}">${l}</button>`).join('')}</div>
+      ${k === 'dn' ? `<div class="set-row rep-days"><div><b>Alle ${r.every} Tage</b></div><div class="stepper">
+        <button data-action="${action}" data-id="${id}" data-k="dn" data-d="-1" aria-label="weniger Tage">−</button><b>${r.every}</b>
+        <button data-action="${action}" data-id="${id}" data-k="dn" data-d="1" aria-label="mehr Tage">+</button></div></div>` : ''}`;
+  }
+  function pickRepeat(cur, el) {
+    const k = el.dataset.k;
+    if (k === 'none') return null;
+    if (k === 'dn') {
+      const n = cur?.unit === 'day' && cur.every > 1 ? cur.every + (+el.dataset.d || 0) : 2;
+      return { unit: 'day', every: Math.min(365, Math.max(2, n)) };
+    }
+    return REPEAT_UNITS.includes(k) ? { unit: k, every: 1 } : validRepeat(cur);
+  }
+  const tplInfo = p => [`${p.subtasks.length} ${p.subtasks.length === 1 ? 'Mini-Schritt' : 'Mini-Schritte'}`, catById(p.catId)?.name || '',
+    validRepeat(p.repeat) ? '🔁 ' + repeatLabel(p.repeat) : ''].filter(Boolean).map(esc).join(' · ');
+  const tplOf = t => state.templates.find(p => norm(p.title) === norm(t.title));
+  const tplById = id => state.templates.find(p => p.id === id);
+  const tplRow = (p, action) => `<button class="tpl-row" style="--cat:${catById(p.catId)?.color || 'var(--line)'}" data-action="${action}" data-id="${p.id}">
+    <span class="dot"></span><span class="tpl-main"><b>${esc(p.title || 'Ohne Namen')}</b><small class="muted">${tplInfo(p)}</small></span><span class="chev">›</span></button>`;
+  // ▲ ▼ für Mini-Schritte (Aufgaben und Vorlagen)
+  const moveBtns = (action, attrs, i, n) => `<span class="sub-move">
+    <button class="mv" data-action="${action}" ${attrs} data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Schritt nach oben">▲</button>
+    <button class="mv" data-action="${action}" ${attrs} data-d="1" ${i === n - 1 ? 'disabled' : ''} aria-label="Schritt nach unten">▼</button></span>`;
+  const swap = (arr, i, d) => { const j = i + d; if (i < 0 || j < 0 || j >= arr.length) return false; [arr[i], arr[j]] = [arr[j], arr[i]]; return true; };
+  // Leere, nie ausgefüllte Vorlagen (z. B. „Neue Vorlage“ gleich wieder zu) nicht aufheben
+  function dropEmptyTemplates() {
+    const n = state.templates.length;
+    state.templates = state.templates.filter(p => String(p.title || '').trim() || p.subtasks.length);
+    if (state.templates.length !== n) save();
+  }
+  // Neue Aufgabe aus einer Vorlage (Schritte frisch, Kategorie wählbar) → gleich zum Anpassen öffnen
+  function taskFromTemplate(p, catId) {
+    const t = { id: uid(), catId: catById(catId) ? catId : catById(p.catId) ? p.catId : state.categories[0]?.id, title: p.title || 'Neue Aufgabe', note: p.note || '',
+      important: !!p.important, today: false, done: false, createdAt: Date.now(),
+      subtasks: p.subtasks.map(s => String(s).trim()).filter(Boolean).map(s => ({ id: uid(), title: s, done: false })),
+      ...(p.heavy ? { heavy: true } : {}), ...(validRepeat(p.repeat) ? { repeat: { ...p.repeat } } : {}) };
+    state.tasks.push(t);
+    save(); render();
+    openSheet('task', t.id);
+    toast(`„${t.title}“ eingetragen 📋 Hier kannst du sie noch anpassen.`);
+  }
+
   const SHEETS = {
     task(id) {
       const t = taskById(id); if (!t) return null;
@@ -888,29 +993,47 @@
           <button class="pill ${t.important ? 'on imp' : ''}" data-action="t-imp" data-id="${t.id}">💛 Wichtig</button>
           <button class="pill ${t.today ? 'on' : ''}" data-action="t-today" data-id="${t.id}">☀️ Für heute</button>
           <button class="pill ${t.heavy ? 'on heavy' : ''}" data-action="t-heavy" data-id="${t.id}" aria-pressed="${!!t.heavy}">${heavyIcon()} ${esc(REWARDS.heavy.label)}</button>
+          ${!t.done ? `<button class="pill ${t.wait ? 'on wait' : ''}" data-action="t-wait" data-id="${t.id}" aria-pressed="${!!t.wait}">⏸ Wartet auf etwas</button>` : ''}
         </div>
         ${t.heavy ? `<p class="hint">${heavyHint()} Das hast du dir verdient. 💜</p>` : ''}
+        ${t.wait && !t.done ? `<div class="wait-box">
+          <h3>⏸ Worauf wartest du?</h3>
+          <input class="field" type="text" data-input="wait-for" data-key="wait-for" data-id="${t.id}" value="${esc(t.wait.for || '')}" maxlength="80" placeholder="z. B. Antwort vom Amt, Paket, Rückruf" aria-label="Worauf wartest du?">
+          <h3>Wieder zeigen am <span class="muted" style="font-weight:600">(optional)</span></h3>
+          <div class="due-row"><input class="field" type="date" data-input="wait-until" data-id="${t.id}" value="${esc(validDue(t.wait.until) || '')}" aria-label="Wieder zeigen am">
+            ${validDue(t.wait.until) ? `<button class="link" data-action="t-wait-clear" data-id="${t.id}">Entfernen</button>` : ''}</div>
+          <p class="hint">Bis dahin steht die Aufgabe eingeklappt unter „⏸ wartet“ und taucht nicht in ☀️ Für heute oder 🎯 Eine Sache auf.${validDue(t.wait.until) ? ` Ab ${waitBack(t) ? 'jetzt' : esc(dueLabel(t.wait.until))} steht sie zum Nachschauen unter ☀️ Für heute.` : ''}</p>
+          <button class="big-btn soft" data-action="t-wait" data-id="${t.id}">▶︎ Es geht weiter</button>
+        </div>` : ''}
         <h3>📅 Planen</h3>
         <div class="due-row"><input class="field" type="date" data-input="due" data-id="${t.id}" value="${esc(validDue(t.due) || '')}" aria-label="Geplant für">
           ${validDue(t.due) ? `<button class="link" data-action="t-due-clear" data-id="${t.id}">Entfernen</button>` : ''}</div>
         <p class="hint">An diesem Tag steht die Aufgabe von selbst unter ☀️ Für heute.</p>
+        <h3>🔁 Wiederholen</h3>
+        ${repeatPicker(t.repeat, 't-rep', t.id)}
+        <p class="hint">${!validRepeat(t.repeat) ? 'Für Dinge, die immer wieder dran sind, z. B. Pflanzen gießen.'
+          : t.done && t.repeatNext && taskById(t.repeatNext) ? 'Die nächste Runde ist schon eingetragen.'
+          : (l => `Hakst du sie heute ab, kommt sie als neue Aufgabe wieder und steht ${l === 'morgen' ? 'morgen' : 'am ' + esc(l)} unter ☀️ Für heute. Die Mini-Schritte fangen dann von vorn an.`)(dueLabel(nextRepeat(t.repeat)))}</p>
         <h3>Kleine Schritte</h3>
         <p class="hint" style="margin-top:-4px">Zu groß? Teil es in Mini-Schritte. Jeder Schritt zählt fürs ${TX.baby}. ${TX.paw}</p>
         <div style="--cat:${catById(t.catId)?.color}">
-        ${t.subtasks.map(s => `<div class="sub ${s.done ? 'is-done' : ''}">
+        ${t.subtasks.map((s, i) => `<div class="sub ${s.done ? 'is-done' : ''}">
           <button class="check sm" data-action="sub-toggle" data-id="${t.id}" data-sub="${s.id}" aria-label="Schritt abhaken">${CHECK}</button>
           <input type="text" value="${esc(s.title)}" data-input="sub-title" data-id="${t.id}" data-sub="${s.id}" aria-label="Schritt">
+          ${t.subtasks.length > 1 ? moveBtns('sub-move', `data-id="${t.id}" data-sub="${s.id}"`, i, t.subtasks.length) : ''}
           <button class="icon-btn" data-action="sub-del" data-id="${t.id}" data-sub="${s.id}" aria-label="Schritt löschen">✕</button>
         </div>`).join('')}</div>
         <form data-form="sub-add" data-id="${t.id}" style="margin-top:6px">
           <input type="text" name="t" data-key="sub-add" placeholder="+ Mini-Schritt hinzufügen" enterkeyhint="done" autocomplete="off">
         </form>
+        <button class="big-btn soft tpl-insert" data-action="tpl-pick" data-into="${t.id}">📋 Schritte aus einer Vorlage einfügen</button>
         <h3>Kategorie</h3>
         <div class="chips">${catChips(t.catId, 't-cat')}</div>
         <h3>Notiz</h3>
         <textarea data-input="note" data-id="${t.id}" rows="3" placeholder="Telefonnummer, Link, was dir hilft …">${esc(t.note)}</textarea>
         <div class="sheet-actions">
           ${!t.done ? `<button class="big-btn soft" data-action="timer" data-id="${t.id}">⏳ Nur 5 Minuten anfangen</button>` : ''}
+          <button class="big-btn soft" data-action="tpl-save" data-id="${t.id}">📋 ${tplOf(t) ? 'Vorlage aktualisieren' : 'Als Vorlage speichern'}</button>
           <button class="big-btn danger-soft" data-action="t-del" data-id="${t.id}">Aufgabe löschen</button>
         </div>`;
     },
@@ -919,6 +1042,11 @@
       if (!ui.addCat || !catById(ui.addCat)) ui.addCat = state.categories[0]?.id;
       return `
         <h2>Aufgaben eintragen</h2>
+        ${state.templates.length ? `<h3 style="margin-top:4px">📋 Aus einer Vorlage</h3>
+          <div class="chips">${state.templates.map(p => `<button class="chip tpl-chip" style="--cat:${catById(p.catId)?.color || 'var(--line)'}" data-action="tpl-apply" data-id="${p.id}">
+            <span class="dot"></span><span>${esc(p.title || 'Ohne Namen')}${p.subtasks.length ? ` <small class="muted">${p.subtasks.length} Schritte</small>` : ''}</span></button>`).join('')}</div>
+          <p class="hint">Antippen legt die Aufgabe gleich mit allen Mini-Schritten an (in der Liste der Vorlage).</p>
+          <h3>Oder selbst aufschreiben</h3>` : ''}
         <p class="hint">Schreib einfach alles auf, was im Kopf rumschwirrt. <b>Jede Zeile wird eine Aufgabe.</b></p>
         <textarea data-input="dump" data-key="dump" rows="6" placeholder="Mail an …&#10;Wäsche waschen&#10;Oma anrufen">${esc(ui.addDraft)}</textarea>
         <h3>In welche Liste?</h3>
@@ -930,13 +1058,65 @@
         </div>
         <h3>📅 Planen <span class="muted" style="font-weight:600">(optional)</span></h3>
         <div class="due-row"><input class="field" type="date" data-input="add-due" value="${esc(ui.addDue || '')}" aria-label="Geplant für"></div>
+        <h3>🔁 Wiederholen <span class="muted" style="font-weight:600">(optional)</span></h3>
+        ${repeatPicker(ui.addRep, 'add-rep')}
         <div class="sheet-actions"><button class="big-btn primary" data-action="add-save">Hinzufügen</button></div>`;
+    },
+
+    // Vorlage auswählen: arg.cat = neue Aufgabe in dieser Liste, arg.into = Schritte in diese Aufgabe einfügen
+    tplPick(arg = {}) {
+      const into = arg.into && taskById(arg.into), cat = arg.cat && catById(arg.cat);
+      if (arg.into && !into) return null;
+      return `
+        <h2>📋 ${into ? 'Schritte aus Vorlage' : 'Aus Vorlage eintragen'}</h2>
+        <p class="hint">${into ? `Die Mini-Schritte der Vorlage kommen unten an „${esc(into.title)}“ dran. Schritte, die es schon gibt, werden übersprungen.`
+          : `Antippen trägt die Aufgabe mit allen Mini-Schritten in <b>${esc(cat?.name || 'die Liste der Vorlage')}</b> ein.`}</p>
+        ${state.templates.length ? state.templates.map(p => tplRow(p, 'tpl-apply')).join('')
+          : '<p class="muted">Noch keine Vorlagen. Leg gleich eine an, zum Beispiel „Wäsche waschen“ mit den Schritten Sortieren, Waschen, Aufhängen.</p>'}
+        <button class="ghost-btn" data-action="tpl-new">＋ Neue Vorlage</button>
+        <div class="sheet-actions"><button class="big-btn" data-action="${into ? 'tpl-back' : 'close-sheet'}">${into ? '← Zurück zur Aufgabe' : 'Abbrechen'}</button></div>`;
+    },
+
+    // Vorlage bearbeiten (alles wird sofort gespeichert)
+    tpl(id) {
+      const p = tplById(id); if (!p) return null;
+      const draft = ui.tplDraft === id, back = ui.tplBack;
+      return `
+        <h2>${draft ? 'Neue Vorlage' : 'Vorlage'}</h2>
+        <input class="field" type="text" data-input="tpl-title" data-key="tpl-title" data-id="${p.id}" value="${esc(p.title)}" maxlength="80" placeholder="Name, z. B. Wäsche waschen" aria-label="Name der Vorlage">
+        <h3>Mini-Schritte</h3>
+        <div style="--cat:${catById(p.catId)?.color || 'var(--accent)'}">
+        ${p.subtasks.map((s, i) => `<div class="sub">
+          <span class="step-no">${i + 1}.</span>
+          <input type="text" value="${esc(s)}" data-input="tpl-sub" data-id="${p.id}" data-i="${i}" aria-label="Schritt ${i + 1}">
+          ${p.subtasks.length > 1 ? moveBtns('tpl-sub-move', `data-id="${p.id}" data-i="${i}"`, i, p.subtasks.length) : ''}
+          <button class="icon-btn" data-action="tpl-sub-del" data-id="${p.id}" data-i="${i}" aria-label="Schritt löschen">✕</button>
+        </div>`).join('')}</div>
+        <form data-form="tpl-sub-add" data-id="${p.id}" style="margin-top:6px">
+          <input type="text" name="t" data-key="tpl-sub-add" placeholder="+ Mini-Schritt hinzufügen" enterkeyhint="done" autocomplete="off">
+        </form>
+        <p class="hint">Enter fügt den Schritt hinzu, das Feld bleibt offen für den nächsten. Mit ▲ ▼ änderst du die Reihenfolge.</p>
+        <h3>Liste</h3>
+        <div class="chips">${catChips(p.catId, 'tpl-cat')}</div>
+        <div class="toggles" style="margin-top:14px">
+          <button class="pill ${p.important ? 'on imp' : ''}" data-action="tpl-imp" data-id="${p.id}">💛 Wichtig</button>
+          <button class="pill ${p.heavy ? 'on heavy' : ''}" data-action="tpl-heavy" data-id="${p.id}">${heavyIcon()} ${esc(REWARDS.heavy.label)}</button>
+        </div>
+        <h3>🔁 Wiederholen</h3>
+        ${repeatPicker(p.repeat, 'tpl-rep', p.id)}
+        <h3>Notiz</h3>
+        <textarea data-input="tpl-note" data-id="${p.id}" rows="2" placeholder="Was dir dabei hilft …">${esc(p.note || '')}</textarea>
+        <div class="sheet-actions">
+          ${back?.name === 'tplPick' ? '' : `<button class="big-btn soft" data-action="tpl-apply" data-id="${p.id}">＋ Jetzt als Aufgabe eintragen</button>`}
+          <button class="big-btn primary" data-action="tpl-done">${back ? '✓ Fertig, zurück zur Auswahl' : draft ? '✓ Vorlage speichern' : '✓ Fertig'}</button>
+          <button class="big-btn danger-soft" data-action="tpl-del" data-id="${p.id}">${draft ? 'Verwerfen' : 'Vorlage löschen'}</button>
+        </div>`;
     },
 
     pickToday() {
       const n = state.tasks.filter(t => t.today && !t.done).length;
       const groups = state.categories.map(c => {
-        const ts = state.tasks.filter(t => t.catId === c.id && !t.done).sort((a, b) => (b.important ? 1 : 0) - (a.important ? 1 : 0));
+        const ts = state.tasks.filter(t => t.catId === c.id && !t.done && !isWaiting(t)).sort((a, b) => (b.important ? 1 : 0) - (a.important ? 1 : 0));
         if (!ts.length) return '';
         return `<div class="pick-group" style="--cat:${c.color}">${esc(c.name)}</div>` + ts.map(t =>
           `<button class="pick ${t.today ? 'on' : ''}" data-action="pick" data-id="${t.id}" aria-pressed="${!!t.today}">
@@ -1116,8 +1296,8 @@
 
   // ---------- Fokus, Timer, Schlüpfen ----------
   function focusPool() {
-    const open = state.tasks.filter(t => !t.done && !(ui.focus?.skipped || []).includes(t.id));
-    const pools = [open.filter(t => t.today || isDue(t)), open.filter(t => t.important), open];
+    const open = state.tasks.filter(t => !t.done && !isWaiting(t) && !(ui.focus?.skipped || []).includes(t.id));
+    const pools = [open.filter(t => t.today || isDue(t) || waitBack(t)),open.filter(t => t.important), open];
     return pools.find(p => p.length) || [];
   }
   function startFocus() {
@@ -1360,7 +1540,6 @@
     // Listen-Import: fügt NUR hinzu – löscht oder überschreibt nie etwas.
     if (data.type === 'pfoetchenplan-liste' && Array.isArray(data.lists)) {
       let n = 0, skipped = 0, newCats = 0;
-      const norm = x => String(x || '').trim().toLowerCase();
       data.lists.forEach(l => {
         if (!l || !String(l.name || '').trim()) return;
         let c = state.categories.find(x => norm(x.name) === norm(l.name));
@@ -1380,6 +1559,7 @@
           const task = {
             id: uid(), catId: c.id, title: t.title, note: t.note || '', important: !!t.important, today: false,
             ...(validDue(t.due) ? { due: t.due } : {}), ...(t.heavy ? { heavy: true } : {}),
+            ...(validRepeat(t.repeat) ? { repeat: { unit: t.repeat.unit, every: t.repeat.every } } : {}),
             done: false, rewarded: false, createdAt: Date.now(),
             subtasks: (t.subtasks || []).map(s => ({ id: uid(), title: s.title || s, done: !!s.done, rewarded: !!s.done, doneAt: s.done ? Date.now() : null })),
           };
@@ -1415,7 +1595,7 @@
     'imp-open': () => { state.settings.impOpen = !state.settings.impOpen; save(); render(); },
     'show-done': el => { const s = state.settings.showDone; s[el.dataset.cat] = !s[el.dataset.cat]; save(); render(); },
     'close-tip': () => { state.settings.tipClosed = true; save(); render(); },
-    add: () => { ui.addDraft = ''; ui.addImp = false; ui.addToday = false; ui.addHeavy = false; ui.addDue = ''; openSheet('add'); setTimeout(() => $('[data-key="dump"]')?.focus(), 50); },
+    add: () => { ui.addDraft = ''; ui.addImp = false; ui.addToday = false; ui.addHeavy = false; ui.addDue = ''; ui.addRep = null; openSheet('add'); setTimeout(() => $('[data-key="dump"]')?.focus(), 50); },
     'add-cat': el => { ui.addCat = el.dataset.cat; renderSheet(); },
     'add-imp': () => { ui.addImp = !ui.addImp; renderSheet(); },
     'add-today': () => { ui.addToday = !ui.addToday; renderSheet(); },
@@ -1423,8 +1603,8 @@
     'add-save': () => {
       const lines = ui.addDraft.split('\n').map(l => l.replace(/^\s*[-•*·]\s*/, '').trim()).filter(Boolean);
       if (!lines.length) { toast('Schreib erst etwas auf ✏️'); return; }
-      const extra = { ...(validDue(ui.addDue) ? { due: ui.addDue } : {}), ...(ui.addHeavy ? { heavy: true } : {}) };
-      lines.forEach(title => state.tasks.push({ id: uid(), catId: ui.addCat, title, note: '', important: ui.addImp, today: ui.addToday, done: false, subtasks: [], createdAt: Date.now(), ...extra }));
+      const extra = () => ({ ...(validDue(ui.addDue) ? { due: ui.addDue } : {}), ...(ui.addHeavy ? { heavy: true } : {}), ...(validRepeat(ui.addRep) ? { repeat: { ...ui.addRep } } : {}) });
+      lines.forEach(title => state.tasks.push({ id: uid(), catId: ui.addCat, title, note: '', important: ui.addImp, today: ui.addToday, done: false, subtasks: [], createdAt: Date.now(), ...extra() }));
       ui.addDraft = '';
       save(); closeSheet();
       toast(lines.length === 1 ? 'Aufgabe eingetragen 📝' : `${lines.length} Aufgaben eingetragen 📝`);
@@ -1435,6 +1615,85 @@
     't-today': el => { const t = taskById(el.dataset.id); t.today = !t.today; save(); refresh(); },
     't-heavy': el => { const t = taskById(el.dataset.id); if (!t) return; if (t.heavy) delete t.heavy; else t.heavy = true; save(); refresh(); },
     't-due-clear': el => { const t = taskById(el.dataset.id); if (t) { delete t.due; save(); refresh(); } },
+    // --- Wiederholen, Warten, Vorlagen ---
+    't-rep': el => { const t = taskById(el.dataset.id); if (!t) return; const r = pickRepeat(t.repeat, el); if (r) t.repeat = r; else delete t.repeat; save(); refresh(); },
+    'add-rep': el => { ui.addRep = pickRepeat(ui.addRep, el); renderSheet(); },
+    't-wait': el => {
+      const t = taskById(el.dataset.id); if (!t || t.done) return;
+      if (t.wait) { delete t.wait; save(); refresh(); toast('Es geht weiter ▶︎'); return; }
+      t.wait = { for: '', until: null };
+      ui.refocus = 'wait-for';
+      save(); refresh();
+    },
+    't-wait-clear': el => { const t = taskById(el.dataset.id); if (t?.wait) { t.wait.until = null; save(); refresh(); } },
+    'show-wait': el => { const s = state.settings.showWait; s[el.dataset.cat] = !s[el.dataset.cat]; save(); render(); },
+    'tpl-save': el => {
+      const t = taskById(el.dataset.id); if (!t) return;
+      const old = tplOf(t);
+      const p = { id: old?.id || uid(), title: t.title.trim() || 'Vorlage', catId: t.catId, important: !!t.important, note: t.note || '',
+        subtasks: t.subtasks.map(s => s.title.trim()).filter(Boolean),
+        ...(t.heavy ? { heavy: true } : {}), ...(validRepeat(t.repeat) ? { repeat: { ...t.repeat } } : {}) };
+      if (old) state.templates[state.templates.indexOf(old)] = p; else state.templates.push(p);
+      save(); refresh();
+      toast(old ? `Vorlage „${p.title}“ aktualisiert 📋` : 'Als Vorlage gespeichert 📋 Benutzen: in Listen über das 📋 neben „+ Aufgabe hinzufügen“.');
+    },
+    // Vorlagen-Auswahl öffnen: data-cat = neue Aufgabe in dieser Liste, data-into = Schritte in diese Aufgabe
+    'tpl-pick': el => openSheet('tplPick', el.dataset.into ? { into: el.dataset.into } : { cat: el.dataset.cat }),
+    'tpl-back': () => { const a = ui.sheet?.arg; if (a?.into && taskById(a.into)) openSheet('task', a.into); else closeSheet(); },
+    // Vorlage benutzen – je nachdem, woher man kommt
+    'tpl-apply': el => {
+      const p = tplById(el.dataset.id); if (!p) return;
+      const arg = ui.sheet?.name === 'tplPick' ? ui.sheet.arg || {} : {};
+      const into = arg.into && taskById(arg.into);
+      if (into) {
+        const have = new Set(into.subtasks.map(s => norm(s.title)));
+        const add = p.subtasks.map(s => String(s).trim()).filter(s => s && !have.has(norm(s)));
+        add.forEach(title => into.subtasks.push({ id: uid(), title, done: false }));
+        if (add.length && into.done) { into.done = false; into.doneAt = null; }   // neue offene Schritte → Aufgabe wieder offen
+        save(); render();
+        openSheet('task', into.id);
+        toast(add.length ? `${add.length} ${add.length === 1 ? 'Schritt' : 'Schritte'} aus „${p.title}“ eingefügt 📋` : 'Diese Schritte sind alle schon da 🙂');
+        return;
+      }
+      taskFromTemplate(p, arg.cat || p.catId);
+    },
+    'tpl-new': () => {
+      const back = ui.sheet?.name === 'tplPick' ? ui.sheet : null;
+      const cat = back?.arg?.cat || (back?.arg?.into && taskById(back.arg.into)?.catId) || state.categories[0]?.id;
+      const p = { id: uid(), title: '', catId: cat, important: false, note: '', subtasks: [] };
+      state.templates.push(p);
+      openSheet('tpl', p.id);   // (räumt nichts auf, weil es die Vorlage selbst ist)
+      ui.tplDraft = p.id; ui.tplBack = back;
+      renderSheet();
+      setTimeout(() => $('[data-key="tpl-title"]')?.focus(), 60);
+    },
+    'tpl-edit': el => { if (!tplById(el.dataset.id)) return; ui.tplBack = null; ui.tplDraft = null; openSheet('tpl', el.dataset.id); },
+    'tpl-done': () => {
+      const back = ui.tplBack;
+      if (back) { ui.tplDraft = null; ui.tplBack = null; openSheet(back.name, back.arg); return; }
+      const p = tplById(ui.sheet?.arg), draft = ui.tplDraft === p?.id;
+      closeSheet();
+      if (p && draft && tplById(p.id)) toast(`Vorlage „${p.title || 'Ohne Namen'}“ gespeichert 📋`);
+    },
+    'tpl-del': el => {
+      const p = tplById(el.dataset.id); if (!p) return;
+      const snap = clone(state), back = ui.tplBack, draft = ui.tplDraft === p.id;
+      state.templates = state.templates.filter(x => x !== p);
+      save();
+      if (back) openSheet(back.name, back.arg); else closeSheet();
+      if (draft) toast('Neue Vorlage verworfen');
+      else toast('Vorlage gelöscht', () => { restore(snap); });
+    },
+    'tpl-cat': el => { const p = tplById(ui.sheet?.arg); if (p) { p.catId = el.dataset.cat; save(); refresh(); } },
+    'tpl-imp': el => { const p = tplById(el.dataset.id); if (p) { p.important = !p.important; save(); refresh(); } },
+    'tpl-heavy': el => { const p = tplById(el.dataset.id); if (!p) return; if (p.heavy) delete p.heavy; else p.heavy = true; save(); refresh(); },
+    'tpl-rep': el => { const p = tplById(el.dataset.id); if (!p) return; const r = pickRepeat(p.repeat, el); if (r) p.repeat = r; else delete p.repeat; save(); refresh(); },
+    'tpl-sub-move': el => { const p = tplById(el.dataset.id); if (p && swap(p.subtasks, +el.dataset.i, +el.dataset.d)) { save(); refresh(); } },
+    'tpl-sub-del': el => { const p = tplById(el.dataset.id); if (p) { p.subtasks.splice(+el.dataset.i, 1); save(); refresh(); } },
+    'sub-move': el => {
+      const t = taskById(el.dataset.id); if (!t) return;
+      if (swap(t.subtasks, t.subtasks.findIndex(s => s.id === el.dataset.sub), +el.dataset.d)) { save(); refresh(); }
+    },
     'plan-open': () => { state.settings.planOpen = state.settings.planOpen === false; save(); render(); },
     'cat-move': el => {
       const a = state.categories, i = a.findIndex(c => c.id === el.dataset.id), j = i + +el.dataset.d;
@@ -1751,6 +2010,11 @@
       state.tasks.push({ id: uid(), catId: f.dataset.cat, title, note: '', important: false, today: false, done: false, subtasks: [], createdAt: Date.now() });
       ui.refocus = 'quick-' + f.dataset.cat;
       save(); render();
+    } else if (f.dataset.form === 'tpl-sub-add') {
+      const p = tplById(f.dataset.id); if (!p) return;
+      p.subtasks.push(title);
+      ui.refocus = 'tpl-sub-add';
+      save(); refresh();
     } else if (f.dataset.form === 'sub-add') {
       const t = taskById(f.dataset.id);
       t.subtasks.push({ id: uid(), title, done: false });
@@ -1766,7 +2030,10 @@
     if (!k) return;
     const v = el.value;
     if (k === 'dump') { ui.addDraft = v; return; }
-    if (k === 'due' || k === 'add-due') return; // Datum: erst bei „change“ übernehmen (siehe unten)
+    if (k === 'due' || k === 'add-due' || k === 'wait-until') return; // Datum: erst bei „change“ übernehmen (siehe unten)
+    if (k === 'tpl-title' || k === 'tpl-note') { const p = tplById(el.dataset.id); if (p) p[k === 'tpl-title' ? 'title' : 'note'] = v; }
+    if (k === 'tpl-sub') { const p = tplById(el.dataset.id), i = +el.dataset.i; if (p && i < p.subtasks.length) p.subtasks[i] = v; }
+    if (k === 'wait-for') { const t = taskById(el.dataset.id); if (t?.wait) t.wait.for = v; }
     if (k === 'appName') { state.settings.appName = v; save(); applySettings(); renderTop(); return; }
     if (k === 'title') { const t = taskById(el.dataset.id); if (t) t.title = v.replace(/\n/g, ' '); }
     if (k === 'note') { const t = taskById(el.dataset.id); if (t) t.note = v; }
@@ -1779,6 +2046,11 @@
   document.addEventListener('change', ev => {
     const el = ev.target, k = el.dataset?.input;
     if (k === 'add-due') { ui.addDue = validDue(el.value) || ''; return; }
+    if (k === 'wait-until') {
+      const t = taskById(el.dataset.id); if (!t?.wait) return;
+      t.wait.until = validDue(el.value) || null;
+      save(); refresh();
+    }
     if (k === 'due') {
       const t = taskById(el.dataset.id); if (!t) return;
       if (validDue(el.value)) t.due = el.value; else delete t.due;

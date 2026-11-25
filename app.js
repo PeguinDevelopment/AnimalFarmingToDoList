@@ -2101,6 +2101,15 @@
   }, 300);
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register(ED.swPath || 'sw.js').catch(() => {});
+    /* Updates zuverlässig ankommen lassen: Installierte Apps (vor allem auf dem iPhone) prüfen selten von selbst.
+       Deshalb bei jedem Zurückkommen in die App nachsehen; ist eine neue Version aktiv, einmal neu laden.
+       Alle Daten sind da schon gespeichert (save() nach jeder Änderung). Nicht neu laden, solange ein Fenster offen ist. */
+    const hadSW = !!navigator.serviceWorker.controller;
+    let updateReady = false;
+    const reloadIfIdle = () => { if (updateReady && !ui.sheet && !ui.overlay && $('#hatch').hidden && $('#gift').hidden && $('#intro').hidden) location.reload(); };
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!hadSW || updateReady) return; updateReady = true; reloadIfIdle(); });
+    navigator.serviceWorker.register(ED.swPath || 'sw.js').then(reg => {
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) { reloadIfIdle(); reg.update().catch(() => {}); } });
+    }).catch(() => {});
   }
 })();
